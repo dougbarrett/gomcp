@@ -1,0 +1,97 @@
+package seeders
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"[[.ModulePath]]/internal/models"
+	"gorm.io/gorm"
+	[[- if .WithFaker]]
+	"github.com/brianvoe/gofakeit/v6"
+	[[- end]]
+)
+
+// [[.ModelName]]Seeder seeds [[.ModelName]] records.
+type [[.ModelName]]Seeder struct {
+	db *gorm.DB
+}
+
+// New[[.ModelName]]Seeder creates a new [[.ModelName]]Seeder.
+func New[[.ModelName]]Seeder(db *gorm.DB) *[[.ModelName]]Seeder {
+	return &[[.ModelName]]Seeder{db: db}
+}
+
+// Seed creates [[.Count]] [[.ModelName]] records.
+func (s *[[.ModelName]]Seeder) Seed(ctx context.Context) error {
+	log.Printf("Seeding [[.Count]] [[pluralize .ModelName | toLower]]...")
+
+	[[- if .WithFaker]]
+	gofakeit.Seed(0)
+	[[- end]]
+
+	for i := 0; i < [[.Count]]; i++ {
+		item := models.[[.ModelName]]{
+			[[- range .Fields]]
+			[[.Name]]: [[fakerFunc .Type]],
+			[[- end]]
+		}
+
+		if err := s.db.WithContext(ctx).Create(&item).Error; err != nil {
+			return fmt.Errorf("failed to seed [[.ModelName | toLower]] %d: %w", i+1, err)
+		}
+	}
+
+	log.Printf("Successfully seeded [[.Count]] [[pluralize .ModelName | toLower]]")
+	return nil
+}
+
+// Clear removes all [[.ModelName]] records.
+func (s *[[.ModelName]]Seeder) Clear(ctx context.Context) error {
+	log.Printf("Clearing all [[pluralize .ModelName | toLower]]...")
+
+	if err := s.db.WithContext(ctx).Exec("DELETE FROM [[.TableName]]").Error; err != nil {
+		return fmt.Errorf("failed to clear [[pluralize .ModelName | toLower]]: %w", err)
+	}
+
+	// Reset auto-increment (SQLite)
+	s.db.WithContext(ctx).Exec("DELETE FROM sqlite_sequence WHERE name='[[.TableName]]'")
+
+	log.Printf("Cleared all [[pluralize .ModelName | toLower]]")
+	return nil
+}
+
+// Count returns the number of [[.ModelName]] records.
+func (s *[[.ModelName]]Seeder) Count(ctx context.Context) (int64, error) {
+	var count int64
+	if err := s.db.WithContext(ctx).Model(&models.[[.ModelName]]{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// SeedIfEmpty seeds only if table is empty.
+func (s *[[.ModelName]]Seeder) SeedIfEmpty(ctx context.Context) error {
+	count, err := s.Count(ctx)
+	if err != nil {
+		return err
+	}
+
+	if count > 0 {
+		log.Printf("Skipping [[.ModelName | toLower]] seeding: %d records already exist", count)
+		return nil
+	}
+
+	return s.Seed(ctx)
+}
+
+[[- if .Dependencies]]
+// Dependencies returns seeders that must run before this one.
+func (s *[[.ModelName]]Seeder) Dependencies() []string {
+	return []string{
+		[[- range .Dependencies]]
+		"[[.]]",
+		[[- end]]
+	}
+}
+[[- end]]

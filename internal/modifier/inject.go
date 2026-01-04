@@ -1,0 +1,284 @@
+// Package modifier provides code injection capabilities using marker comments.
+package modifier
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+
+	"github.com/dbb1dev/go-mcp/internal/utils"
+)
+
+// MarkerPrefix is the prefix used for marker comments.
+const MarkerPrefix = "// MCP:"
+
+// Common marker names
+const (
+	MarkerModelsStart      = "MCP:MODELS:START"
+	MarkerModelsEnd        = "MCP:MODELS:END"
+	MarkerReposStart       = "MCP:REPOS:START"
+	MarkerReposEnd         = "MCP:REPOS:END"
+	MarkerServicesStart    = "MCP:SERVICES:START"
+	MarkerServicesEnd      = "MCP:SERVICES:END"
+	MarkerControllersStart = "MCP:CONTROLLERS:START"
+	MarkerControllersEnd   = "MCP:CONTROLLERS:END"
+	MarkerRoutesStart      = "MCP:ROUTES:START"
+	MarkerRoutesEnd        = "MCP:ROUTES:END"
+	MarkerImportsStart     = "MCP:IMPORTS:START"
+	MarkerImportsEnd       = "MCP:IMPORTS:END"
+)
+
+// Injector handles code injection into files using marker comments.
+type Injector struct {
+	filePath string
+	content  string
+}
+
+// NewInjector creates a new injector for the given file.
+func NewInjector(filePath string) (*Injector, error) {
+	content, err := utils.ReadFileString(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
+	}
+	return &Injector{
+		filePath: filePath,
+		content:  content,
+	}, nil
+}
+
+// NewInjectorFromContent creates a new injector from content string.
+func NewInjectorFromContent(content string) *Injector {
+	return &Injector{
+		content: content,
+	}
+}
+
+// InjectBetweenMarkers injects code between START and END markers.
+// It adds the code before the END marker, preserving existing content.
+func (i *Injector) InjectBetweenMarkers(startMarker, endMarker, code string) error {
+	// Find the markers
+	startPattern := regexp.MustCompile(`(?m)^(\s*)//\s*` + regexp.QuoteMeta(startMarker) + `\s*$`)
+	endPattern := regexp.MustCompile(`(?m)^(\s*)//\s*` + regexp.QuoteMeta(endMarker) + `\s*$`)
+
+	startMatch := startPattern.FindStringSubmatchIndex(i.content)
+	endMatch := endPattern.FindStringSubmatchIndex(i.content)
+
+	if startMatch == nil {
+		return fmt.Errorf("start marker not found: %s", startMarker)
+	}
+	if endMatch == nil {
+		return fmt.Errorf("end marker not found: %s", endMarker)
+	}
+	if startMatch[0] >= endMatch[0] {
+		return fmt.Errorf("start marker must come before end marker")
+	}
+
+	// Get the indentation from the end marker
+	indent := ""
+	if endMatch[2] != -1 && endMatch[3] != -1 {
+		indent = i.content[endMatch[2]:endMatch[3]]
+	}
+
+	// Check if code already exists between markers
+	existingContent := i.content[startMatch[1]:endMatch[0]]
+	if strings.Contains(existingContent, strings.TrimSpace(code)) {
+		// Code already exists, skip injection
+		return nil
+	}
+
+	// Prepare the code with proper indentation
+	indentedCode := indentCode(code, indent)
+
+	// Insert before the end marker
+	insertPos := endMatch[0]
+	i.content = i.content[:insertPos] + indentedCode + "\n" + i.content[insertPos:]
+
+	return nil
+}
+
+// InjectAfterMarker injects code after a marker.
+func (i *Injector) InjectAfterMarker(marker, code string) error {
+	pattern := regexp.MustCompile(`(?m)^(\s*)//\s*` + regexp.QuoteMeta(marker) + `\s*$`)
+	match := pattern.FindStringSubmatchIndex(i.content)
+
+	if match == nil {
+		return fmt.Errorf("marker not found: %s", marker)
+	}
+
+	// Get the indentation
+	indent := ""
+	if match[2] != -1 && match[3] != -1 {
+		indent = i.content[match[2]:match[3]]
+	}
+
+	// Prepare the code with proper indentation
+	indentedCode := indentCode(code, indent)
+
+	// Insert after the marker line
+	insertPos := match[1]
+	i.content = i.content[:insertPos] + "\n" + indentedCode + i.content[insertPos:]
+
+	return nil
+}
+
+// InjectBeforeMarker injects code before a marker.
+func (i *Injector) InjectBeforeMarker(marker, code string) error {
+	pattern := regexp.MustCompile(`(?m)^(\s*)//\s*` + regexp.QuoteMeta(marker) + `\s*$`)
+	match := pattern.FindStringSubmatchIndex(i.content)
+
+	if match == nil {
+		return fmt.Errorf("marker not found: %s", marker)
+	}
+
+	// Get the indentation
+	indent := ""
+	if match[2] != -1 && match[3] != -1 {
+		indent = i.content[match[2]:match[3]]
+	}
+
+	// Prepare the code with proper indentation
+	indentedCode := indentCode(code, indent)
+
+	// Insert before the marker line
+	insertPos := match[0]
+	i.content = i.content[:insertPos] + indentedCode + "\n" + i.content[insertPos:]
+
+	return nil
+}
+
+// ReplaceMarkerContent replaces all content between markers with new content.
+func (i *Injector) ReplaceMarkerContent(startMarker, endMarker, code string) error {
+	startPattern := regexp.MustCompile(`(?m)^(\s*)//\s*` + regexp.QuoteMeta(startMarker) + `\s*$`)
+	endPattern := regexp.MustCompile(`(?m)^(\s*)//\s*` + regexp.QuoteMeta(endMarker) + `\s*$`)
+
+	startMatch := startPattern.FindStringSubmatchIndex(i.content)
+	endMatch := endPattern.FindStringSubmatchIndex(i.content)
+
+	if startMatch == nil {
+		return fmt.Errorf("start marker not found: %s", startMarker)
+	}
+	if endMatch == nil {
+		return fmt.Errorf("end marker not found: %s", endMarker)
+	}
+	if startMatch[0] >= endMatch[0] {
+		return fmt.Errorf("start marker must come before end marker")
+	}
+
+	// Get the indentation from the end marker
+	indent := ""
+	if endMatch[2] != -1 && endMatch[3] != -1 {
+		indent = i.content[endMatch[2]:endMatch[3]]
+	}
+
+	// Prepare the code with proper indentation
+	indentedCode := ""
+	if code != "" {
+		indentedCode = indentCode(code, indent) + "\n"
+	}
+
+	// Replace content between markers
+	i.content = i.content[:startMatch[1]+1] + indentedCode + i.content[endMatch[0]:]
+
+	return nil
+}
+
+// HasMarker checks if a marker exists in the content.
+func (i *Injector) HasMarker(marker string) bool {
+	pattern := regexp.MustCompile(`(?m)//\s*` + regexp.QuoteMeta(marker))
+	return pattern.MatchString(i.content)
+}
+
+// Content returns the current content.
+func (i *Injector) Content() string {
+	return i.content
+}
+
+// Save writes the content back to the file.
+func (i *Injector) Save() error {
+	if i.filePath == "" {
+		return fmt.Errorf("no file path set")
+	}
+	return utils.WriteFileString(i.filePath, i.content, true)
+}
+
+// SaveTo writes the content to the specified file.
+func (i *Injector) SaveTo(filePath string) error {
+	return utils.WriteFileString(filePath, i.content, true)
+}
+
+// indentCode adds indentation to each line of code.
+func indentCode(code, indent string) string {
+	lines := strings.Split(strings.TrimSpace(code), "\n")
+	for i, line := range lines {
+		if line != "" {
+			lines[i] = indent + line
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// InjectImport adds an import statement to the imports section.
+func (i *Injector) InjectImport(importPath string) error {
+	// Check if import already exists
+	importPattern := regexp.MustCompile(`"` + regexp.QuoteMeta(importPath) + `"`)
+	if importPattern.MatchString(i.content) {
+		return nil // Import already exists
+	}
+
+	// Try to inject using markers first
+	if i.HasMarker(MarkerImportsStart) && i.HasMarker(MarkerImportsEnd) {
+		return i.InjectBetweenMarkers(MarkerImportsStart, MarkerImportsEnd, `"`+importPath+`"`)
+	}
+
+	// Fall back to finding import block
+	importBlockPattern := regexp.MustCompile(`(?m)^import \(\n((?:\s+.*\n)*)\)`)
+	match := importBlockPattern.FindStringSubmatchIndex(i.content)
+	if match == nil {
+		return fmt.Errorf("no import block found")
+	}
+
+	// Insert before the closing paren
+	insertPos := match[1] - 1
+	i.content = i.content[:insertPos] + "\t\"" + importPath + "\"\n" + i.content[insertPos:]
+
+	return nil
+}
+
+// InjectModel adds a model to the AutoMigrate call.
+func (i *Injector) InjectModel(modelName string) error {
+	modelCode := "&models." + modelName + "{},"
+	return i.InjectBetweenMarkers(MarkerModelsStart, MarkerModelsEnd, modelCode)
+}
+
+// InjectRepo adds a repository instantiation.
+func (i *Injector) InjectRepo(domainName, modulePath string) error {
+	varName := utils.ToRepoVariableName(domainName)
+	pkgName := utils.ToPackageName(domainName)
+	code := fmt.Sprintf(`%s := %s.NewRepository(db)`, varName, pkgName)
+	return i.InjectBetweenMarkers(MarkerReposStart, MarkerReposEnd, code)
+}
+
+// InjectService adds a service instantiation.
+func (i *Injector) InjectService(domainName string) error {
+	varName := utils.ToServiceVariableName(domainName)
+	repoVarName := utils.ToRepoVariableName(domainName)
+	pkgName := utils.ToPackageName(domainName)
+	code := fmt.Sprintf(`%s := %s.NewService(%s)`, varName, pkgName, repoVarName)
+	return i.InjectBetweenMarkers(MarkerServicesStart, MarkerServicesEnd, code)
+}
+
+// InjectController adds a controller instantiation.
+func (i *Injector) InjectController(domainName string) error {
+	varName := utils.ToControllerVariableName(domainName)
+	serviceVarName := utils.ToServiceVariableName(domainName)
+	pkgName := utils.ToPackageName(domainName)
+	code := fmt.Sprintf(`%s := %s.NewController(%s)`, varName, pkgName, serviceVarName)
+	return i.InjectBetweenMarkers(MarkerControllersStart, MarkerControllersEnd, code)
+}
+
+// InjectRoute adds a route registration.
+func (i *Injector) InjectRoute(domainName string) error {
+	varName := utils.ToControllerVariableName(domainName)
+	code := fmt.Sprintf(`%s.RegisterRoutes(mux)`, varName)
+	return i.InjectBetweenMarkers(MarkerRoutesStart, MarkerRoutesEnd, code)
+}

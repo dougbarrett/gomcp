@@ -1,0 +1,146 @@
+package tools
+
+import (
+	"context"
+	"fmt"
+	"path/filepath"
+
+	"github.com/dbb1dev/go-mcp/internal/generator"
+	"github.com/dbb1dev/go-mcp/internal/types"
+	"github.com/dbb1dev/go-mcp/internal/utils"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+// RegisterScaffoldProject registers the scaffold_project tool.
+func RegisterScaffoldProject(server *mcp.Server, registry *Registry) {
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "scaffold_project",
+		Description: "Initialize a new Go web application project with complete directory structure, including templ layouts, GORM database setup, and Taskfile configuration.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldProjectInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
+		result, err := scaffoldProject(registry, input)
+		if err != nil {
+			return nil, types.NewErrorResult(err.Error()), nil
+		}
+		return nil, result, nil
+	})
+}
+
+func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (types.ScaffoldResult, error) {
+	// Validate input
+	if err := utils.ValidateProjectName(input.ProjectName); err != nil {
+		return types.NewErrorResult(err.Error()), nil
+	}
+	if err := utils.ValidateModulePath(input.ModulePath); err != nil {
+		return types.NewErrorResult(err.Error()), nil
+	}
+	if err := utils.ValidateDatabaseType(input.DatabaseType); err != nil {
+		return types.NewErrorResult(err.Error()), nil
+	}
+
+	// Set defaults
+	dbType := input.DatabaseType
+	if dbType == "" {
+		dbType = "sqlite"
+	}
+
+	// Create project path
+	projectPath := filepath.Join(registry.WorkingDir, input.ProjectName)
+
+	// Check if project already exists
+	if utils.DirExists(projectPath) && !input.DryRun {
+		return types.NewErrorResult(fmt.Sprintf("project directory already exists: %s", projectPath)), nil
+	}
+
+	// Create generator
+	gen := registry.NewGenerator(projectPath)
+	gen.SetDryRun(input.DryRun)
+
+	// Prepare template data
+	data := generator.ProjectData{
+		ProjectName:  input.ProjectName,
+		ModulePath:   input.ModulePath,
+		DatabaseType: dbType,
+		WithAuth:     input.WithAuth,
+	}
+
+	// Create directory structure
+	directories := []string{
+		"cmd/web",
+		"cmd/seed",
+		"internal/config",
+		"internal/database",
+		"internal/models",
+		"internal/repository",
+		"internal/services",
+		"internal/web/middleware",
+		"internal/web/layouts",
+		"internal/web/components",
+		"config/en/pages",
+		"assets/css",
+		"assets/js",
+		"components",
+		"utils",
+	}
+
+	for _, dir := range directories {
+		if err := gen.EnsureDir(dir); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("failed to create directory %s: %v", dir, err)), nil
+		}
+	}
+
+	// Generate files
+	files := []struct {
+		template string
+		output   string
+	}{
+		{"project/go.mod.tmpl", "go.mod"},
+		{"project/main.go.tmpl", "cmd/web/main.go"},
+		{"project/seed_main.go.tmpl", "cmd/seed/main.go"},
+		{"project/config.go.tmpl", "internal/config/config.go"},
+		{"project/database.go.tmpl", "internal/database/database.go"},
+		{"project/base_model.go.tmpl", "internal/models/base.go"},
+		{"project/router.go.tmpl", "internal/web/router.go"},
+		{"project/middleware.go.tmpl", "internal/web/middleware/middleware.go"},
+		{"project/response.go.tmpl", "internal/web/response.go"},
+		{"project/base_layout.templ.tmpl", "internal/web/layouts/base.templ"},
+		{"project/common_components.templ.tmpl", "internal/web/components/common.templ"},
+		{"project/taskfile.yml.tmpl", "Taskfile.yml"},
+		{"project/air.toml.tmpl", ".air.toml"},
+		{"project/templui.json.tmpl", ".templui.json"},
+		{"project/tailwind_input.css.tmpl", "assets/css/input.css"},
+		{"project/app.toml.tmpl", "config/en/app.toml"},
+		{"project/menu.toml.tmpl", "config/en/menu.toml"},
+		{"project/gitignore.tmpl", ".gitignore"},
+	}
+
+	for _, f := range files {
+		if err := gen.GenerateFile(f.template, f.output, data); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("failed to generate %s: %v", f.output, err)), nil
+		}
+	}
+
+	// Prepare result
+	result := gen.Result()
+	nextSteps := []string{
+		fmt.Sprintf("cd %s", input.ProjectName),
+		"go mod tidy",
+		"task dev  # Start development server",
+	}
+
+	if input.DryRun {
+		return types.ScaffoldResult{
+			Success:      true,
+			Message:      fmt.Sprintf("Dry run: Would create project '%s' with %d files", input.ProjectName, len(result.FilesCreated)),
+			FilesCreated: result.FilesCreated,
+			NextSteps:    nextSteps,
+		}, nil
+	}
+
+	return types.ScaffoldResult{
+		Success:      true,
+		Message:      fmt.Sprintf("Successfully created project '%s'", input.ProjectName),
+		FilesCreated: result.FilesCreated,
+		FilesUpdated: result.FilesUpdated,
+		NextSteps:    nextSteps,
+	}, nil
+}

@@ -1,0 +1,200 @@
+package auth
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"time"
+
+	"[[.ModulePath]]/internal/models"
+	"[[.ModulePath]]/internal/repository/user"
+	"github.com/gorilla/sessions"
+)
+
+const (
+	// SessionName is the name of the session cookie.
+	SessionName = "[[.ProjectName]]-session"
+	// SessionUserIDKey is the key for user ID in the session.
+	SessionUserIDKey = "user_id"
+	// SessionMaxAge is the maximum age of the session in seconds (7 days).
+	SessionMaxAge = 60 * 60 * 24 * 7
+)
+
+var (
+	// ErrInvalidCredentials is returned when email/password don't match.
+	ErrInvalidCredentials = errors.New("invalid email or password")
+	// ErrUserNotFound is returned when user doesn't exist.
+	ErrUserNotFound = errors.New("user not found")
+	// ErrUserInactive is returned when user account is disabled.
+	ErrUserInactive = errors.New("user account is inactive")
+	// ErrEmailExists is returned when email is already registered.
+	ErrEmailExists = errors.New("email already exists")
+)
+
+// Service handles authentication operations.
+type Service struct {
+	userRepo *user.Repository
+	store    sessions.Store
+}
+
+// NewService creates a new auth Service.
+func NewService(userRepo *user.Repository, sessionSecret string) *Service {
+	store := sessions.NewCookieStore([]byte(sessionSecret))
+	store.Options = &sessions.Options{
+		Path:     "/",
+		MaxAge:   SessionMaxAge,
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		SameSite: http.SameSiteLaxMode,
+	}
+	return &Service{
+		userRepo: userRepo,
+		store:    store,
+	}
+}
+
+// LoginInput contains login form data.
+type LoginInput struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Remember bool   `json:"remember"`
+}
+
+// RegisterInput contains registration form data.
+type RegisterInput struct {
+	Name            string `json:"name"`
+	Email           string `json:"email"`
+	Password        string `json:"password"`
+	PasswordConfirm string `json:"password_confirm"`
+}
+
+// Login authenticates a user and creates a session.
+func (s *Service) Login(ctx context.Context, w http.ResponseWriter, r *http.Request, input LoginInput) (*models.User, error) {
+	// Find user by email
+	user, err := s.userRepo.FindByEmail(ctx, input.Email)
+	if err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	// Check password
+	if !user.CheckPassword(input.Password) {
+		return nil, ErrInvalidCredentials
+	}
+
+	// Check if user is active
+	if !user.Active {
+		return nil, ErrUserInactive
+	}
+
+	// Update last login
+	user.UpdateLastLogin()
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return nil, fmt.Errorf("failed to update last login: %w", err)
+	}
+
+	// Create session
+	session, err := s.store.Get(r, SessionName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get session: %w", err)
+	}
+
+	session.Values[SessionUserIDKey] = user.ID
+	if input.Remember {
+		session.Options.MaxAge = SessionMaxAge * 4 // 28 days
+	}
+
+	if err := session.Save(r, w); err != nil {
+		return nil, fmt.Errorf("failed to save session: %w", err)
+	}
+
+	return user, nil
+}
+
+// Register creates a new user account.
+func (s *Service) Register(ctx context.Context, w http.ResponseWriter, r *http.Request, input RegisterInput) (*models.User, error) {
+	// Check if email already exists
+	existing, _ := s.userRepo.FindByEmail(ctx, input.Email)
+	if existing != nil {
+		return nil, ErrEmailExists
+	}
+
+	// Create user
+	user := &models.User{
+		Name:   input.Name,
+		Email:  input.Email,
+		Role:   models.RoleUser,
+		Active: true,
+	}
+
+	if err := user.SetPassword(input.Password); err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Auto-login after registration
+	session, err := s.store.Get(r, SessionName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get session: %w", err)
+	}
+
+	session.Values[SessionUserIDKey] = user.ID
+	if err := session.Save(r, w); err != nil {
+		return nil, fmt.Errorf("failed to save session: %w", err)
+	}
+
+	return user, nil
+}
+
+// Logout destroys the user session.
+func (s *Service) Logout(w http.ResponseWriter, r *http.Request) error {
+	session, err := s.store.Get(r, SessionName)
+	if err != nil {
+		return fmt.Errorf("failed to get session: %w", err)
+	}
+
+	session.Options.MaxAge = -1
+	return session.Save(r, w)
+}
+
+// GetUserFromSession retrieves the authenticated user from the session.
+func (s *Service) GetUserFromSession(r *http.Request) (*models.User, error) {
+	session, err := s.store.Get(r, SessionName)
+	if err != nil {
+		return nil, err
+	}
+
+	userID, ok := session.Values[SessionUserIDKey].(uint)
+	if !ok || userID == 0 {
+		return nil, ErrUserNotFound
+	}
+
+	return s.userRepo.FindByID(r.Context(), userID)
+}
+
+// ChangePassword updates a user's password.
+func (s *Service) ChangePassword(ctx context.Context, userID uint, currentPassword, newPassword string) error {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	if !user.CheckPassword(currentPassword) {
+		return ErrInvalidCredentials
+	}
+
+	if err := user.SetPassword(newPassword); err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	return s.userRepo.Update(ctx, user)
+}
+
+// ValidateSession checks if the current session is valid.
+func (s *Service) ValidateSession(r *http.Request) bool {
+	user, err := s.GetUserFromSession(r)
+	return err == nil && user != nil && user.Active
+}

@@ -1,0 +1,161 @@
+package tools
+
+import (
+	"context"
+	"fmt"
+	"path/filepath"
+
+	"github.com/dbb1dev/go-mcp/internal/generator"
+	"github.com/dbb1dev/go-mcp/internal/types"
+	"github.com/dbb1dev/go-mcp/internal/utils"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+// RegisterScaffoldPage registers the scaffold_page tool.
+func RegisterScaffoldPage(server *mcp.Server, registry *Registry) {
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "scaffold_page",
+		Description: "Create a complete page with layout, components, and TOML configuration. Supports default, dashboard, landing, and blank layouts.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldPageInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
+		result, err := scaffoldPage(registry, input)
+		if err != nil {
+			return nil, types.NewErrorResult(err.Error()), nil
+		}
+		return nil, result, nil
+	})
+}
+
+func scaffoldPage(registry *Registry, input types.ScaffoldPageInput) (types.ScaffoldResult, error) {
+	// Validate input
+	if input.PageName == "" {
+		return types.NewErrorResult("page name is required"), nil
+	}
+
+	if input.Route == "" {
+		return types.NewErrorResult("route is required"), nil
+	}
+
+	if err := utils.ValidateURLPath(input.Route); err != nil {
+		return types.NewErrorResult(err.Error()), nil
+	}
+
+	if err := utils.ValidateLayoutType(input.Layout); err != nil {
+		return types.NewErrorResult(err.Error()), nil
+	}
+
+	// Get module path from go.mod
+	modulePath, err := utils.GetModulePath(registry.WorkingDir)
+	if err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to get module path: %v", err)), nil
+	}
+
+	// Create generator
+	gen := registry.NewGenerator("")
+	gen.SetDryRun(input.DryRun)
+
+	// Prepare template data
+	data := buildPageData(input, modulePath)
+
+	// Determine page output path
+	pageDir := filepath.Join("internal", "web", "pages")
+	pagePath := filepath.Join(pageDir, utils.ToSnakeCase(input.PageName)+".templ")
+
+	// Ensure directory exists
+	if err := gen.EnsureDir(pageDir); err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to create directory: %v", err)), nil
+	}
+
+	// Generate the page file using list template as base for now
+	// In a full implementation, we'd have a dedicated page.templ.tmpl
+	if err := gen.GenerateFile("views/list.templ.tmpl", pagePath, data); err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to generate page: %v", err)), nil
+	}
+
+	// Generate TOML config if requested
+	if input.CreateTomlConfig {
+		configDir := filepath.Join("config", "en", "pages")
+		configPath := filepath.Join(configDir, utils.ToSnakeCase(input.PageName)+".toml")
+
+		if err := gen.EnsureDir(configDir); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("failed to create config directory: %v", err)), nil
+		}
+
+		configData := buildPageConfigData(input)
+		if err := gen.GenerateFile("config/page.toml.tmpl", configPath, configData); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("failed to generate config: %v", err)), nil
+		}
+	}
+
+	// Get result
+	result := gen.Result()
+
+	nextSteps := []string{
+		"templ generate",
+		fmt.Sprintf("Add route handler for '%s' in your router", input.Route),
+	}
+
+	if input.DryRun {
+		return types.ScaffoldResult{
+			Success:      true,
+			Message:      fmt.Sprintf("Dry run: Would create page '%s' at route '%s'", input.PageName, input.Route),
+			FilesCreated: result.FilesCreated,
+			NextSteps:    nextSteps,
+		}, nil
+	}
+
+	return types.ScaffoldResult{
+		Success:      true,
+		Message:      fmt.Sprintf("Successfully created page '%s' at route '%s'", input.PageName, input.Route),
+		FilesCreated: result.FilesCreated,
+		FilesUpdated: result.FilesUpdated,
+		NextSteps:    nextSteps,
+	}, nil
+}
+
+// buildPageData creates PageData from ScaffoldPageInput.
+func buildPageData(input types.ScaffoldPageInput, modulePath string) generator.PageData {
+	layout := input.Layout
+	if layout == "" {
+		layout = "default"
+	}
+
+	// Build sections
+	sections := make([]generator.SectionData, len(input.Sections))
+	for i, section := range input.Sections {
+		sections[i] = generator.SectionData{
+			Type:   section.Type,
+			Config: section.Config,
+		}
+	}
+
+	// Generate title from page name
+	title := utils.ToLabel(input.PageName)
+
+	return generator.PageData{
+		ModulePath:  modulePath,
+		PageName:    input.PageName,
+		Route:       input.Route,
+		Layout:      layout,
+		Sections:    sections,
+		Title:       title,
+		Description: fmt.Sprintf("%s page", title),
+	}
+}
+
+// buildPageConfigData creates ConfigData for page TOML.
+func buildPageConfigData(input types.ScaffoldPageInput) generator.ConfigData {
+	title := utils.ToLabel(input.PageName)
+
+	content := map[string]interface{}{
+		"title":       title,
+		"description": fmt.Sprintf("%s page", title),
+		"heading":     title,
+	}
+
+	return generator.ConfigData{
+		ConfigType: "page",
+		Name:       input.PageName,
+		Locale:     "en",
+		Content:    content,
+	}
+}

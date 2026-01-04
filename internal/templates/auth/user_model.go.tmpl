@@ -1,0 +1,71 @@
+package models
+
+import (
+	"time"
+
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
+)
+
+// UserRole represents user permission levels.
+type UserRole string
+
+const (
+	RoleUser  UserRole = "user"
+	RoleAdmin UserRole = "admin"
+)
+
+// User represents an authenticated user.
+type User struct {
+	ID           uint           `gorm:"primarykey" json:"id"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	Email        string         `gorm:"uniqueIndex;size:255;not null" json:"email"`
+	PasswordHash string         `gorm:"size:255;not null" json:"-"`
+	Name         string         `gorm:"size:255" json:"name"`
+	Role         UserRole       `gorm:"size:50;default:user" json:"role"`
+	Active       bool           `gorm:"default:true" json:"active"`
+	LastLoginAt  *time.Time     `json:"last_login_at,omitempty"`
+	AvatarURL    string         `gorm:"size:500" json:"avatar_url,omitempty"`
+}
+
+// SetPassword hashes and sets the user's password.
+func (u *User) SetPassword(password string) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	u.PasswordHash = string(hash)
+	return nil
+}
+
+// CheckPassword verifies the provided password against the hash.
+func (u *User) CheckPassword(password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password))
+	return err == nil
+}
+
+// IsAdmin checks if the user has admin role.
+func (u *User) IsAdmin() bool {
+	return u.Role == RoleAdmin
+}
+
+// UpdateLastLogin sets the last login timestamp.
+func (u *User) UpdateLastLogin() {
+	now := time.Now()
+	u.LastLoginAt = &now
+}
+
+// BeforeCreate is a GORM hook to validate user before creation.
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.Role == "" {
+		u.Role = RoleUser
+	}
+	return nil
+}
+
+// TableName returns the table name for the User model.
+func (User) TableName() string {
+	return "users"
+}

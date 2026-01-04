@@ -1,0 +1,99 @@
+package middleware
+
+import (
+	"context"
+	"net/http"
+
+	"[[.ModulePath]]/internal/models"
+	"[[.ModulePath]]/internal/services/auth"
+)
+
+// ContextKey is a type for context keys.
+type ContextKey string
+
+const (
+	// UserContextKey is the key for the user in the request context.
+	UserContextKey ContextKey = "user"
+	// SessionContextKey is the key for the session in the request context.
+	SessionContextKey ContextKey = "session"
+)
+
+// AuthMiddleware handles authentication for protected routes.
+type AuthMiddleware struct {
+	authService *auth.Service
+}
+
+// NewAuthMiddleware creates a new AuthMiddleware.
+func NewAuthMiddleware(authService *auth.Service) *AuthMiddleware {
+	return &AuthMiddleware{authService: authService}
+}
+
+// RequireAuth middleware ensures the user is authenticated.
+func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, err := m.authService.GetUserFromSession(r)
+		if err != nil || user == nil {
+			// Check if HTMX request
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Redirect", "/login")
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		// Add user to context
+		ctx := context.WithValue(r.Context(), UserContextKey, user)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// RequireAdmin middleware ensures the user is an admin.
+func (m *AuthMiddleware) RequireAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := GetUserFromContext(r.Context())
+		if user == nil || !user.IsAdmin() {
+			if r.Header.Get("HX-Request") == "true" {
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte("Access denied"))
+				return
+			}
+			http.Error(w, "Access denied", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// OptionalAuth middleware loads user if authenticated but doesn't require it.
+func (m *AuthMiddleware) OptionalAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, _ := m.authService.GetUserFromSession(r)
+		if user != nil {
+			ctx := context.WithValue(r.Context(), UserContextKey, user)
+			r = r.WithContext(ctx)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// GetUserFromContext retrieves the user from the request context.
+func GetUserFromContext(ctx context.Context) *models.User {
+	user, ok := ctx.Value(UserContextKey).(*models.User)
+	if !ok {
+		return nil
+	}
+	return user
+}
+
+// IsAuthenticated checks if there is an authenticated user in the context.
+func IsAuthenticated(ctx context.Context) bool {
+	return GetUserFromContext(ctx) != nil
+}
+
+// IsAdmin checks if the authenticated user is an admin.
+func IsAdmin(ctx context.Context) bool {
+	user := GetUserFromContext(ctx)
+	return user != nil && user.IsAdmin()
+}

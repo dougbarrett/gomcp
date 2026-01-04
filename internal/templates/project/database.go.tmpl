@@ -1,0 +1,68 @@
+package database
+
+import (
+	"log"
+
+	"[[.ModulePath]]/internal/config"
+	"[[.ModulePath]]/internal/models"
+[[- if eq .DatabaseType "sqlite"]]
+	"gorm.io/driver/sqlite"
+[[- else if eq .DatabaseType "postgres"]]
+	"gorm.io/driver/postgres"
+[[- else if eq .DatabaseType "mysql"]]
+	"gorm.io/driver/mysql"
+[[- end]]
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+)
+
+// Connect establishes a database connection and runs migrations.
+func Connect(cfg *config.Config) *gorm.DB {
+	var dialector gorm.Dialector
+
+	switch cfg.Database.Driver {
+[[- if eq .DatabaseType "sqlite"]]
+	case "sqlite":
+		dialector = sqlite.Open(cfg.Database.DSN)
+[[- else if eq .DatabaseType "postgres"]]
+	case "postgres":
+		dialector = postgres.Open(cfg.Database.DSN)
+[[- else if eq .DatabaseType "mysql"]]
+	case "mysql":
+		dialector = mysql.Open(cfg.Database.DSN)
+[[- end]]
+	default:
+[[- if eq .DatabaseType "sqlite"]]
+		dialector = sqlite.Open(cfg.Database.DSN)
+[[- else if eq .DatabaseType "postgres"]]
+		dialector = postgres.Open(cfg.Database.DSN)
+[[- else if eq .DatabaseType "mysql"]]
+		dialector = mysql.Open(cfg.Database.DSN)
+[[- end]]
+	}
+
+	logLevel := logger.Silent
+	if cfg.Server.Debug {
+		logLevel = logger.Info
+	}
+
+	db, err := gorm.Open(dialector, &gorm.Config{
+		Logger: logger.Default.LogMode(logLevel),
+	})
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	// Run migrations
+	if err := db.AutoMigrate(
+		// MCP:MODELS:START
+		// MCP:MODELS:END
+	); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	// Ensure base model is used
+	_ = models.BaseModel{}
+
+	return db
+}

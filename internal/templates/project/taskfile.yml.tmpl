@@ -1,0 +1,85 @@
+version: "3"
+
+vars:
+  TAILWIND_CMD:
+    sh: command -v tailwindcss >/dev/null 2>&1 && echo "tailwindcss" || echo "npx tailwindcss@latest"
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  templ:
+    desc: Generate templ files with hot reload
+    cmds:
+      - templ generate --watch --proxy="http://localhost:8080" --cmd="go run ./cmd/web"
+
+  tailwind:
+    desc: Watch Tailwind CSS changes
+    cmds:
+      - "{{.TAILWIND_CMD}} -i ./assets/css/input.css -o ./assets/css/output.css --watch"
+
+  tailwind:build:
+    desc: Build Tailwind CSS for production
+    cmds:
+      - "{{.TAILWIND_CMD}} -i ./assets/css/input.css -o ./assets/css/output.css --minify"
+
+  dev:
+    desc: Start development server with hot reload
+    deps: [templ, tailwind]
+
+  build:
+    desc: Build for production
+    cmds:
+      - templ generate
+      - task: tailwind:build
+      - go build -o bin/server ./cmd/web
+
+  run:
+    desc: Run the server
+    cmds:
+      - go run ./cmd/web
+
+  seed:
+    desc: Seed the database
+    cmds:
+      - go run ./cmd/seed
+
+  seed:clear:
+    desc: Clear and reseed the database
+    cmds:
+      - go run ./cmd/seed -clear
+
+  generate:
+    desc: Generate all templ files
+    cmds:
+      - templ generate
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+
+  lint:
+    desc: Run linter
+    cmds:
+      - golangci-lint run
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf bin/
+      - rm -rf tmp/
+      - rm -f assets/css/output.css
+
+  deps:
+    desc: Download dependencies
+    cmds:
+      - go mod download
+      - go mod tidy
+
+  templui:add:
+    desc: Add a templui component (usage - task templui:add -- button)
+    cmds:
+      - templui add {{.CLI_ARGS}}

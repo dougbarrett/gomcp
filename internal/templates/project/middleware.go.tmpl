@@ -1,0 +1,52 @@
+package middleware
+
+import (
+	"net/http"
+)
+
+// CORS adds CORS headers to responses.
+func CORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, HX-Request, HX-Target, HX-Trigger")
+		w.Header().Set("Access-Control-Expose-Headers", "HX-Redirect, HX-Trigger, HX-Refresh")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// HTMLContentType sets the Content-Type header to text/html.
+func HTMLContentType(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		next.ServeHTTP(w, r)
+	})
+}
+
+// IsHTMX returns true if the request is an HTMX request.
+func IsHTMX(r *http.Request) bool {
+	return r.Header.Get("HX-Request") == "true"
+}
+
+// HTMXRedirect sends an HTMX redirect response.
+func HTMXRedirect(w http.ResponseWriter, url string) {
+	w.Header().Set("HX-Redirect", url)
+	w.WriteHeader(http.StatusOK)
+}
+
+// HTMXRefresh triggers a full page refresh.
+func HTMXRefresh(w http.ResponseWriter) {
+	w.Header().Set("HX-Refresh", "true")
+	w.WriteHeader(http.StatusOK)
+}
+
+// HTMXTrigger sends a custom event to HTMX.
+func HTMXTrigger(w http.ResponseWriter, event string) {
+	w.Header().Set("HX-Trigger", event)
+}

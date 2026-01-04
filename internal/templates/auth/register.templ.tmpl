@@ -1,0 +1,154 @@
+package views
+
+import (
+	"github.com/templui/templui/components/button"
+	"github.com/templui/templui/components/card"
+	"github.com/templui/templui/components/input"
+	"github.com/templui/templui/components/label"
+)
+
+// RegisterProps contains props for the register page.
+type RegisterProps struct {
+	Name   string
+	Email  string
+	Error  string
+	Errors map[string]string
+}
+
+// RegisterPage renders the registration page.
+templ RegisterPage(props RegisterProps) {
+	@AuthLayout("Create Account") {
+		@card.Card(card.Props{Class: "w-full max-w-md"}) {
+			@card.Header(card.HeaderProps{Class: "text-center"}) {
+				<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Create an account</h1>
+				<p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+					Get started with your free account
+				</p>
+			}
+			@card.Content(card.ContentProps{}) {
+				if props.Error != "" {
+					<div class="mb-4 p-3 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-lg">
+						<p class="text-sm text-red-600 dark:text-red-400">{ props.Error }</p>
+					</div>
+				}
+				<form hx-post="/register" hx-target="body" class="space-y-4">
+					<!-- Name -->
+					<div class="space-y-2">
+						@label.Label(label.Props{For: "name"}) {
+							Full Name
+						}
+						@input.Input(input.Props{
+							ID:          "name",
+							Name:        "name",
+							Type:        "text",
+							Placeholder: "John Doe",
+							Required:    true,
+							Attributes: templ.Attributes{
+								"value":        props.Name,
+								"autocomplete": "name",
+							},
+						})
+						if err, ok := props.Errors["name"]; ok {
+							<p class="text-sm text-red-500">{ err }</p>
+						}
+					</div>
+
+					<!-- Email -->
+					<div class="space-y-2">
+						@label.Label(label.Props{For: "email"}) {
+							Email
+						}
+						@input.Input(input.Props{
+							ID:          "email",
+							Name:        "email",
+							Type:        "email",
+							Placeholder: "you@example.com",
+							Required:    true,
+							Attributes: templ.Attributes{
+								"value":        props.Email,
+								"autocomplete": "email",
+							},
+						})
+						if err, ok := props.Errors["email"]; ok {
+							<p class="text-sm text-red-500">{ err }</p>
+						}
+					</div>
+
+					<!-- Password -->
+					<div class="space-y-2">
+						@label.Label(label.Props{For: "password"}) {
+							Password
+						}
+						@input.Input(input.Props{
+							ID:          "password",
+							Name:        "password",
+							Type:        "password",
+							Placeholder: "Create a password",
+							Required:    true,
+							Attributes: templ.Attributes{
+								"autocomplete": "new-password",
+								"minlength":    "8",
+							},
+						})
+						<p class="text-xs text-gray-500 dark:text-gray-400">
+							Must be at least 8 characters
+						</p>
+						if err, ok := props.Errors["password"]; ok {
+							<p class="text-sm text-red-500">{ err }</p>
+						}
+					</div>
+
+					<!-- Confirm Password -->
+					<div class="space-y-2">
+						@label.Label(label.Props{For: "password_confirm"}) {
+							Confirm Password
+						}
+						@input.Input(input.Props{
+							ID:          "password_confirm",
+							Name:        "password_confirm",
+							Type:        "password",
+							Placeholder: "Confirm your password",
+							Required:    true,
+							Attributes: templ.Attributes{
+								"autocomplete": "new-password",
+							},
+						})
+						if err, ok := props.Errors["password_confirm"]; ok {
+							<p class="text-sm text-red-500">{ err }</p>
+						}
+					</div>
+
+					<!-- Terms -->
+					<p class="text-xs text-gray-500 dark:text-gray-400">
+						By creating an account, you agree to our
+						<a href="/terms" class="text-primary-600 hover:text-primary-500">Terms of Service</a>
+						and
+						<a href="/privacy" class="text-primary-600 hover:text-primary-500">Privacy Policy</a>.
+					</p>
+
+					<!-- Submit -->
+					@button.Button(button.Props{
+						Type:    "submit",
+						Variant: "default",
+						Class:   "w-full",
+					}) {
+						Create account
+					}
+				</form>
+			}
+			@card.Footer(card.FooterProps{Class: "text-center"}) {
+				<p class="text-sm text-gray-600 dark:text-gray-400">
+					Already have an account?
+					<a href="/login" class="text-primary-600 hover:text-primary-500 font-medium">
+						Sign in
+					</a>
+				</p>
+			}
+		}
+	}
+}
+
+// RegisterForm renders just the registration form for HTMX updates.
+templ RegisterForm(props RegisterProps) {
+	@RegisterPage(props)
+}

@@ -1,0 +1,238 @@
+package views
+
+import (
+	"[[.ModulePath]]/internal/models"
+	"[[.ModulePath]]/internal/services/[[.PackageName]]"
+	"github.com/templui/templui/components/button"
+	"github.com/templui/templui/components/card"
+	"github.com/templui/templui/components/icon"
+	"github.com/templui/templui/components/input"
+	"github.com/templui/templui/components/textarea"
+	"github.com/templui/templui/components/checkbox"
+	"github.com/templui/templui/components/label"
+	"github.com/templui/templui/components/select_box"
+)
+
+// [[.ModelName]]FormProps contains props for the [[.ModelName]] form.
+type [[.ModelName]]FormProps struct {
+	Item       *models.[[.ModelName]] // nil for create, populated for edit
+	Errors     map[string]string
+	IsEdit     bool
+}
+
+// [[.ModelName]]Form renders the create/edit form for a [[.ModelName]].
+templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+		 _="on click if event.target === me remove me">
+		@card.Card(card.Props{Class: "w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"}) {
+			@card.Header(card.HeaderProps{}) {
+				<div class="flex items-center justify-between">
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+						if props.IsEdit {
+							Edit [[.ModelName]]
+						} else {
+							Create [[.ModelName]]
+						}
+					</h2>
+					@button.Button(button.Props{
+						Variant: "ghost",
+						Size:    "sm",
+						Attributes: templ.Attributes{
+							"_": "on click remove closest .fixed",
+						},
+					}) {
+						@icon.Icon(icon.Props{Name: "x", Class: "h-4 w-4"})
+					}
+				</div>
+			}
+			@card.Content(card.ContentProps{}) {
+				<form
+					if props.IsEdit {
+						hx-put={ fmt.Sprintf("[[.URLPath]]/%d", props.Item.ID) }
+					} else {
+						hx-post="[[.URLPath]]"
+					}
+					hx-target="#main-content"
+					hx-swap="innerHTML"
+					class="space-y-4"
+				>
+					[[- range .Fields]]
+					<!-- [[.Label]] Field -->
+					<div class="space-y-2">
+						@label.Label(label.Props{For: "[[.JSONName]]"}) {
+							[[.Label]]
+							[[- if .Required]]
+							<span class="text-red-500">*</span>
+							[[- end]]
+						}
+						[[- if eq .FormType "textarea"]]
+						@textarea.Textarea(textarea.Props{
+							ID:          "[[.JSONName]]",
+							Name:        "[[.JSONName]]",
+							Placeholder: "Enter [[.Label | toLower]]",
+							Rows:        4,
+							[[- if .Required]]
+							Required:    true,
+							[[- end]]
+							Attributes: templ.Attributes{
+								if props.Item != nil {
+									"value": props.Item.[[.Name]],
+								}
+							},
+						})
+						[[- else if eq .FormType "checkbox"]]
+						<div class="flex items-center gap-2">
+							@checkbox.Checkbox(checkbox.Props{
+								ID:   "[[.JSONName]]",
+								Name: "[[.JSONName]]",
+								Attributes: templ.Attributes{
+									if props.Item != nil && props.Item.[[.Name]] {
+										"checked": "checked",
+									}
+								},
+							})
+						</div>
+						[[- else if eq .FormType "select"]]
+						@select_box.SelectBox(select_box.Props{
+							ID:   "[[.JSONName]]",
+							Name: "[[.JSONName]]",
+							[[- if .Required]]
+							Required: true,
+							[[- end]]
+						}) {
+							<option value="">Select [[.Label | toLower]]</option>
+							<!-- Add your options here -->
+						}
+						[[- else if eq .FormType "number"]]
+						@input.Input(input.Props{
+							ID:          "[[.JSONName]]",
+							Name:        "[[.JSONName]]",
+							Type:        "number",
+							Placeholder: "Enter [[.Label | toLower]]",
+							[[- if .Required]]
+							Required:    true,
+							[[- end]]
+							Attributes: templ.Attributes{
+								if props.Item != nil {
+									"value": fmt.Sprintf("%v", props.Item.[[.Name]]),
+								}
+							},
+						})
+						[[- else if eq .FormType "email"]]
+						@input.Input(input.Props{
+							ID:          "[[.JSONName]]",
+							Name:        "[[.JSONName]]",
+							Type:        "email",
+							Placeholder: "Enter [[.Label | toLower]]",
+							[[- if .Required]]
+							Required:    true,
+							[[- end]]
+							Attributes: templ.Attributes{
+								if props.Item != nil {
+									"value": props.Item.[[.Name]],
+								}
+							},
+						})
+						[[- else if eq .FormType "password"]]
+						@input.Input(input.Props{
+							ID:          "[[.JSONName]]",
+							Name:        "[[.JSONName]]",
+							Type:        "password",
+							Placeholder: "Enter [[.Label | toLower]]",
+							[[- if .Required]]
+							Required:    true,
+							[[- end]]
+						})
+						[[- else if eq .FormType "date"]]
+						@input.Input(input.Props{
+							ID:          "[[.JSONName]]",
+							Name:        "[[.JSONName]]",
+							Type:        "date",
+							[[- if .Required]]
+							Required:    true,
+							[[- end]]
+							Attributes: templ.Attributes{
+								if props.Item != nil && props.Item.[[.Name]] != nil {
+									"value": props.Item.[[.Name]].Format("2006-01-02"),
+								}
+							},
+						})
+						[[- else if eq .FormType "datetime"]]
+						@input.Input(input.Props{
+							ID:          "[[.JSONName]]",
+							Name:        "[[.JSONName]]",
+							Type:        "datetime-local",
+							[[- if .Required]]
+							Required:    true,
+							[[- end]]
+							Attributes: templ.Attributes{
+								if props.Item != nil {
+									"value": props.Item.[[.Name]].Format("2006-01-02T15:04"),
+								}
+							},
+						})
+						[[- else]]
+						@input.Input(input.Props{
+							ID:          "[[.JSONName]]",
+							Name:        "[[.JSONName]]",
+							Type:        "text",
+							Placeholder: "Enter [[.Label | toLower]]",
+							[[- if .Required]]
+							Required:    true,
+							[[- end]]
+							Attributes: templ.Attributes{
+								if props.Item != nil {
+									"value": [[if eq .Type "string"]]props.Item.[[.Name]][[else]]fmt.Sprintf("%v", props.Item.[[.Name]])[[end]],
+								}
+							},
+						})
+						[[- end]]
+						if err, ok := props.Errors["[[.JSONName]]"]; ok {
+							<p class="text-sm text-red-500">{ err }</p>
+						}
+					</div>
+					[[- end]]
+				}
+			}
+			@card.Footer(card.FooterProps{Class: "flex justify-end gap-3"}) {
+				@button.Button(button.Props{
+					Variant: "outline",
+					Attributes: templ.Attributes{
+						"_": "on click remove closest .fixed",
+					},
+				}) {
+					Cancel
+				}
+				@button.Button(button.Props{
+					Type:    "submit",
+					Variant: "default",
+				}) {
+					if props.IsEdit {
+						Save Changes
+					} else {
+						Create [[.ModelName]]
+					}
+				}
+			}
+				</form>
+		}
+	</div>
+}
+
+// [[.ModelName]]FormCreate renders the create form.
+templ [[.ModelName]]FormCreate(errors map[string]string) {
+	@[[.ModelName]]Form([[.ModelName]]FormProps{
+		Item:   nil,
+		Errors: errors,
+		IsEdit: false,
+	})
+}
+
+// [[.ModelName]]FormEdit renders the edit form.
+templ [[.ModelName]]FormEdit(item models.[[.ModelName]], errors map[string]string) {
+	@[[.ModelName]]Form([[.ModelName]]FormProps{
+		Item:   &item,
+		Errors: errors,
+		IsEdit: true,
+	})
+}

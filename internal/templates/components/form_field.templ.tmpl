@@ -1,0 +1,265 @@
+package components
+
+import (
+	"github.com/templui/templui/components/input"
+	"github.com/templui/templui/components/textarea"
+	"github.com/templui/templui/components/checkbox"
+	"github.com/templui/templui/components/select_box"
+	"github.com/templui/templui/components/label"
+)
+
+// FormFieldProps contains properties for a form field.
+type FormFieldProps struct {
+	ID          string
+	Name        string
+	Label       string
+	Type        string // text, email, password, number, textarea, checkbox, select, date, datetime
+	Placeholder string
+	Value       string
+	Required    bool
+	Disabled    bool
+	Error       string
+	HelpText    string
+	Options     []SelectOption // For select fields
+	Rows        int            // For textarea
+	Min         string         // For number/date
+	Max         string         // For number/date
+	Step        string         // For number
+	Pattern     string         // For pattern validation
+	Class       string
+}
+
+// SelectOption represents an option in a select field.
+type SelectOption struct {
+	Value    string
+	Label    string
+	Selected bool
+	Disabled bool
+}
+
+// FormField renders a form field with label and error handling.
+templ FormField(props FormFieldProps) {
+	<div class={ "space-y-2 " + props.Class }>
+		if props.Label != "" {
+			@label.Label(label.Props{For: props.ID}) {
+				{ props.Label }
+				if props.Required {
+					<span class="text-red-500 ml-1">*</span>
+				}
+			}
+		}
+
+		switch props.Type {
+		case "textarea":
+			@FormTextarea(props)
+		case "checkbox":
+			@FormCheckbox(props)
+		case "select":
+			@FormSelect(props)
+		case "email":
+			@FormInput(props, "email")
+		case "password":
+			@FormInput(props, "password")
+		case "number":
+			@FormInput(props, "number")
+		case "date":
+			@FormInput(props, "date")
+		case "datetime":
+			@FormInput(props, "datetime-local")
+		case "time":
+			@FormInput(props, "time")
+		case "tel":
+			@FormInput(props, "tel")
+		case "url":
+			@FormInput(props, "url")
+		case "hidden":
+			<input type="hidden" id={ props.ID } name={ props.Name } value={ props.Value }/>
+		default:
+			@FormInput(props, "text")
+		}
+
+		if props.Error != "" {
+			<p class="text-sm text-red-500">{ props.Error }</p>
+		}
+
+		if props.HelpText != "" && props.Error == "" {
+			<p class="text-sm text-gray-500 dark:text-gray-400">{ props.HelpText }</p>
+		}
+	</div>
+}
+
+// FormInput renders an input field.
+templ FormInput(props FormFieldProps, inputType string) {
+	@input.Input(input.Props{
+		ID:          props.ID,
+		Name:        props.Name,
+		Type:        inputType,
+		Placeholder: props.Placeholder,
+		Required:    props.Required,
+		Disabled:    props.Disabled,
+		Class:       inputErrorClass(props.Error),
+		Attributes: templ.Attributes{
+			"value":   props.Value,
+			"min":     props.Min,
+			"max":     props.Max,
+			"step":    props.Step,
+			"pattern": props.Pattern,
+		},
+	})
+}
+
+// FormTextarea renders a textarea field.
+templ FormTextarea(props FormFieldProps) {
+	@textarea.Textarea(textarea.Props{
+		ID:          props.ID,
+		Name:        props.Name,
+		Placeholder: props.Placeholder,
+		Required:    props.Required,
+		Disabled:    props.Disabled,
+		Rows:        getRows(props.Rows),
+		Class:       inputErrorClass(props.Error),
+	}) {
+		{ props.Value }
+	}
+}
+
+// FormCheckbox renders a checkbox field.
+templ FormCheckbox(props FormFieldProps) {
+	<div class="flex items-center gap-2">
+		@checkbox.Checkbox(checkbox.Props{
+			ID:       props.ID,
+			Name:     props.Name,
+			Disabled: props.Disabled,
+			Attributes: templ.Attributes{
+				"checked": props.Value == "true" || props.Value == "1",
+			},
+		})
+		if props.Label != "" {
+			<span class="text-sm text-gray-700 dark:text-gray-300">{ props.Label }</span>
+		}
+	</div>
+}
+
+// FormSelect renders a select field.
+templ FormSelect(props FormFieldProps) {
+	@select_box.SelectBox(select_box.Props{
+		ID:       props.ID,
+		Name:     props.Name,
+		Required: props.Required,
+		Disabled: props.Disabled,
+		Class:    inputErrorClass(props.Error),
+	}) {
+		if props.Placeholder != "" {
+			<option value="" disabled selected>{ props.Placeholder }</option>
+		}
+		for _, opt := range props.Options {
+			<option
+				value={ opt.Value }
+				if opt.Selected || opt.Value == props.Value {
+					selected
+				}
+				if opt.Disabled {
+					disabled
+				}
+			>
+				{ opt.Label }
+			</option>
+		}
+	}
+}
+
+// FormGroup groups multiple form fields.
+templ FormGroup(legend string) {
+	<fieldset class="space-y-4">
+		if legend != "" {
+			<legend class="text-lg font-medium text-gray-900 dark:text-white">{ legend }</legend>
+		}
+		{ children... }
+	</fieldset>
+}
+
+// FormRow renders form fields in a row.
+templ FormRow() {
+	<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+		{ children... }
+	</div>
+}
+
+// FormActions renders form action buttons.
+templ FormActions() {
+	<div class="flex justify-end gap-3 pt-4">
+		{ children... }
+	</div>
+}
+
+// inputErrorClass returns the appropriate class for error state.
+func inputErrorClass(err string) string {
+	if err != "" {
+		return "border-red-500 focus:ring-red-500"
+	}
+	return ""
+}
+
+// getRows returns the number of rows for textarea.
+func getRows(rows int) int {
+	if rows <= 0 {
+		return 4
+	}
+	return rows
+}
+
+// FormFieldText is a convenience wrapper for text input.
+templ FormFieldText(id, name, label, value, placeholder string, required bool, err string) {
+	@FormField(FormFieldProps{
+		ID:          id,
+		Name:        name,
+		Label:       label,
+		Type:        "text",
+		Value:       value,
+		Placeholder: placeholder,
+		Required:    required,
+		Error:       err,
+	})
+}
+
+// FormFieldEmail is a convenience wrapper for email input.
+templ FormFieldEmail(id, name, label, value string, required bool, err string) {
+	@FormField(FormFieldProps{
+		ID:          id,
+		Name:        name,
+		Label:       label,
+		Type:        "email",
+		Value:       value,
+		Placeholder: "you@example.com",
+		Required:    required,
+		Error:       err,
+	})
+}
+
+// FormFieldPassword is a convenience wrapper for password input.
+templ FormFieldPassword(id, name, label string, required bool, err string) {
+	@FormField(FormFieldProps{
+		ID:          id,
+		Name:        name,
+		Label:       label,
+		Type:        "password",
+		Placeholder: "Enter password",
+		Required:    required,
+		Error:       err,
+	})
+}
+
+// FormFieldNumber is a convenience wrapper for number input.
+templ FormFieldNumber(id, name, label, value, min, max string, required bool, err string) {
+	@FormField(FormFieldProps{
+		ID:       id,
+		Name:     name,
+		Label:    label,
+		Type:     "number",
+		Value:    value,
+		Min:      min,
+		Max:      max,
+		Required: required,
+		Error:    err,
+	})
+}

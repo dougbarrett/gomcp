@@ -1,0 +1,117 @@
+package [[.PackageName]]
+
+import (
+	"context"
+
+	"[[.ModulePath]]/internal/models"
+	"gorm.io/gorm"
+)
+
+// Repository defines the interface for [[.ModelName]] data operations.
+type Repository interface {
+	Create(ctx context.Context, [[.VariableName]] *models.[[.ModelName]]) error
+	FindByID(ctx context.Context, id uint) (*models.[[.ModelName]], error)
+	FindAll(ctx context.Context, opts ...QueryOption) ([]models.[[.ModelName]], int64, error)
+	Update(ctx context.Context, [[.VariableName]] *models.[[.ModelName]]) error
+	Delete(ctx context.Context, id uint) error
+}
+
+// QueryOption is a function that modifies a query.
+type QueryOption func(*gorm.DB) *gorm.DB
+
+// WithPagination adds pagination to the query.
+func WithPagination(page, pageSize int) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if page < 1 {
+			page = 1
+		}
+		if pageSize < 1 {
+			pageSize = 10
+		}
+		offset := (page - 1) * pageSize
+		return db.Offset(offset).Limit(pageSize)
+	}
+}
+
+// WithSearch adds a search filter to the query.
+func WithSearch(field, search string) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if search == "" {
+			return db
+		}
+		return db.Where(field+" LIKE ?", "%"+search+"%")
+	}
+}
+
+// WithOrder adds ordering to the query.
+func WithOrder(field string, desc bool) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if field == "" {
+			return db
+		}
+		order := field
+		if desc {
+			order += " DESC"
+		}
+		return db.Order(order)
+	}
+}
+
+// repository implements Repository.
+type repository struct {
+	db *gorm.DB
+}
+
+// NewRepository creates a new [[.ModelName]] repository.
+func NewRepository(db *gorm.DB) Repository {
+	return &repository{db: db}
+}
+
+// Create creates a new [[.ModelName]].
+func (r *repository) Create(ctx context.Context, [[.VariableName]] *models.[[.ModelName]]) error {
+	return r.db.WithContext(ctx).Create([[.VariableName]]).Error
+}
+
+// FindByID finds a [[.ModelName]] by ID.
+func (r *repository) FindByID(ctx context.Context, id uint) (*models.[[.ModelName]], error) {
+	var [[.VariableName]] models.[[.ModelName]]
+	err := r.db.WithContext(ctx).First(&[[.VariableName]], id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &[[.VariableName]], nil
+}
+
+// FindAll finds all [[pluralize .ModelName]] with optional query options.
+func (r *repository) FindAll(ctx context.Context, opts ...QueryOption) ([]models.[[.ModelName]], int64, error) {
+	var [[pluralize .VariableName]] []models.[[.ModelName]]
+	var total int64
+
+	db := r.db.WithContext(ctx).Model(&models.[[.ModelName]]{})
+
+	// Count total before pagination
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Apply query options
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	if err := db.Find(&[[pluralize .VariableName]]).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return [[pluralize .VariableName]], total, nil
+}
+
+// Update updates a [[.ModelName]].
+func (r *repository) Update(ctx context.Context, [[.VariableName]] *models.[[.ModelName]]) error {
+	return r.db.WithContext(ctx).Save([[.VariableName]]).Error
+}
+
+// Delete deletes a [[.ModelName]] by ID.
+func (r *repository) Delete(ctx context.Context, id uint) error {
+	return r.db.WithContext(ctx).Delete(&models.[[.ModelName]]{}, id).Error
+}

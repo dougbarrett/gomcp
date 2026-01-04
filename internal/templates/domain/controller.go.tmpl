@@ -1,0 +1,226 @@
+package [[.PackageName]]
+
+import (
+	"encoding/json"
+	"net/http"
+	"strconv"
+
+	"[[.ModulePath]]/internal/web"
+	[[- if .WithCrudViews]]
+	"[[.ModulePath]]/internal/web/[[.PackageName]]/views"
+	[[- end]]
+	"github.com/a-h/templ"
+	"github.com/go-chi/chi/v5"
+)
+
+// Controller handles HTTP requests for [[pluralize .ModelName]].
+type Controller struct {
+	service Service
+}
+
+// NewController creates a new [[.ModelName]] controller.
+func NewController(service Service) *Controller {
+	return &Controller{service: service}
+}
+
+// RegisterRoutes registers the [[.ModelName]] routes.
+func (c *Controller) RegisterRoutes(r chi.Router) {
+	r.Route("[[.URLPath]]", func(r chi.Router) {
+		r.Get("/", c.List)
+		r.Post("/", c.Create)
+		r.Get("/new", c.New)
+		r.Get("/{id}", c.Show)
+		r.Get("/{id}/edit", c.Edit)
+		r.Put("/{id}", c.Update)
+		r.Delete("/{id}", c.Delete)
+	})
+}
+
+// render renders a templ component to the response.
+func (c *Controller) render(w http.ResponseWriter, r *http.Request, component templ.Component) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	component.Render(r.Context(), w)
+}
+
+// List handles GET [[.URLPath]]
+func (c *Controller) List(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	// Parse query parameters
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	search := r.URL.Query().Get("search")
+	sortBy := r.URL.Query().Get("sort_by")
+	sortDesc := r.URL.Query().Get("sort_desc") == "true"
+
+	filter := List[[.ModelName]]Filter{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   search,
+		SortBy:   sortBy,
+		SortDesc: sortDesc,
+	}
+
+	result, err := c.service.List(r.Context(), filter)
+	if err != nil {
+		res.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	[[- if .WithCrudViews]]
+	// For HTMX partial requests, render just the list content
+	if res.IsHTMX() {
+		c.render(w, r, views.[[.ModelName]]ListPartial(result.Items, result.Page, result.TotalPages))
+		return
+	}
+
+	// For full page requests, render the complete list view
+	c.render(w, r, views.[[.ModelName]]List(result.Items, result.Page, result.TotalPages))
+	[[- else]]
+	// Return JSON response
+	res.JSON(http.StatusOK, result)
+	[[- end]]
+}
+
+// Show handles GET [[.URLPath]]/{id}
+func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		res.Error(http.StatusBadRequest, "Invalid ID")
+		return
+	}
+
+	[[.VariableName]], err := c.service.GetByID(r.Context(), uint(id))
+	if err != nil {
+		res.Error(http.StatusNotFound, err.Error())
+		return
+	}
+
+	[[- if .WithCrudViews]]
+	c.render(w, r, views.[[.ModelName]]Show([[.VariableName]]))
+	[[- else]]
+	res.JSON(http.StatusOK, To[[.ModelName]]Response([[.VariableName]]))
+	[[- end]]
+}
+
+// New handles GET [[.URLPath]]/new
+func (c *Controller) New(w http.ResponseWriter, r *http.Request) {
+	[[- if .WithCrudViews]]
+	c.render(w, r, views.[[.ModelName]]Form(nil, "create"))
+	[[- else]]
+	res := web.NewResponse(w, r)
+	res.JSON(http.StatusOK, map[string]string{"action": "new"})
+	[[- end]]
+}
+
+// Create handles POST [[.URLPath]]
+func (c *Controller) Create(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	var input Create[[.ModelName]]Input
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		res.Error(http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	[[.VariableName]], err := c.service.Create(r.Context(), input)
+	if err != nil {
+		res.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if res.IsHTMX() {
+		res.Success("[[.ModelName]] created successfully")
+		res.Redirect("[[.URLPath]]/" + strconv.FormatUint(uint64([[.VariableName]].ID), 10))
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	res.JSON(http.StatusCreated, To[[.ModelName]]Response([[.VariableName]]))
+}
+
+// Edit handles GET [[.URLPath]]/{id}/edit
+func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		res.Error(http.StatusBadRequest, "Invalid ID")
+		return
+	}
+
+	[[.VariableName]], err := c.service.GetByID(r.Context(), uint(id))
+	if err != nil {
+		res.Error(http.StatusNotFound, err.Error())
+		return
+	}
+
+	[[- if .WithCrudViews]]
+	c.render(w, r, views.[[.ModelName]]Form([[.VariableName]], "edit"))
+	[[- else]]
+	res.JSON(http.StatusOK, To[[.ModelName]]Response([[.VariableName]]))
+	[[- end]]
+}
+
+// Update handles PUT [[.URLPath]]/{id}
+func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		res.Error(http.StatusBadRequest, "Invalid ID")
+		return
+	}
+
+	var input Update[[.ModelName]]Input
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		res.Error(http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	[[.VariableName]], err := c.service.Update(r.Context(), uint(id), input)
+	if err != nil {
+		if err == Err[[.ModelName]]NotFound {
+			res.Error(http.StatusNotFound, err.Error())
+			return
+		}
+		res.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if res.IsHTMX() {
+		res.Success("[[.ModelName]] updated successfully")
+	}
+
+	res.JSON(http.StatusOK, To[[.ModelName]]Response([[.VariableName]]))
+}
+
+// Delete handles DELETE [[.URLPath]]/{id}
+func (c *Controller) Delete(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		res.Error(http.StatusBadRequest, "Invalid ID")
+		return
+	}
+
+	if err := c.service.Delete(r.Context(), uint(id)); err != nil {
+		if err == Err[[.ModelName]]NotFound {
+			res.Error(http.StatusNotFound, err.Error())
+			return
+		}
+		res.Error(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if res.IsHTMX() {
+		res.Success("[[.ModelName]] deleted successfully")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

@@ -1,0 +1,255 @@
+package auth
+
+import (
+	"context"
+	"encoding/gob"
+	"fmt"
+	"net/http"
+	"time"
+
+	"[[.ModulePath]]/internal/models"
+	"github.com/gorilla/sessions"
+)
+
+func init() {
+	// Register types for session encoding
+	gob.Register(uint(0))
+	gob.Register(time.Time{})
+}
+
+// SessionManager manages user sessions.
+type SessionManager struct {
+	store       sessions.Store
+	sessionName string
+	maxAge      int
+}
+
+// SessionConfig contains session configuration.
+type SessionConfig struct {
+	Secret      string
+	SessionName string
+	MaxAge      int  // in seconds
+	Secure      bool // HTTPS only
+	HttpOnly    bool
+	SameSite    http.SameSite
+}
+
+// DefaultSessionConfig returns sensible session defaults.
+func DefaultSessionConfig(secret string) SessionConfig {
+	return SessionConfig{
+		Secret:      secret,
+		SessionName: "[[.ProjectName]]-session",
+		MaxAge:      86400 * 7, // 7 days
+		Secure:      false,     // Set true in production
+		HttpOnly:    true,
+		SameSite:    http.SameSiteLaxMode,
+	}
+}
+
+// NewSessionManager creates a new SessionManager.
+func NewSessionManager(config SessionConfig) *SessionManager {
+	store := sessions.NewCookieStore([]byte(config.Secret))
+	store.Options = &sessions.Options{
+		Path:     "/",
+		MaxAge:   config.MaxAge,
+		HttpOnly: config.HttpOnly,
+		Secure:   config.Secure,
+		SameSite: config.SameSite,
+	}
+
+	return &SessionManager{
+		store:       store,
+		sessionName: config.SessionName,
+		maxAge:      config.MaxAge,
+	}
+}
+
+// SessionData contains data stored in the session.
+type SessionData struct {
+	UserID      uint
+	Email       string
+	Role        models.UserRole
+	CreatedAt   time.Time
+	LastAccess  time.Time
+	FlashErrors []string
+	FlashInfo   []string
+}
+
+// GetSession retrieves the session from the request.
+func (m *SessionManager) GetSession(r *http.Request) (*sessions.Session, error) {
+	return m.store.Get(r, m.sessionName)
+}
+
+// GetSessionData retrieves typed session data.
+func (m *SessionManager) GetSessionData(r *http.Request) (*SessionData, error) {
+	session, err := m.GetSession(r)
+	if err != nil {
+		return nil, err
+	}
+
+	data := &SessionData{}
+	if userID, ok := session.Values["user_id"].(uint); ok {
+		data.UserID = userID
+	}
+	if email, ok := session.Values["email"].(string); ok {
+		data.Email = email
+	}
+	if role, ok := session.Values["role"].(models.UserRole); ok {
+		data.Role = role
+	}
+	if createdAt, ok := session.Values["created_at"].(time.Time); ok {
+		data.CreatedAt = createdAt
+	}
+	if lastAccess, ok := session.Values["last_access"].(time.Time); ok {
+		data.LastAccess = lastAccess
+	}
+
+	return data, nil
+}
+
+// SetUser stores user information in the session.
+func (m *SessionManager) SetUser(w http.ResponseWriter, r *http.Request, user *models.User) error {
+	session, err := m.GetSession(r)
+	if err != nil {
+		return fmt.Errorf("failed to get session: %w", err)
+	}
+
+	session.Values["user_id"] = user.ID
+	session.Values["email"] = user.Email
+	session.Values["role"] = user.Role
+	session.Values["created_at"] = time.Now()
+	session.Values["last_access"] = time.Now()
+
+	return session.Save(r, w)
+}
+
+// ClearUser removes user information from the session.
+func (m *SessionManager) ClearUser(w http.ResponseWriter, r *http.Request) error {
+	session, err := m.GetSession(r)
+	if err != nil {
+		return fmt.Errorf("failed to get session: %w", err)
+	}
+
+	session.Options.MaxAge = -1
+	return session.Save(r, w)
+}
+
+// GetUserID returns the user ID from the session.
+func (m *SessionManager) GetUserID(r *http.Request) (uint, error) {
+	session, err := m.GetSession(r)
+	if err != nil {
+		return 0, err
+	}
+
+	userID, ok := session.Values["user_id"].(uint)
+	if !ok || userID == 0 {
+		return 0, fmt.Errorf("no user in session")
+	}
+
+	return userID, nil
+}
+
+// IsAuthenticated checks if there is a valid user session.
+func (m *SessionManager) IsAuthenticated(r *http.Request) bool {
+	userID, err := m.GetUserID(r)
+	return err == nil && userID > 0
+}
+
+// RefreshSession updates the last access time.
+func (m *SessionManager) RefreshSession(w http.ResponseWriter, r *http.Request) error {
+	session, err := m.GetSession(r)
+	if err != nil {
+		return err
+	}
+
+	session.Values["last_access"] = time.Now()
+	return session.Save(r, w)
+}
+
+// AddFlashError adds an error flash message.
+func (m *SessionManager) AddFlashError(w http.ResponseWriter, r *http.Request, message string) error {
+	session, err := m.GetSession(r)
+	if err != nil {
+		return err
+	}
+
+	session.AddFlash(message, "error")
+	return session.Save(r, w)
+}
+
+// AddFlashInfo adds an info flash message.
+func (m *SessionManager) AddFlashInfo(w http.ResponseWriter, r *http.Request, message string) error {
+	session, err := m.GetSession(r)
+	if err != nil {
+		return err
+	}
+
+	session.AddFlash(message, "info")
+	return session.Save(r, w)
+}
+
+// GetFlashErrors retrieves and clears error flash messages.
+func (m *SessionManager) GetFlashErrors(w http.ResponseWriter, r *http.Request) []string {
+	session, err := m.GetSession(r)
+	if err != nil {
+		return nil
+	}
+
+	flashes := session.Flashes("error")
+	session.Save(r, w)
+
+	var messages []string
+	for _, flash := range flashes {
+		if msg, ok := flash.(string); ok {
+			messages = append(messages, msg)
+		}
+	}
+	return messages
+}
+
+// GetFlashInfo retrieves and clears info flash messages.
+func (m *SessionManager) GetFlashInfo(w http.ResponseWriter, r *http.Request) []string {
+	session, err := m.GetSession(r)
+	if err != nil {
+		return nil
+	}
+
+	flashes := session.Flashes("info")
+	session.Save(r, w)
+
+	var messages []string
+	for _, flash := range flashes {
+		if msg, ok := flash.(string); ok {
+			messages = append(messages, msg)
+		}
+	}
+	return messages
+}
+
+// SessionMiddleware refreshes session on each request.
+func (m *SessionManager) SessionMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if m.IsAuthenticated(r) {
+			m.RefreshSession(w, r)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// ContextWithSession adds session data to context.
+func (m *SessionManager) ContextWithSession(ctx context.Context, r *http.Request) context.Context {
+	data, err := m.GetSessionData(r)
+	if err != nil {
+		return ctx
+	}
+	return context.WithValue(ctx, "session", data)
+}
+
+// GetSessionFromContext retrieves session data from context.
+func GetSessionFromContext(ctx context.Context) *SessionData {
+	data, ok := ctx.Value("session").(*SessionData)
+	if !ok {
+		return nil
+	}
+	return data
+}

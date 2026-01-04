@@ -1,0 +1,39 @@
+package main
+
+import (
+	"context"
+	"flag"
+	"log"
+
+	"[[.ModulePath]]/internal/config"
+	"[[.ModulePath]]/internal/database"
+)
+
+func main() {
+	// Parse flags
+	clear := flag.Bool("clear", false, "Clear existing data before seeding")
+	flag.Parse()
+
+	// Load configuration
+	cfg := config.Load()
+
+	// Initialize database
+	db := database.Connect(cfg)
+
+	ctx := context.Background()
+
+	// Clear data if requested
+	if *clear {
+		log.Println("Clearing existing data...")
+		// Add clear operations here
+	}
+
+	log.Println("Seeding database...")
+
+	// Run seeders
+	// Add seeder calls here
+	_ = db
+	_ = ctx
+
+	log.Println("Seeding completed successfully!")
+}

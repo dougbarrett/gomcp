@@ -1,0 +1,54 @@
+package web
+
+import (
+	"net/http"
+
+	"[[.ModulePath]]/internal/config"
+	"[[.ModulePath]]/internal/web/middleware"
+	"github.com/go-chi/chi/v5"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
+)
+
+// NewRouter creates and configures the HTTP router.
+func NewRouter(cfg *config.Config) *chi.Mux {
+	r := chi.NewRouter()
+
+	// Global middleware
+	r.Use(chimiddleware.RequestID)
+	r.Use(chimiddleware.RealIP)
+	r.Use(chimiddleware.Logger)
+	r.Use(chimiddleware.Recoverer)
+	r.Use(middleware.CORS)
+
+	// Serve static files
+	fileServer := http.FileServer(http.Dir("assets"))
+	r.Handle("/assets/*", http.StripPrefix("/assets/", fileServer))
+
+	// Health check
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	// Home page
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<!DOCTYPE html>
+<html>
+<head>
+    <title>[[.ProjectName]]</title>
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="text-center">
+        <h1 class="text-4xl font-bold text-gray-800 mb-4">Welcome to [[.ProjectName]]</h1>
+        <p class="text-gray-600">Your Go web application is running!</p>
+        <p class="text-sm text-gray-400 mt-4">Start scaffolding domains with the MCP tools.</p>
+    </div>
+</body>
+</html>`))
+	})
+
+	return r
+}

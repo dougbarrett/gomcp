@@ -1,0 +1,56 @@
+package [[.PackageName]]
+
+import "[[.ModulePath]]/internal/models"
+
+// Create[[.ModelName]]Input is the input for creating a [[.ModelName]].
+type Create[[.ModelName]]Input struct {
+[[- range .Fields]]
+	[[.Name]] [[.Type]] `json:"[[.JSONName]]"[[if .Required]] validate:"required"[[end]]`
+[[- end]]
+}
+
+// Update[[.ModelName]]Input is the input for updating a [[.ModelName]].
+type Update[[.ModelName]]Input struct {
+[[- range .Fields]]
+	[[.Name]] *[[.Type]] `json:"[[.JSONName]],omitempty"`
+[[- end]]
+}
+
+// List[[.ModelName]]Filter is the filter for listing [[pluralize .ModelName]].
+type List[[.ModelName]]Filter struct {
+	Search   string `json:"search"`
+	Page     int    `json:"page"`
+	PageSize int    `json:"page_size"`
+	SortBy   string `json:"sort_by"`
+	SortDesc bool   `json:"sort_desc"`
+}
+
+// List[[.ModelName]]Result is the result of listing [[pluralize .ModelName]].
+type List[[.ModelName]]Result struct {
+	Items    []models.[[.ModelName]] `json:"items"`
+	Total    int64                   `json:"total"`
+	Page     int                     `json:"page"`
+	PageSize int                     `json:"page_size"`
+}
+
+// [[.ModelName]]Response is the response format for a [[.ModelName]].
+type [[.ModelName]]Response struct {
+	ID        uint   `json:"id"`
+[[- range .Fields]]
+	[[.Name]] [[.Type]] `json:"[[.JSONName]]"`
+[[- end]]
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// To[[.ModelName]]Response converts a model to a response.
+func To[[.ModelName]]Response([[.VariableName]] *models.[[.ModelName]]) *[[.ModelName]]Response {
+	return &[[.ModelName]]Response{
+		ID:        [[.VariableName]].ID,
+[[- range .Fields]]
+		[[.Name]]: [[$.VariableName]].[[.Name]],
+[[- end]]
+		CreatedAt: [[.VariableName]].CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt: [[.VariableName]].UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+}

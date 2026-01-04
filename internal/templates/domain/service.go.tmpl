@@ -1,0 +1,127 @@
+package [[.PackageName]]
+
+import (
+	"context"
+	"errors"
+
+	"[[.ModulePath]]/internal/models"
+)
+
+var (
+	// Err[[.ModelName]]NotFound is returned when a [[.ModelName]] is not found.
+	Err[[.ModelName]]NotFound = errors.New("[[.DomainName]] not found")
+)
+
+// Service defines the interface for [[.ModelName]] business operations.
+type Service interface {
+	Create(ctx context.Context, input Create[[.ModelName]]Input) (*models.[[.ModelName]], error)
+	GetByID(ctx context.Context, id uint) (*models.[[.ModelName]], error)
+	List(ctx context.Context, filter List[[.ModelName]]Filter) (*List[[.ModelName]]Result, error)
+	Update(ctx context.Context, id uint, input Update[[.ModelName]]Input) (*models.[[.ModelName]], error)
+	Delete(ctx context.Context, id uint) error
+}
+
+// service implements Service.
+type service struct {
+	repo Repository
+}
+
+// NewService creates a new [[.ModelName]] service.
+func NewService(repo Repository) Service {
+	return &service{repo: repo}
+}
+
+// Create creates a new [[.ModelName]].
+func (s *service) Create(ctx context.Context, input Create[[.ModelName]]Input) (*models.[[.ModelName]], error) {
+	[[.VariableName]] := &models.[[.ModelName]]{
+[[- range .Fields]]
+		[[.Name]]: input.[[.Name]],
+[[- end]]
+	}
+
+	if err := s.repo.Create(ctx, [[.VariableName]]); err != nil {
+		return nil, err
+	}
+
+	return [[.VariableName]], nil
+}
+
+// GetByID gets a [[.ModelName]] by ID.
+func (s *service) GetByID(ctx context.Context, id uint) (*models.[[.ModelName]], error) {
+	[[.VariableName]], err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, Err[[.ModelName]]NotFound
+	}
+	return [[.VariableName]], nil
+}
+
+// List lists [[pluralize .ModelName]] with filtering and pagination.
+func (s *service) List(ctx context.Context, filter List[[.ModelName]]Filter) (*List[[.ModelName]]Result, error) {
+	var opts []QueryOption
+
+	// Apply pagination
+	if filter.Page > 0 || filter.PageSize > 0 {
+		page := filter.Page
+		if page < 1 {
+			page = 1
+		}
+		pageSize := filter.PageSize
+		if pageSize < 1 {
+			pageSize = 10
+		}
+		opts = append(opts, WithPagination(page, pageSize))
+	}
+
+	// Apply search if provided
+	if filter.Search != "" {
+		opts = append(opts, WithSearch("name", filter.Search))
+	}
+
+	// Apply ordering
+	if filter.SortBy != "" {
+		opts = append(opts, WithOrder(filter.SortBy, filter.SortDesc))
+	} else {
+		opts = append(opts, WithOrder("created_at", true))
+	}
+
+	[[pluralize .VariableName]], total, err := s.repo.FindAll(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &List[[.ModelName]]Result{
+		Items: [[pluralize .VariableName]],
+		Total: total,
+		Page:  filter.Page,
+		PageSize: filter.PageSize,
+	}, nil
+}
+
+// Update updates a [[.ModelName]].
+func (s *service) Update(ctx context.Context, id uint, input Update[[.ModelName]]Input) (*models.[[.ModelName]], error) {
+	[[.VariableName]], err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, Err[[.ModelName]]NotFound
+	}
+
+[[- range .Fields]]
+	if input.[[.Name]] != nil {
+		[[$.VariableName]].[[.Name]] = *input.[[.Name]]
+	}
+[[- end]]
+
+	if err := s.repo.Update(ctx, [[.VariableName]]); err != nil {
+		return nil, err
+	}
+
+	return [[.VariableName]], nil
+}
+
+// Delete deletes a [[.ModelName]].
+func (s *service) Delete(ctx context.Context, id uint) error {
+	_, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return Err[[.ModelName]]NotFound
+	}
+	return s.repo.Delete(ctx, id)
+}

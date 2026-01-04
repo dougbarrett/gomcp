@@ -1,0 +1,200 @@
+package views
+
+import (
+	"[[.ModulePath]]/internal/models"
+	"[[.ModulePath]]/internal/web/components"
+	"github.com/templui/templui/components/button"
+	"github.com/templui/templui/components/card"
+	"github.com/templui/templui/components/icon"
+)
+
+// [[.ModelName]]ListProps contains props for the [[.ModelName]] list view.
+type [[.ModelName]]ListProps struct {
+	Items      []models.[[.ModelName]]
+	Page       int
+	TotalPages int
+	TotalItems int
+	[[- if .WithSearch]]
+	SearchQuery string
+	[[- end]]
+}
+
+// [[.ModelName]]List renders the list view for [[pluralize .ModelName]].
+templ [[.ModelName]]List(props [[.ModelName]]ListProps) {
+	<div class="space-y-6">
+		<!-- Header -->
+		<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+			<div>
+				<h1 class="text-2xl font-bold text-gray-900 dark:text-white">[[pluralize .ModelName]]</h1>
+				<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+					{ fmt.Sprintf("%d total", props.TotalItems) }
+				</p>
+			</div>
+			<div class="flex items-center gap-3">
+				[[- if .WithSearch]]
+				<div class="relative">
+					<input
+						type="search"
+						name="q"
+						value={ props.SearchQuery }
+						placeholder="Search [[pluralize .ModelName | toLower]]..."
+						class="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600"
+						hx-get="[[.URLPath]]"
+						hx-trigger="input changed delay:300ms, search"
+						hx-target="#[[.VariableName]]-list"
+						hx-push-url="true"
+					/>
+					@icon.Icon(icon.Props{Name: "search", Class: "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"})
+				</div>
+				[[- end]]
+				@button.Button(button.Props{
+					Variant: "default",
+					Attributes: templ.Attributes{
+						"hx-get":     "[[.URLPath]]/new",
+						"hx-target":  "#modal-container",
+						"hx-swap":    "innerHTML",
+					},
+				}) {
+					@icon.Icon(icon.Props{Name: "plus", Class: "h-4 w-4 mr-2"})
+					Add [[.ModelName]]
+				}
+			</div>
+		</div>
+
+		<!-- List Container -->
+		<div id="[[.VariableName]]-list">
+			if len(props.Items) == 0 {
+				@[[.ModelName]]EmptyState()
+			} else {
+				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+					for _, item := range props.Items {
+						@[[.ModelName]]Card(item)
+					}
+				</div>
+				[[- if .WithPagination]]
+				if props.TotalPages > 1 {
+					@components.Pagination(components.PaginationProps{
+						CurrentPage: props.Page,
+						TotalPages:  props.TotalPages,
+						BaseURL:     "[[.URLPath]]",
+					})
+				}
+				[[- end]]
+			}
+		</div>
+	</div>
+
+	<!-- Modal Container -->
+	<div id="modal-container"></div>
+}
+
+// [[.ModelName]]Card renders a card for a single [[.ModelName]].
+templ [[.ModelName]]Card(item models.[[.ModelName]]) {
+	@card.Card(card.Props{Class: "hover:shadow-md transition-shadow"}) {
+		@card.Header(card.HeaderProps{}) {
+			<div class="flex items-center justify-between">
+				<h3 class="font-semibold text-gray-900 dark:text-white">
+					[[- range $i, $f := .Fields]]
+					[[- if eq $i 0]]
+					{ [[if eq $f.Type "string"]]item.[[.Name]][[else]]fmt.Sprintf("%v", item.[[.Name]])[[end]] }
+					[[- end]]
+					[[- end]]
+				</h3>
+				<div class="flex items-center gap-1">
+					@button.Button(button.Props{
+						Variant: "ghost",
+						Size:    "sm",
+						Attributes: templ.Attributes{
+							"hx-get":    fmt.Sprintf("[[.URLPath]]/%d/edit", item.ID),
+							"hx-target": "#modal-container",
+							"hx-swap":   "innerHTML",
+						},
+					}) {
+						@icon.Icon(icon.Props{Name: "pencil", Class: "h-4 w-4"})
+					}
+					@button.Button(button.Props{
+						Variant: "ghost",
+						Size:    "sm",
+						Attributes: templ.Attributes{
+							"hx-delete":  fmt.Sprintf("[[.URLPath]]/%d", item.ID),
+							"hx-confirm": "Are you sure you want to delete this [[.ModelName | toLower]]?",
+							"hx-target":  "closest .card",
+							"hx-swap":    "outerHTML swap:300ms",
+						},
+					}) {
+						@icon.Icon(icon.Props{Name: "trash", Class: "h-4 w-4 text-red-500"})
+					}
+				</div>
+			</div>
+		}
+		@card.Content(card.ContentProps{}) {
+			<dl class="space-y-2 text-sm">
+				[[- range $i, $f := .Fields]]
+				[[- if gt $i 0]]
+				<div class="flex justify-between">
+					<dt class="text-gray-500 dark:text-gray-400">[[.Label]]</dt>
+					<dd class="text-gray-900 dark:text-white">
+						[[- if eq $f.Type "bool"]]
+						if item.[[.Name]] {
+							<span class="text-green-600">Yes</span>
+						} else {
+							<span class="text-gray-400">No</span>
+						}
+						[[- else if eq $f.Type "time.Time"]]
+						{ item.[[.Name]].Format("Jan 02, 2006") }
+						[[- else if eq $f.Type "*time.Time"]]
+						if item.[[.Name]] != nil {
+							{ item.[[.Name]].Format("Jan 02, 2006") }
+						}
+						[[- else]]
+						{ [[if eq $f.Type "string"]]item.[[.Name]][[else]]fmt.Sprintf("%v", item.[[.Name]])[[end]] }
+						[[- end]]
+					</dd>
+				</div>
+				[[- end]]
+				[[- end]]
+			</dl>
+		}
+		@card.Footer(card.FooterProps{Class: "pt-0"}) {
+			@button.Button(button.Props{
+				Variant: "outline",
+				Size:    "sm",
+				Class:   "w-full",
+				Attributes: templ.Attributes{
+					"hx-get":    fmt.Sprintf("[[.URLPath]]/%d", item.ID),
+					"hx-target": "#main-content",
+					"hx-push-url": "true",
+				},
+			}) {
+				View Details
+				@icon.Icon(icon.Props{Name: "arrow-right", Class: "h-4 w-4 ml-2"})
+			}
+		}
+	}
+}
+
+// [[.ModelName]]EmptyState renders the empty state for the list.
+templ [[.ModelName]]EmptyState() {
+	<div class="text-center py-12">
+		<div class="mx-auto h-12 w-12 text-gray-400">
+			@icon.Icon(icon.Props{Name: "inbox", Class: "h-12 w-12"})
+		</div>
+		<h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">No [[pluralize .ModelName | toLower]] found</h3>
+		<p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+			Get started by creating a new [[.ModelName | toLower]].
+		</p>
+		<div class="mt-6">
+			@button.Button(button.Props{
+				Variant: "default",
+				Attributes: templ.Attributes{
+					"hx-get":    "[[.URLPath]]/new",
+					"hx-target": "#modal-container",
+					"hx-swap":   "innerHTML",
+				},
+			}) {
+				@icon.Icon(icon.Props{Name: "plus", Class: "h-4 w-4 mr-2"})
+				Add [[.ModelName]]
+			}
+		</div>
+	</div>
+}

@@ -1,0 +1,17 @@
+[server]
+address = ":8080"
+debug = true
+
+[database]
+driver = "[[.DatabaseType]]"
+[[- if eq .DatabaseType "sqlite"]]
+dsn = "data.db"
+[[- else if eq .DatabaseType "postgres"]]
+dsn = "host=localhost user=postgres password=postgres dbname=[[.ProjectName]] port=5432 sslmode=disable"
+[[- else if eq .DatabaseType "mysql"]]
+dsn = "root:password@tcp(127.0.0.1:3306)/[[.ProjectName]]?charset=utf8mb4&parseTime=True&loc=Local"
+[[- end]]
+
+[app]
+name = "[[.ProjectName]]"
+version = "0.1.0"

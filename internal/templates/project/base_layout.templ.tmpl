@@ -1,0 +1,63 @@
+package layouts
+
+templ Base(title string) {
+	<!DOCTYPE html>
+	<html lang="en" class="h-full">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } - [[.ProjectName]]</title>
+			<script src="https://unpkg.com/htmx.org@2.0.0"></script>
+			<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+			<link href="/assets/css/output.css" rel="stylesheet"/>
+		</head>
+		<body class="h-full bg-background text-foreground" hx-boost="true">
+			<div id="app" class="min-h-full">
+				{ children... }
+			</div>
+			<!-- Toast container -->
+			<div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+			<!-- Modal container -->
+			<div id="modal-container"></div>
+			<script>
+				// Toast notification handler
+				document.body.addEventListener('showToast', function(evt) {
+					const toast = document.createElement('div');
+					const type = evt.detail.type || 'info';
+					const colors = {
+						success: 'bg-green-500',
+						error: 'bg-red-500',
+						warning: 'bg-yellow-500',
+						info: 'bg-blue-500'
+					};
+					toast.className = `${colors[type]} text-white px-4 py-2 rounded shadow-lg`;
+					toast.textContent = evt.detail.message;
+					document.getElementById('toast-container').appendChild(toast);
+					setTimeout(() => toast.remove(), 3000);
+				});
+			</script>
+		</body>
+	</html>
+}
+
+templ Dashboard(title string) {
+	@Base(title) {
+		<div class="flex h-full">
+			<!-- Sidebar -->
+			<aside class="w-64 bg-card border-r hidden md:block">
+				<div class="p-4">
+					<h1 class="text-xl font-bold">[[.ProjectName]]</h1>
+				</div>
+				<nav id="sidebar-nav" class="p-4">
+					<!-- Navigation loaded from menu config -->
+				</nav>
+			</aside>
+			<!-- Main content -->
+			<main class="flex-1 overflow-auto">
+				<div class="p-6">
+					{ children... }
+				</div>
+			</main>
+		</div>
+	}
+}

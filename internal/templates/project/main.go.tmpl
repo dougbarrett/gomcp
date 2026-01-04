@@ -1,0 +1,41 @@
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"[[.ModulePath]]/internal/config"
+	"[[.ModulePath]]/internal/database"
+	"[[.ModulePath]]/internal/web"
+	// MCP:IMPORTS:START
+	// MCP:IMPORTS:END
+)
+
+func main() {
+	// Load configuration
+	cfg := config.Load()
+
+	// Initialize database
+	db := database.Connect(cfg)
+	_ = db // Use db when wiring repositories
+
+	// Wire dependencies: Repos -> Services -> Controllers
+	// MCP:REPOS:START
+	// MCP:REPOS:END
+
+	// MCP:SERVICES:START
+	// MCP:SERVICES:END
+
+	// MCP:CONTROLLERS:START
+	// MCP:CONTROLLERS:END
+
+	// Setup router
+	router := web.NewRouter(cfg)
+
+	// Register routes
+	// MCP:ROUTES:START
+	// MCP:ROUTES:END
+
+	log.Printf("Server starting on %s", cfg.Server.Address)
+	log.Fatal(http.ListenAndServe(cfg.Server.Address, router))
+}

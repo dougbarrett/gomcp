@@ -1,0 +1,189 @@
+package auth
+
+import (
+	"net/http"
+
+	"[[.ModulePath]]/internal/services/auth"
+	"[[.ModulePath]]/internal/web/auth/views"
+	"[[.ModulePath]]/internal/web/response"
+)
+
+// Controller handles auth HTTP requests.
+type Controller struct {
+	authService *auth.Service
+}
+
+// NewController creates a new auth Controller.
+func NewController(authService *auth.Service) *Controller {
+	return &Controller{authService: authService}
+}
+
+// RegisterRoutes registers auth routes.
+func (c *Controller) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /login", c.ShowLogin)
+	mux.HandleFunc("POST /login", c.Login)
+	mux.HandleFunc("GET /register", c.ShowRegister)
+	mux.HandleFunc("POST /register", c.Register)
+	mux.HandleFunc("POST /logout", c.Logout)
+}
+
+// ShowLogin renders the login page.
+func (c *Controller) ShowLogin(w http.ResponseWriter, r *http.Request) {
+	// Check if already logged in
+	if c.authService.ValidateSession(r) {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	response.Render(w, r, views.LoginPage(views.LoginProps{}))
+}
+
+// Login processes the login form.
+func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		response.Render(w, r, views.LoginPage(views.LoginProps{
+			Error: "Invalid form data",
+		}))
+		return
+	}
+
+	input := auth.LoginInput{
+		Email:    r.FormValue("email"),
+		Password: r.FormValue("password"),
+		Remember: r.FormValue("remember") == "on",
+	}
+
+	// Validate input
+	errors := make(map[string]string)
+	if input.Email == "" {
+		errors["email"] = "Email is required"
+	}
+	if input.Password == "" {
+		errors["password"] = "Password is required"
+	}
+
+	if len(errors) > 0 {
+		response.Render(w, r, views.LoginPage(views.LoginProps{
+			Email:  input.Email,
+			Errors: errors,
+		}))
+		return
+	}
+
+	// Attempt login
+	_, err := c.authService.Login(r.Context(), w, r, input)
+	if err != nil {
+		response.Render(w, r, views.LoginPage(views.LoginProps{
+			Email: input.Email,
+			Error: err.Error(),
+		}))
+		return
+	}
+
+	// Redirect to home or intended URL
+	redirectURL := r.URL.Query().Get("redirect")
+	if redirectURL == "" {
+		redirectURL = "/"
+	}
+
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", redirectURL)
+		return
+	}
+
+	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+}
+
+// ShowRegister renders the registration page.
+func (c *Controller) ShowRegister(w http.ResponseWriter, r *http.Request) {
+	// Check if already logged in
+	if c.authService.ValidateSession(r) {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	response.Render(w, r, views.RegisterPage(views.RegisterProps{}))
+}
+
+// Register processes the registration form.
+func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		response.Render(w, r, views.RegisterPage(views.RegisterProps{
+			Error: "Invalid form data",
+		}))
+		return
+	}
+
+	input := auth.RegisterInput{
+		Name:            r.FormValue("name"),
+		Email:           r.FormValue("email"),
+		Password:        r.FormValue("password"),
+		PasswordConfirm: r.FormValue("password_confirm"),
+	}
+
+	// Validate input
+	errors := make(map[string]string)
+	if input.Name == "" {
+		errors["name"] = "Name is required"
+	}
+	if input.Email == "" {
+		errors["email"] = "Email is required"
+	}
+	if input.Password == "" {
+		errors["password"] = "Password is required"
+	} else if len(input.Password) < 8 {
+		errors["password"] = "Password must be at least 8 characters"
+	}
+	if input.Password != input.PasswordConfirm {
+		errors["password_confirm"] = "Passwords do not match"
+	}
+
+	if len(errors) > 0 {
+		response.Render(w, r, views.RegisterPage(views.RegisterProps{
+			Name:   input.Name,
+			Email:  input.Email,
+			Errors: errors,
+		}))
+		return
+	}
+
+	// Attempt registration
+	_, err := c.authService.Register(r.Context(), w, r, input)
+	if err != nil {
+		if err == auth.ErrEmailExists {
+			errors["email"] = "This email is already registered"
+			response.Render(w, r, views.RegisterPage(views.RegisterProps{
+				Name:   input.Name,
+				Email:  input.Email,
+				Errors: errors,
+			}))
+			return
+		}
+		response.Render(w, r, views.RegisterPage(views.RegisterProps{
+			Name:  input.Name,
+			Email: input.Email,
+			Error: "Failed to create account. Please try again.",
+		}))
+		return
+	}
+
+	// Redirect to home
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", "/")
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// Logout logs the user out.
+func (c *Controller) Logout(w http.ResponseWriter, r *http.Request) {
+	c.authService.Logout(w, r)
+
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", "/login")
+		return
+	}
+
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
+}

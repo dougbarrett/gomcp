@@ -1,0 +1,198 @@
+package tools
+
+import (
+	"context"
+	"fmt"
+	"path/filepath"
+
+	"github.com/dbb1dev/go-mcp/internal/generator"
+	"github.com/dbb1dev/go-mcp/internal/modifier"
+	"github.com/dbb1dev/go-mcp/internal/types"
+	"github.com/dbb1dev/go-mcp/internal/utils"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+// RegisterScaffoldDomain registers the scaffold_domain tool.
+func RegisterScaffoldDomain(server *mcp.Server, registry *Registry) {
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "scaffold_domain",
+		Description: "Create a complete domain with model, repository, service, controller, and optional CRUD views. This is the most comprehensive scaffolding tool that generates all layers following clean architecture.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldDomainInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
+		result, err := scaffoldDomain(registry, input)
+		if err != nil {
+			return nil, types.NewErrorResult(err.Error()), nil
+		}
+		return nil, result, nil
+	})
+}
+
+func scaffoldDomain(registry *Registry, input types.ScaffoldDomainInput) (types.ScaffoldResult, error) {
+	// Validate input
+	if err := utils.ValidateDomainName(input.DomainName); err != nil {
+		return types.NewErrorResult(err.Error()), nil
+	}
+
+	if len(input.Fields) == 0 {
+		return types.NewErrorResult("at least one field is required"), nil
+	}
+
+	// Validate each field
+	for _, field := range input.Fields {
+		if err := utils.ValidateFieldName(field.Name); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("field '%s': %v", field.Name, err)), nil
+		}
+		if err := utils.ValidateFieldType(field.Type); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("field '%s': %v", field.Name, err)), nil
+		}
+		if field.FormType != "" {
+			if err := utils.ValidateFormType(field.FormType); err != nil {
+				return types.NewErrorResult(fmt.Sprintf("field '%s': %v", field.Name, err)), nil
+			}
+		}
+	}
+
+	// Get module path from go.mod
+	modulePath, err := utils.GetModulePath(registry.WorkingDir)
+	if err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to get module path: %v", err)), nil
+	}
+
+	// Create generator
+	gen := registry.NewGenerator("")
+	gen.SetDryRun(input.DryRun)
+
+	// Prepare template data
+	data := generator.NewDomainData(input, modulePath)
+
+	// Create directories
+	pkgName := utils.ToPackageName(input.DomainName)
+	directories := []string{
+		filepath.Join("internal", "repository", pkgName),
+		filepath.Join("internal", "services", pkgName),
+		filepath.Join("internal", "web", pkgName),
+	}
+
+	if input.GetWithCrudViews() {
+		directories = append(directories, filepath.Join("internal", "web", pkgName, "views"))
+	}
+
+	for _, dir := range directories {
+		if err := gen.EnsureDir(dir); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("failed to create directory %s: %v", dir, err)), nil
+		}
+	}
+
+	// Generate model
+	modelPath := filepath.Join("internal", "models", pkgName+".go")
+	if err := gen.GenerateFile("domain/model.go.tmpl", modelPath, data); err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to generate model: %v", err)), nil
+	}
+
+	// Generate repository
+	repoPath := filepath.Join("internal", "repository", pkgName, pkgName+".go")
+	if err := gen.GenerateFile("domain/repository.go.tmpl", repoPath, data); err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to generate repository: %v", err)), nil
+	}
+
+	// Generate service
+	servicePath := filepath.Join("internal", "services", pkgName, pkgName+".go")
+	if err := gen.GenerateFile("domain/service.go.tmpl", servicePath, data); err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to generate service: %v", err)), nil
+	}
+
+	// Generate DTOs
+	dtoPath := filepath.Join("internal", "services", pkgName, "dto.go")
+	if err := gen.GenerateFile("domain/dto.go.tmpl", dtoPath, data); err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to generate DTOs: %v", err)), nil
+	}
+
+	// Generate controller
+	controllerPath := filepath.Join("internal", "web", pkgName, pkgName+".go")
+	if err := gen.GenerateFile("domain/controller.go.tmpl", controllerPath, data); err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to generate controller: %v", err)), nil
+	}
+
+	// Prepare result
+	result := gen.Result()
+
+	// Inject into main.go if not dry run
+	if !input.DryRun {
+		mainGoPath := filepath.Join(registry.WorkingDir, "cmd", "web", "main.go")
+		if utils.FileExists(mainGoPath) {
+			if err := injectDomainWiring(mainGoPath, modulePath, pkgName, input.DomainName); err != nil {
+				// Log warning but don't fail
+				fmt.Printf("Warning: could not inject DI wiring: %v\n", err)
+			} else {
+				result.FilesUpdated = append(result.FilesUpdated, "cmd/web/main.go")
+			}
+		}
+	}
+	nextSteps := []string{
+		"go mod tidy",
+		"templ generate",
+		fmt.Sprintf("Add business logic to internal/services/%s/%s.go", pkgName, pkgName),
+	}
+
+	if input.DryRun {
+		return types.ScaffoldResult{
+			Success:      true,
+			Message:      fmt.Sprintf("Dry run: Would create domain '%s' with %d files", input.DomainName, len(result.FilesCreated)),
+			FilesCreated: result.FilesCreated,
+			NextSteps:    nextSteps,
+		}, nil
+	}
+
+	return types.ScaffoldResult{
+		Success:      true,
+		Message:      fmt.Sprintf("Successfully created domain '%s'", input.DomainName),
+		FilesCreated: result.FilesCreated,
+		FilesUpdated: result.FilesUpdated,
+		NextSteps:    nextSteps,
+	}, nil
+}
+
+// injectDomainWiring injects the domain wiring into main.go.
+func injectDomainWiring(mainGoPath, modulePath, pkgName, domainName string) error {
+	injector, err := modifier.NewInjector(mainGoPath)
+	if err != nil {
+		return err
+	}
+
+	// Inject imports
+	repoImport := fmt.Sprintf("%s/internal/repository/%s", modulePath, pkgName)
+	if err := injector.InjectImport(repoImport); err != nil {
+		return err
+	}
+
+	serviceImport := fmt.Sprintf("%s/internal/services/%s", modulePath, pkgName)
+	if err := injector.InjectImport(serviceImport); err != nil {
+		return err
+	}
+
+	controllerImport := fmt.Sprintf("%s/internal/web/%s", modulePath, pkgName)
+	if err := injector.InjectImport(controllerImport); err != nil {
+		return err
+	}
+
+	// Inject repository
+	if err := injector.InjectRepo(domainName, modulePath); err != nil {
+		return err
+	}
+
+	// Inject service
+	if err := injector.InjectService(domainName); err != nil {
+		return err
+	}
+
+	// Inject controller
+	if err := injector.InjectController(domainName); err != nil {
+		return err
+	}
+
+	// Inject route
+	if err := injector.InjectRoute(domainName); err != nil {
+		return err
+	}
+
+	return injector.Save()
+}

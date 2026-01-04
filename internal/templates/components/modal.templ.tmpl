@@ -1,0 +1,199 @@
+package components
+
+import (
+	"github.com/templui/templui/components/button"
+	"github.com/templui/templui/components/icon"
+)
+
+// [[.ModalName]]Props contains properties for the [[.ModalName]] modal.
+type [[.ModalName]]Props struct {
+	Title       string
+	Description string
+	Size        string // sm, md, lg, xl, full
+	[[- if .IsConfirm]]
+	ConfirmText string
+	CancelText  string
+	OnConfirm   string // HTMX action URL
+	[[- end]]
+}
+
+[[- if .IsDialog]]
+// [[.ModalName]] renders a dialog modal.
+templ [[.ModalName]](props [[.ModalName]]Props) {
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+		_="on click if event.target === me remove me"
+	>
+		<div class={ modalSizeClass(props.Size) }>
+			<!-- Header -->
+			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+				<div>
+					<h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+						{ props.Title }
+					</h2>
+					if props.Description != "" {
+						<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+							{ props.Description }
+						</p>
+					}
+				</div>
+				@button.Button(button.Props{
+					Variant: "ghost",
+					Size:    "sm",
+					Attributes: templ.Attributes{
+						"_": "on click remove closest .fixed",
+					},
+				}) {
+					@icon.Icon(icon.Props{Name: "x", Class: "h-4 w-4"})
+				}
+			</div>
+			<!-- Content -->
+			<div class="p-4">
+				{ children... }
+			</div>
+		</div>
+	</div>
+}
+[[- end]]
+
+[[- if .IsSheet]]
+// [[.ModalName]] renders a sheet modal (slides from the side).
+templ [[.ModalName]](props [[.ModalName]]Props) {
+	<div
+		class="fixed inset-0 z-50 flex justify-end bg-black/50"
+		_="on click if event.target === me remove me"
+	>
+		<div
+			class="bg-white dark:bg-gray-900 w-full max-w-md h-full overflow-y-auto shadow-xl animate-slide-in-right"
+		>
+			<!-- Header -->
+			<div class="sticky top-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+				<div>
+					<h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+						{ props.Title }
+					</h2>
+					if props.Description != "" {
+						<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+							{ props.Description }
+						</p>
+					}
+				</div>
+				@button.Button(button.Props{
+					Variant: "ghost",
+					Size:    "sm",
+					Attributes: templ.Attributes{
+						"_": "on click remove closest .fixed",
+					},
+				}) {
+					@icon.Icon(icon.Props{Name: "x", Class: "h-4 w-4"})
+				}
+			</div>
+			<!-- Content -->
+			<div class="p-4">
+				{ children... }
+			</div>
+		</div>
+	</div>
+}
+[[- end]]
+
+[[- if .IsConfirm]]
+// [[.ModalName]] renders a confirm dialog modal.
+templ [[.ModalName]](props [[.ModalName]]Props) {
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+		_="on click if event.target === me remove me"
+	>
+		<div class="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md mx-4 w-full">
+			<!-- Content -->
+			<div class="p-6">
+				<div class="flex items-start gap-4">
+					<div class="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
+						@icon.Icon(icon.Props{Name: "alert-triangle", Class: "h-6 w-6 text-red-600"})
+					</div>
+					<div>
+						<h3 class="text-lg font-medium text-gray-900 dark:text-white">
+							{ props.Title }
+						</h3>
+						if props.Description != "" {
+							<p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+								{ props.Description }
+							</p>
+						}
+					</div>
+				</div>
+			</div>
+			<!-- Footer -->
+			<div class="flex justify-end gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
+				@button.Button(button.Props{
+					Variant: "outline",
+					Attributes: templ.Attributes{
+						"_": "on click remove closest .fixed",
+					},
+				}) {
+					if props.CancelText != "" {
+						{ props.CancelText }
+					} else {
+						Cancel
+					}
+				}
+				@button.Button(button.Props{
+					Variant: "destructive",
+					Attributes: templ.Attributes{
+						"hx-delete": props.OnConfirm,
+						"hx-target": "#main-content",
+						"hx-swap":   "innerHTML",
+					},
+				}) {
+					if props.ConfirmText != "" {
+						{ props.ConfirmText }
+					} else {
+						Confirm
+					}
+				}
+			</div>
+		</div>
+	</div>
+}
+[[- end]]
+
+// modalSizeClass returns the appropriate size class for the modal.
+func modalSizeClass(size string) string {
+	base := "bg-white dark:bg-gray-900 rounded-lg shadow-xl mx-4 overflow-hidden"
+	switch size {
+	case "sm":
+		return base + " max-w-sm w-full"
+	case "lg":
+		return base + " max-w-2xl w-full"
+	case "xl":
+		return base + " max-w-4xl w-full"
+	case "full":
+		return base + " max-w-6xl w-full max-h-[90vh] overflow-y-auto"
+	default:
+		return base + " max-w-lg w-full"
+	}
+}
+
+// ModalContainer is a placeholder for modals loaded via HTMX.
+templ ModalContainer() {
+	<div id="modal-container"></div>
+}
+
+// ModalLoading renders a loading state for modal content.
+templ ModalLoading() {
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+		<div class="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-8">
+			<div class="flex items-center gap-3">
+				<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+				<span class="text-gray-600 dark:text-gray-400">Loading...</span>
+			</div>
+		</div>
+	</div>
+}
+
+// CloseModal closes the current modal.
+templ CloseModal() {
+	<script>
+		document.querySelector('#modal-container').innerHTML = '';
+	</script>
+}

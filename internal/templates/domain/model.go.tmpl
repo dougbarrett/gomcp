@@ -1,0 +1,25 @@
+package models
+
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
+
+// [[.ModelName]] represents a [[.DomainName]] in the system.
+type [[.ModelName]] struct {
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+[[- if .WithSoftDelete]]
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+[[- end]]
+[[- range .Fields]]
+	[[.Name]] [[.Type]] `[[if .GORMTags]]gorm:"[[.GORMTags]]" [[end]]json:"[[.JSONName]][[if .Omitempty]],omitempty[[end]]"`
+[[- end]]
+}
+
+// TableName returns the table name for the model.
+func ([[.ModelName]]) TableName() string {
+	return "[[.TableName]]"
+}

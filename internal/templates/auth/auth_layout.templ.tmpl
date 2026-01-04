@@ -1,0 +1,118 @@
+package views
+
+// AuthLayout renders the layout for authentication pages.
+templ AuthLayout(title string) {
+	<!DOCTYPE html>
+	<html lang="en" class="h-full">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } - [[.ProjectName]]</title>
+			<link href="/static/css/output.css" rel="stylesheet"/>
+			<script src="https://unpkg.com/htmx.org@2.0.0"></script>
+			<script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
+		</head>
+		<body class="h-full bg-gray-50 dark:bg-gray-950">
+			<div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+				<!-- Logo -->
+				<div class="sm:mx-auto sm:w-full sm:max-w-md">
+					<div class="flex justify-center">
+						<a href="/" class="flex items-center gap-2">
+							<div class="h-10 w-10 rounded-lg bg-primary-600 flex items-center justify-center">
+								<span class="text-white font-bold text-xl">[[slice .ProjectName 0 1 | toUpper]]</span>
+							</div>
+							<span class="text-xl font-bold text-gray-900 dark:text-white">[[.ProjectName]]</span>
+						</a>
+					</div>
+				</div>
+
+				<!-- Content -->
+				<div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+					{ children... }
+				</div>
+
+				<!-- Footer -->
+				<div class="mt-8 text-center">
+					<p class="text-sm text-gray-500 dark:text-gray-400">
+						&copy; { time.Now().Year() } [[.ProjectName]]. All rights reserved.
+					</p>
+				</div>
+			</div>
+		</body>
+	</html>
+}
+
+// AuthCard wraps content in a styled card for auth pages.
+templ AuthCard(title, subtitle string) {
+	<div class="bg-white dark:bg-gray-900 py-8 px-4 shadow sm:rounded-lg sm:px-10">
+		if title != "" {
+			<div class="text-center mb-6">
+				<h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+					{ title }
+				</h2>
+				if subtitle != "" {
+					<p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+						{ subtitle }
+					</p>
+				}
+			</div>
+		}
+		{ children... }
+	</div>
+}
+
+// AuthError renders an error message.
+templ AuthError(message string) {
+	if message != "" {
+		<div class="mb-4 p-3 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-lg">
+			<p class="text-sm text-red-600 dark:text-red-400">{ message }</p>
+		</div>
+	}
+}
+
+// AuthSuccess renders a success message.
+templ AuthSuccess(message string) {
+	if message != "" {
+		<div class="mb-4 p-3 bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-800 rounded-lg">
+			<p class="text-sm text-green-600 dark:text-green-400">{ message }</p>
+		</div>
+	}
+}
+
+// AuthDivider renders a divider with text.
+templ AuthDivider(text string) {
+	<div class="relative my-6">
+		<div class="absolute inset-0 flex items-center">
+			<div class="w-full border-t border-gray-300 dark:border-gray-700"></div>
+		</div>
+		<div class="relative flex justify-center text-sm">
+			<span class="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">
+				{ text }
+			</span>
+		</div>
+	</div>
+}
+
+// SocialLoginButtons renders social login options.
+templ SocialLoginButtons() {
+	<div class="grid grid-cols-2 gap-3">
+		<button
+			type="button"
+			class="inline-flex justify-center items-center gap-2 py-2.5 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+		>
+			<svg class="h-5 w-5" viewBox="0 0 24 24">
+				<path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>
+			</svg>
+			Google
+		</button>
+		<button
+			type="button"
+			class="inline-flex justify-center items-center gap-2 py-2.5 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+		>
+			<svg class="h-5 w-5" viewBox="0 0 24 24">
+				<path fill="currentColor" d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+			</svg>
+			GitHub
+		</button>
+	</div>
+}

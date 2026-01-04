@@ -1,0 +1,96 @@
+package web
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+
+	"github.com/a-h/templ"
+)
+
+// Response provides helper methods for HTTP responses.
+type Response struct {
+	w http.ResponseWriter
+	r *http.Request
+}
+
+// NewResponse creates a new response helper.
+func NewResponse(w http.ResponseWriter, r *http.Request) *Response {
+	return &Response{w: w, r: r}
+}
+
+// JSON writes a JSON response.
+func (res *Response) JSON(status int, data interface{}) error {
+	res.w.Header().Set("Content-Type", "application/json")
+	res.w.WriteHeader(status)
+	return json.NewEncoder(res.w).Encode(data)
+}
+
+// HTML writes an HTML response using a templ component.
+func (res *Response) HTML(status int, component templ.Component) error {
+	res.w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	res.w.WriteHeader(status)
+	return component.Render(context.Background(), res.w)
+}
+
+// Render renders a templ component with the request context.
+func (res *Response) Render(component templ.Component) error {
+	res.w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	return component.Render(res.r.Context(), res.w)
+}
+
+// Error writes an error response.
+func (res *Response) Error(status int, message string) {
+	if res.IsHTMX() {
+		res.w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		res.w.WriteHeader(status)
+		res.w.Write([]byte(`<div class="text-red-500">` + message + `</div>`))
+		return
+	}
+	http.Error(res.w, message, status)
+}
+
+// Redirect performs an HTTP redirect or HTMX redirect.
+func (res *Response) Redirect(url string) {
+	if res.IsHTMX() {
+		res.w.Header().Set("HX-Redirect", url)
+		res.w.WriteHeader(http.StatusOK)
+		return
+	}
+	http.Redirect(res.w, res.r, url, http.StatusFound)
+}
+
+// IsHTMX returns true if this is an HTMX request.
+func (res *Response) IsHTMX() bool {
+	return res.r.Header.Get("HX-Request") == "true"
+}
+
+// HTMXTrigger triggers a custom HTMX event.
+func (res *Response) HTMXTrigger(event string) {
+	res.w.Header().Set("HX-Trigger", event)
+}
+
+// HTMXReswap changes the swap behavior.
+func (res *Response) HTMXReswap(swap string) {
+	res.w.Header().Set("HX-Reswap", swap)
+}
+
+// HTMXRetarget changes the target element.
+func (res *Response) HTMXRetarget(target string) {
+	res.w.Header().Set("HX-Retarget", target)
+}
+
+// HTMXPushURL updates the browser URL.
+func (res *Response) HTMXPushURL(url string) {
+	res.w.Header().Set("HX-Push-Url", url)
+}
+
+// Success sends a success toast notification via HTMX trigger.
+func (res *Response) Success(message string) {
+	res.w.Header().Set("HX-Trigger", `{"showToast": {"message": "`+message+`", "type": "success"}}`)
+}
+
+// ErrorToast sends an error toast notification via HTMX trigger.
+func (res *Response) ErrorToast(message string) {
+	res.w.Header().Set("HX-Trigger", `{"showToast": {"message": "`+message+`", "type": "error"}}`)
+}
