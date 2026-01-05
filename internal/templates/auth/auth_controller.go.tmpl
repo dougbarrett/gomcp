@@ -5,7 +5,9 @@ import (
 
 	"[[.ModulePath]]/internal/services/auth"
 	"[[.ModulePath]]/internal/web/auth/views"
+	"[[.ModulePath]]/internal/web/middleware"
 	"[[.ModulePath]]/internal/web/response"
+	"github.com/go-chi/chi/v5"
 )
 
 // Controller handles auth HTTP requests.
@@ -19,12 +21,12 @@ func NewController(authService *auth.Service) *Controller {
 }
 
 // RegisterRoutes registers auth routes.
-func (c *Controller) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /login", c.ShowLogin)
-	mux.HandleFunc("POST /login", c.Login)
-	mux.HandleFunc("GET /register", c.ShowRegister)
-	mux.HandleFunc("POST /register", c.Register)
-	mux.HandleFunc("POST /logout", c.Logout)
+func (c *Controller) RegisterRoutes(r chi.Router) {
+	r.Get("/login", c.ShowLogin)
+	r.Post("/login", c.Login)
+	r.Get("/register", c.ShowRegister)
+	r.Post("/register", c.Register)
+	r.Post("/logout", c.Logout)
 }
 
 // ShowLogin renders the login page.
@@ -35,14 +37,19 @@ func (c *Controller) ShowLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.Render(w, r, views.LoginPage(views.LoginProps{}))
+	response.Render(w, r, views.LoginPage(views.LoginProps{
+		CSRFToken: middleware.GetCSRFToken(r.Context()),
+	}))
 }
 
 // Login processes the login form.
 func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
+	csrfToken := middleware.GetCSRFToken(r.Context())
+
 	if err := r.ParseForm(); err != nil {
 		response.Render(w, r, views.LoginPage(views.LoginProps{
-			Error: "Invalid form data",
+			Error:     "Invalid form data",
+			CSRFToken: csrfToken,
 		}))
 		return
 	}
@@ -64,8 +71,9 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
 
 	if len(errors) > 0 {
 		response.Render(w, r, views.LoginPage(views.LoginProps{
-			Email:  input.Email,
-			Errors: errors,
+			Email:     input.Email,
+			Errors:    errors,
+			CSRFToken: csrfToken,
 		}))
 		return
 	}
@@ -74,8 +82,9 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
 	_, err := c.authService.Login(r.Context(), w, r, input)
 	if err != nil {
 		response.Render(w, r, views.LoginPage(views.LoginProps{
-			Email: input.Email,
-			Error: err.Error(),
+			Email:     input.Email,
+			Error:     err.Error(),
+			CSRFToken: csrfToken,
 		}))
 		return
 	}
@@ -102,14 +111,19 @@ func (c *Controller) ShowRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.Render(w, r, views.RegisterPage(views.RegisterProps{}))
+	response.Render(w, r, views.RegisterPage(views.RegisterProps{
+		CSRFToken: middleware.GetCSRFToken(r.Context()),
+	}))
 }
 
 // Register processes the registration form.
 func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
+	csrfToken := middleware.GetCSRFToken(r.Context())
+
 	if err := r.ParseForm(); err != nil {
 		response.Render(w, r, views.RegisterPage(views.RegisterProps{
-			Error: "Invalid form data",
+			Error:     "Invalid form data",
+			CSRFToken: csrfToken,
 		}))
 		return
 	}
@@ -140,9 +154,10 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 
 	if len(errors) > 0 {
 		response.Render(w, r, views.RegisterPage(views.RegisterProps{
-			Name:   input.Name,
-			Email:  input.Email,
-			Errors: errors,
+			Name:      input.Name,
+			Email:     input.Email,
+			Errors:    errors,
+			CSRFToken: csrfToken,
 		}))
 		return
 	}
@@ -153,16 +168,18 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 		if err == auth.ErrEmailExists {
 			errors["email"] = "This email is already registered"
 			response.Render(w, r, views.RegisterPage(views.RegisterProps{
-				Name:   input.Name,
-				Email:  input.Email,
-				Errors: errors,
+				Name:      input.Name,
+				Email:     input.Email,
+				Errors:    errors,
+				CSRFToken: csrfToken,
 			}))
 			return
 		}
 		response.Render(w, r, views.RegisterPage(views.RegisterProps{
-			Name:  input.Name,
-			Email: input.Email,
-			Error: "Failed to create account. Please try again.",
+			Name:      input.Name,
+			Email:     input.Email,
+			Error:     "Failed to create account. Please try again.",
+			CSRFToken: csrfToken,
 		}))
 		return
 	}

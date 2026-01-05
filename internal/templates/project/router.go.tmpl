@@ -20,6 +20,11 @@ func NewRouter(cfg *config.Config) *chi.Mux {
 	r.Use(chimiddleware.Recoverer)
 	r.Use(middleware.CORS)
 
+	// CSRF protection - uses session secret from config
+	// For HTMX requests, include X-CSRF-Token header
+	r.Use(middleware.CSRF(cfg))
+	r.Use(middleware.InjectCSRFToken)
+
 	// Serve static files
 	fileServer := http.FileServer(http.Dir("assets"))
 	r.Handle("/assets/*", http.StripPrefix("/assets/", fileServer))

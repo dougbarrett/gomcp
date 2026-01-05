@@ -4,8 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
+	[[- if .HasDistributions]]
+	"math/rand"
+	[[- end]]
 
 	"[[.ModulePath]]/internal/models"
+	[[- if .HasRelationships]]
+	[[- range .Relationships]]
+	"[[$.ModulePath]]/internal/repository/[[.ModelVar | toSnakeCase]]"
+	[[- end]]
+	[[- end]]
 	"gorm.io/gorm"
 	[[- if .WithFaker]]
 	"github.com/brianvoe/gofakeit/v6"
@@ -15,11 +23,23 @@ import (
 // [[.ModelName]]Seeder seeds [[.ModelName]] records.
 type [[.ModelName]]Seeder struct {
 	db *gorm.DB
+	[[- if .HasRelationships]]
+	[[- range .Relationships]]
+	[[.ModelVar]]Repo *[[.ModelVar | toSnakeCase]].Repository
+	[[- end]]
+	[[- end]]
 }
 
 // New[[.ModelName]]Seeder creates a new [[.ModelName]]Seeder.
 func New[[.ModelName]]Seeder(db *gorm.DB) *[[.ModelName]]Seeder {
-	return &[[.ModelName]]Seeder{db: db}
+	return &[[.ModelName]]Seeder{
+		db: db,
+		[[- if .HasRelationships]]
+		[[- range .Relationships]]
+		[[.ModelVar]]Repo: [[.ModelVar | toSnakeCase]].NewRepository(db),
+		[[- end]]
+		[[- end]]
+	}
 }
 
 // Seed creates [[.Count]] [[.ModelName]] records.
@@ -30,10 +50,59 @@ func (s *[[.ModelName]]Seeder) Seed(ctx context.Context) error {
 	gofakeit.Seed(0)
 	[[- end]]
 
+	[[- if .HasRelationships]]
+
+	// Fetch related records for relationships
+	[[- range .Relationships]]
+	[[.ModelVar | toLower]]s, err := s.[[.ModelVar]]Repo.FindAll(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch [[pluralize .Model | toLower]]: %w", err)
+	}
+	if len([[.ModelVar | toLower]]s) == 0 {
+		return fmt.Errorf("no [[pluralize .Model | toLower]] found - run [[.Model | toLower]] seeder first")
+	}
+	[[.ModelVar | toLower]]IDs := make([]uint, len([[.ModelVar | toLower]]s))
+	for i, r := range [[.ModelVar | toLower]]s {
+		[[.ModelVar | toLower]]IDs[i] = r.ID
+	}
+	[[- end]]
+	[[- end]]
+
+	[[- if .HasDistributions]]
+
+	// Build distribution pools for fields with specific value distributions
+	[[- range .Distributions]]
+	[[.Field | toLower]]Pool := [][[fieldGoType .Field $.Fields]]{}
+	[[- range .Values]]
+	for i := 0; i < [[.Count]]; i++ {
+		[[$.Field | toLower]]Pool = append([[$.Field | toLower]]Pool, [[.Value]])
+	}
+	[[- end]]
+	// Shuffle the pool for random distribution
+	rand.Shuffle(len([[.Field | toLower]]Pool), func(i, j int) {
+		[[.Field | toLower]]Pool[i], [[.Field | toLower]]Pool[j] = [[.Field | toLower]]Pool[j], [[.Field | toLower]]Pool[i]
+	})
+	[[- end]]
+	[[- end]]
+
 	for i := 0; i < [[.Count]]; i++ {
 		item := models.[[.ModelName]]{
 			[[- range .Fields]]
+			[[- if not (isDistributedField .Name $.Distributions)]]
 			[[.Name]]: [[fakerFunc .Type]],
+			[[- end]]
+			[[- end]]
+			[[- range .Distributions]]
+			[[.Field]]: [[.Field | toLower]]Pool[i % len([[.Field | toLower]]Pool)],
+			[[- end]]
+			[[- range .Relationships]]
+			[[- if eq .Strategy "random"]]
+			[[.Field]]: [[.ModelVar | toLower]]IDs[gofakeit.Number(0, len([[.ModelVar | toLower]]IDs)-1)],
+			[[- else if eq .Strategy "distribute"]]
+			[[.Field]]: [[.ModelVar | toLower]]IDs[i % len([[.ModelVar | toLower]]IDs)],
+			[[- else if eq .Strategy "each"]]
+			[[.Field]]: [[.ModelVar | toLower]]IDs[i % len([[.ModelVar | toLower]]IDs)],
+			[[- end]]
 			[[- end]]
 		}
 
@@ -86,6 +155,7 @@ func (s *[[.ModelName]]Seeder) SeedIfEmpty(ctx context.Context) error {
 }
 
 [[- if .Dependencies]]
+
 // Dependencies returns seeders that must run before this one.
 func (s *[[.ModelName]]Seeder) Dependencies() []string {
 	return []string{
@@ -95,3 +165,47 @@ func (s *[[.ModelName]]Seeder) Dependencies() []string {
 	}
 }
 [[- end]]
+
+/*
+SEEDING EXAMPLES:
+
+1. Basic seeding with count:
+   seeder := seeders.New[[.ModelName]]Seeder(db)
+   seeder.Seed(ctx)
+
+2. Seed only if empty:
+   seeder.SeedIfEmpty(ctx)
+
+3. Clear and reseed:
+   seeder.Clear(ctx)
+   seeder.Seed(ctx)
+
+[[- if .HasRelationships]]
+
+RELATIONSHIP SEEDING:
+This seeder fetches related records and assigns foreign keys.
+Strategies:
+- "random": Picks a random related record for each new record
+- "distribute": Spreads records evenly across related records
+- "each": Creates one record per related record (count should match)
+
+Make sure to run dependency seeders first:
+[[- range .Dependencies]]
+  - [[.]] seeder
+[[- end]]
+[[- end]]
+
+[[- if .HasDistributions]]
+
+VALUE DISTRIBUTION:
+This seeder distributes specific values across records.
+The values are shuffled to randomize their order.
+[[- end]]
+
+CUSTOMIZATION:
+To customize the seeding logic, modify the Seed() method above.
+Common customizations:
+- Add more realistic faker data (gofakeit.Email(), gofakeit.Name(), etc.)
+- Add conditional logic based on index
+- Create related records on-the-fly
+*/

@@ -6,10 +6,11 @@ import (
 
 // RegisterProps contains props for the register page.
 type RegisterProps struct {
-	Name   string
-	Email  string
-	Error  string
-	Errors map[string]string
+	Name      string
+	Email     string
+	Error     string
+	Errors    map[string]string
+	CSRFToken string
 }
 
 // RegisterPage renders the registration page.
@@ -28,7 +29,8 @@ templ RegisterPage(props RegisterProps) {
 						<p class="text-sm text-red-600 dark:text-red-400">{ props.Error }</p>
 					</div>
 				}
-				<form hx-post="/register" hx-target="body" class="space-y-4">
+				<form hx-post="/register" hx-target="body" hx-headers={ `{"X-CSRF-Token": "` + props.CSRFToken + `"}` } class="space-y-4">
+					<input type="hidden" name="csrf_token" value={ props.CSRFToken }/>
 					<!-- Name -->
 					<div class="space-y-2">
 						@components.Label("name", true) {

@@ -21,6 +21,17 @@ Features:
 - with_faker: true for realistic fake data (names, emails, addresses, etc.)
 - count: Number of records to seed (default: 10)
 - dependencies: Other seeders to run first (e.g., ["user"] before "order")
+- relationships: Define how to seed foreign keys with strategies:
+  - random: Pick a random related record for each new record
+  - distribute: Spread records evenly across related records
+  - each: Create one record per related record
+- distributions: Specify value distributions for fields (e.g., 2 admins, 5 users)
+
+Example with relationships:
+  relationships: [{"field": "UserID", "model": "User", "strategy": "random"}]
+
+Example with distributions:
+  distributions: [{"field": "Role", "values": [{"value": "\"admin\"", "count": 2}, {"value": "\"user\"", "count": 8}]}]
 
 Register the seeder in cmd/seed/main.go after generating.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldSeedInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
@@ -126,14 +137,52 @@ func buildSeedData(input types.ScaffoldSeedInput, modulePath string) generator.S
 	// Build fields
 	fields := generator.NewFieldDataList(input.Fields)
 
+	// Build relationships
+	var relationships []generator.SeedRelationshipData
+	for _, rel := range input.Relationships {
+		strategy := rel.Strategy
+		if strategy == "" {
+			strategy = "random"
+		}
+		relationships = append(relationships, generator.SeedRelationshipData{
+			Field:    rel.Field,
+			Model:    rel.Model,
+			ModelVar: utils.ToCamelCase(rel.Model),
+			Strategy: strategy,
+		})
+	}
+
+	// Build distributions
+	var distributions []generator.SeedDistributionData
+	for _, dist := range input.Distributions {
+		var values []generator.SeedValueData
+		totalCount := 0
+		for _, v := range dist.Values {
+			values = append(values, generator.SeedValueData{
+				Value: v.Value,
+				Count: v.Count,
+			})
+			totalCount += v.Count
+		}
+		distributions = append(distributions, generator.SeedDistributionData{
+			Field:      dist.Field,
+			Values:     values,
+			TotalCount: totalCount,
+		})
+	}
+
 	return generator.SeedData{
-		ModulePath:   modulePath,
-		DomainName:   input.Domain,
-		ModelName:    modelName,
-		TableName:    tableName,
-		Fields:       fields,
-		Count:        count,
-		WithFaker:    input.WithFaker,
-		Dependencies: input.Dependencies,
+		ModulePath:       modulePath,
+		DomainName:       input.Domain,
+		ModelName:        modelName,
+		TableName:        tableName,
+		Fields:           fields,
+		Count:            count,
+		WithFaker:        input.WithFaker,
+		Dependencies:     input.Dependencies,
+		Relationships:    relationships,
+		Distributions:    distributions,
+		HasRelationships: len(relationships) > 0,
+		HasDistributions: len(distributions) > 0,
 	}
 }

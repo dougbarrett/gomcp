@@ -333,3 +333,104 @@ func TestBuildSeedData(t *testing.T) {
 		t.Errorf("expected 1 dependency, got %d", len(data.Dependencies))
 	}
 }
+
+func TestBuildSeedData_Relationships(t *testing.T) {
+	input := types.ScaffoldSeedInput{
+		Domain: "order",
+		Fields: []types.FieldDef{
+			{Name: "Total", Type: "float64"},
+		},
+		Count:     20,
+		WithFaker: true,
+		Relationships: []types.SeedRelationshipDef{
+			{Field: "UserID", Model: "User", Strategy: "random"},
+			{Field: "ProductID", Model: "Product", Strategy: "distribute"},
+		},
+	}
+
+	data := buildSeedData(input, "github.com/example/app")
+
+	if !data.HasRelationships {
+		t.Error("expected HasRelationships to be true")
+	}
+	if len(data.Relationships) != 2 {
+		t.Errorf("expected 2 relationships, got %d", len(data.Relationships))
+	}
+
+	// Check first relationship
+	rel := data.Relationships[0]
+	if rel.Field != "UserID" {
+		t.Errorf("expected Field to be UserID, got %s", rel.Field)
+	}
+	if rel.Model != "User" {
+		t.Errorf("expected Model to be User, got %s", rel.Model)
+	}
+	if rel.ModelVar != "user" {
+		t.Errorf("expected ModelVar to be user, got %s", rel.ModelVar)
+	}
+	if rel.Strategy != "random" {
+		t.Errorf("expected Strategy to be random, got %s", rel.Strategy)
+	}
+
+	// Check second relationship
+	rel2 := data.Relationships[1]
+	if rel2.Strategy != "distribute" {
+		t.Errorf("expected Strategy to be distribute, got %s", rel2.Strategy)
+	}
+}
+
+func TestBuildSeedData_Distributions(t *testing.T) {
+	input := types.ScaffoldSeedInput{
+		Domain: "user",
+		Fields: []types.FieldDef{
+			{Name: "Name", Type: "string"},
+			{Name: "Role", Type: "string"},
+		},
+		Count:     10,
+		WithFaker: true,
+		Distributions: []types.SeedDistributionDef{
+			{
+				Field: "Role",
+				Values: []types.SeedValueDef{
+					{Value: `"admin"`, Count: 2},
+					{Value: `"user"`, Count: 8},
+				},
+			},
+		},
+	}
+
+	data := buildSeedData(input, "github.com/example/app")
+
+	if !data.HasDistributions {
+		t.Error("expected HasDistributions to be true")
+	}
+	if len(data.Distributions) != 1 {
+		t.Errorf("expected 1 distribution, got %d", len(data.Distributions))
+	}
+
+	dist := data.Distributions[0]
+	if dist.Field != "Role" {
+		t.Errorf("expected Field to be Role, got %s", dist.Field)
+	}
+	if dist.TotalCount != 10 {
+		t.Errorf("expected TotalCount to be 10, got %d", dist.TotalCount)
+	}
+	if len(dist.Values) != 2 {
+		t.Errorf("expected 2 values, got %d", len(dist.Values))
+	}
+}
+
+func TestBuildSeedData_DefaultStrategy(t *testing.T) {
+	input := types.ScaffoldSeedInput{
+		Domain: "order",
+		Relationships: []types.SeedRelationshipDef{
+			{Field: "UserID", Model: "User"}, // No strategy specified
+		},
+	}
+
+	data := buildSeedData(input, "github.com/example/app")
+
+	if data.Relationships[0].Strategy != "random" {
+		t.Errorf("expected default Strategy to be random, got %s", data.Relationships[0].Strategy)
+	}
+}

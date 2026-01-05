@@ -1,8 +1,59 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
+
+	"github.com/gorilla/csrf"
+	"[[.ModulePath]]/internal/config"
 )
+
+// CSRFContextKey is the context key for the CSRF token.
+type CSRFContextKey struct{}
+
+// CSRF returns a CSRF protection middleware configured for the application.
+// It uses gorilla/csrf with settings appropriate for HTMX applications.
+func CSRF(cfg *config.Config) func(http.Handler) http.Handler {
+	csrfMiddleware := csrf.Protect(
+		[]byte(cfg.Session.Secret),
+		csrf.Secure(cfg.Session.Secure),
+		csrf.Path("/"),
+		csrf.SameSite(csrf.SameSiteLaxMode),
+		// Allow HTMX requests - CSRF token sent via header
+		csrf.RequestHeader("X-CSRF-Token"),
+		csrf.FieldName("csrf_token"),
+		// Error handler for CSRF failures
+		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Retarget", "body")
+				w.Header().Set("HX-Reswap", "innerHTML")
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(`<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">CSRF token invalid. Please refresh the page and try again.</div>`))
+				return
+			}
+			http.Error(w, "Forbidden - CSRF token invalid", http.StatusForbidden)
+		})),
+	)
+	return csrfMiddleware
+}
+
+// InjectCSRFToken adds the CSRF token to the request context for use in templates.
+func InjectCSRFToken(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := csrf.Token(r)
+		ctx := context.WithValue(r.Context(), CSRFContextKey{}, token)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// GetCSRFToken retrieves the CSRF token from the context.
+func GetCSRFToken(ctx context.Context) string {
+	token, ok := ctx.Value(CSRFContextKey{}).(string)
+	if !ok {
+		return ""
+	}
+	return token
+}
 
 // CORS adds CORS headers to responses.
 func CORS(next http.Handler) http.Handler {

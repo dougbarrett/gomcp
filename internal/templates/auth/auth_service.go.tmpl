@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"[[.ModulePath]]/internal/config"
 	"[[.ModulePath]]/internal/models"
 	"[[.ModulePath]]/internal/repository/user"
 	"github.com/gorilla/sessions"
@@ -17,8 +18,6 @@ const (
 	SessionName = "[[.ProjectName]]-session"
 	// SessionUserIDKey is the key for user ID in the session.
 	SessionUserIDKey = "user_id"
-	// SessionMaxAge is the maximum age of the session in seconds (7 days).
-	SessionMaxAge = 60 * 60 * 24 * 7
 )
 
 var (
@@ -34,23 +33,25 @@ var (
 
 // Service handles authentication operations.
 type Service struct {
-	userRepo *user.Repository
-	store    sessions.Store
+	userRepo      *user.Repository
+	store         sessions.Store
+	sessionMaxAge int
 }
 
 // NewService creates a new auth Service.
-func NewService(userRepo *user.Repository, sessionSecret string) *Service {
-	store := sessions.NewCookieStore([]byte(sessionSecret))
+func NewService(userRepo *user.Repository, cfg *config.Config) *Service {
+	store := sessions.NewCookieStore([]byte(cfg.Session.Secret))
 	store.Options = &sessions.Options{
 		Path:     "/",
-		MaxAge:   SessionMaxAge,
-		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
+		MaxAge:   cfg.Session.MaxAge,
+		HttpOnly: cfg.Session.HttpOnly,
+		Secure:   cfg.Session.Secure,
 		SameSite: http.SameSiteLaxMode,
 	}
 	return &Service{
-		userRepo: userRepo,
-		store:    store,
+		userRepo:      userRepo,
+		store:         store,
+		sessionMaxAge: cfg.Session.MaxAge,
 	}
 }
 
@@ -101,7 +102,7 @@ func (s *Service) Login(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	session.Values[SessionUserIDKey] = user.ID
 	if input.Remember {
-		session.Options.MaxAge = SessionMaxAge * 4 // 28 days
+		session.Options.MaxAge = s.sessionMaxAge * 4 // Extended session (4x normal)
 	}
 
 	if err := session.Save(r, w); err != nil {

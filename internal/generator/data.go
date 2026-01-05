@@ -529,6 +529,36 @@ type ConfigData struct {
 	Sidebar bool
 }
 
+// SeedRelationshipData represents a relationship for seeding.
+type SeedRelationshipData struct {
+	// Field is the foreign key field name (e.g., "UserID").
+	Field string
+	// Model is the related model name (e.g., "User").
+	Model string
+	// ModelVar is the variable name (e.g., "user").
+	ModelVar string
+	// Strategy is how to assign: random, each, distribute.
+	Strategy string
+}
+
+// SeedDistributionData represents value distribution for seeding.
+type SeedDistributionData struct {
+	// Field is the field name.
+	Field string
+	// Values is the list of value distributions.
+	Values []SeedValueData
+	// TotalCount is the sum of all value counts.
+	TotalCount int
+}
+
+// SeedValueData represents a value and its count.
+type SeedValueData struct {
+	// Value is the field value.
+	Value string
+	// Count is how many records should have this value.
+	Count int
+}
+
 // SeedData is the template data for seeder scaffolding.
 type SeedData struct {
 	// ModulePath is the Go module path.
@@ -547,6 +577,14 @@ type SeedData struct {
 	WithFaker bool
 	// Dependencies is the list of dependencies.
 	Dependencies []string
+	// Relationships is the list of relationships to seed.
+	Relationships []SeedRelationshipData
+	// Distributions is the list of value distributions.
+	Distributions []SeedDistributionData
+	// HasRelationships is true if there are relationships.
+	HasRelationships bool
+	// HasDistributions is true if there are distributions.
+	HasDistributions bool
 }
 
 // AuthData is the template data for auth scaffolding.

@@ -335,5 +335,24 @@ func TemplateFuncMap() template.FuncMap {
 		"list": func(values ...interface{}) []interface{} {
 			return values
 		},
+
+		// Seeding helpers
+		"isDistributedField": func(fieldName string, distributions []SeedDistributionData) bool {
+			for _, d := range distributions {
+				if d.Field == fieldName {
+					return true
+				}
+			}
+			return false
+		},
+
+		"fieldGoType": func(fieldName string, fields []FieldData) string {
+			for _, f := range fields {
+				if f.Name == fieldName {
+					return f.Type
+				}
+			}
+			return "string"
+		},
 	}
 }

@@ -12,12 +12,21 @@ import (
 type Config struct {
 	Server   ServerConfig   `toml:"server"`
 	Database DatabaseConfig `toml:"database"`
+	Session  SessionConfig  `toml:"session"`
 }
 
 // ServerConfig holds server-related configuration.
 type ServerConfig struct {
 	Address string `toml:"address"`
 	Debug   bool   `toml:"debug"`
+}
+
+// SessionConfig holds session-related configuration.
+type SessionConfig struct {
+	Secret   string `toml:"secret"`
+	MaxAge   int    `toml:"max_age"`   // in seconds
+	Secure   bool   `toml:"secure"`    // HTTPS only
+	HttpOnly bool   `toml:"http_only"`
 }
 
 // DatabaseConfig holds database-related configuration.
@@ -36,6 +45,12 @@ func Load() *Config {
 		Database: DatabaseConfig{
 			Driver: getEnv("DB_DRIVER", "[[.DatabaseType]]"),
 			DSN:    getEnv("DB_DSN", getDefaultDSN()),
+		},
+		Session: SessionConfig{
+			Secret:   getEnv("SESSION_SECRET", getDefaultSessionSecret()),
+			MaxAge:   86400 * 7, // 7 days
+			Secure:   getEnv("SESSION_SECURE", "false") == "true",
+			HttpOnly: true,
 		},
 	}
 
@@ -87,4 +102,11 @@ func getDefaultDSN() string {
 [[- else]]
 	return "data.db"
 [[- end]]
+}
+
+func getDefaultSessionSecret() string {
+	// WARNING: This default is for development only.
+	// In production, always set SESSION_SECRET environment variable.
+	log.Println("WARNING: Using default session secret. Set SESSION_SECRET environment variable in production.")
+	return "[[.ProjectName]]-dev-secret-change-me-in-production"
 }

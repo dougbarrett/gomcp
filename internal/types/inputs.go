@@ -387,6 +387,32 @@ type ScaffoldConfigInput struct {
 	DryRun bool `json:"dry_run,omitempty"`
 }
 
+// SeedRelationshipDef defines how to seed a relationship.
+type SeedRelationshipDef struct {
+	// Field is the foreign key field name (e.g., "UserID").
+	Field string `json:"field"`
+	// Model is the related model name (e.g., "User").
+	Model string `json:"model"`
+	// Strategy is how to assign: random (pick random existing), each (one per related record), distribute (spread evenly).
+	Strategy string `json:"strategy,omitempty"`
+}
+
+// SeedDistributionDef defines value distribution for a field.
+type SeedDistributionDef struct {
+	// Field is the field name.
+	Field string `json:"field"`
+	// Values is the list of value distributions.
+	Values []SeedValueDef `json:"values"`
+}
+
+// SeedValueDef defines a value and its count.
+type SeedValueDef struct {
+	// Value is the field value (as string, will be converted).
+	Value string `json:"value"`
+	// Count is how many records should have this value.
+	Count int `json:"count"`
+}
+
 // ScaffoldSeedInput is the input for the scaffold_seed tool.
 type ScaffoldSeedInput struct {
 	// Domain is the domain name.
@@ -399,6 +425,10 @@ type ScaffoldSeedInput struct {
 	WithFaker bool `json:"with_faker,omitempty"`
 	// Dependencies is the list of seeders to run first.
 	Dependencies []string `json:"dependencies,omitempty"`
+	// Relationships defines how to seed foreign key relationships.
+	Relationships []SeedRelationshipDef `json:"relationships,omitempty"`
+	// Distributions defines value distributions for specific fields.
+	Distributions []SeedDistributionDef `json:"distributions,omitempty"`
 	// DryRun previews changes without writing files.
 	DryRun bool `json:"dry_run,omitempty"`
 }

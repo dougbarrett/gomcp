@@ -461,6 +461,138 @@ func TestScaffoldProject(t *testing.T) {
 			t.Errorf("expected %d files, got %d: %v", expectedFileCount, len(result.FilesCreated), result.FilesCreated)
 		}
 	})
+
+	t.Run("middleware includes CSRF protection", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		input := types.ScaffoldProjectInput{
+			ProjectName: "csrfapp",
+			ModulePath:  "github.com/test/csrfapp",
+			DryRun:      false,
+		}
+
+		result, err := scaffoldProject(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.Success {
+			t.Fatalf("expected success, got: %s", result.Message)
+		}
+
+		// Check middleware.go includes CSRF middleware
+		middlewarePath := tmpDir + "/csrfapp/internal/web/middleware/middleware.go"
+		content := readFile(t, middlewarePath)
+
+		if !containsString(content, "CSRF") {
+			t.Errorf("middleware.go should include CSRF function")
+		}
+		if !containsString(content, "gorilla/csrf") {
+			t.Errorf("middleware.go should import gorilla/csrf")
+		}
+		if !containsString(content, "GetCSRFToken") {
+			t.Errorf("middleware.go should include GetCSRFToken function")
+		}
+	})
+
+	t.Run("router includes CSRF middleware", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		input := types.ScaffoldProjectInput{
+			ProjectName: "csrfrouterapp",
+			ModulePath:  "github.com/test/csrfrouterapp",
+			DryRun:      false,
+		}
+
+		result, err := scaffoldProject(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.Success {
+			t.Fatalf("expected success, got: %s", result.Message)
+		}
+
+		// Check router.go includes CSRF middleware usage
+		routerPath := tmpDir + "/csrfrouterapp/internal/web/router.go"
+		content := readFile(t, routerPath)
+
+		if !containsString(content, "middleware.CSRF") {
+			t.Errorf("router.go should use middleware.CSRF")
+		}
+		if !containsString(content, "middleware.InjectCSRFToken") {
+			t.Errorf("router.go should use middleware.InjectCSRFToken")
+		}
+	})
+
+	t.Run("config includes session config", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		input := types.ScaffoldProjectInput{
+			ProjectName: "sessioncfgapp",
+			ModulePath:  "github.com/test/sessioncfgapp",
+			DryRun:      false,
+		}
+
+		result, err := scaffoldProject(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.Success {
+			t.Fatalf("expected success, got: %s", result.Message)
+		}
+
+		// Check config.go includes session configuration
+		configPath := tmpDir + "/sessioncfgapp/internal/config/config.go"
+		content := readFile(t, configPath)
+
+		if !containsString(content, "SessionConfig") {
+			t.Errorf("config.go should include SessionConfig struct")
+		}
+		if !containsString(content, "SESSION_SECRET") {
+			t.Errorf("config.go should read SESSION_SECRET from environment")
+		}
+	})
+
+	t.Run("auth templates include CSRF token", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		input := types.ScaffoldProjectInput{
+			ProjectName: "authcsrfapp",
+			ModulePath:  "github.com/test/authcsrfapp",
+			WithAuth:    true,
+			DryRun:      false,
+		}
+
+		result, err := scaffoldProject(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.Success {
+			t.Fatalf("expected success, got: %s", result.Message)
+		}
+
+		// Check login.templ includes CSRF token
+		loginPath := tmpDir + "/authcsrfapp/internal/web/auth/views/login.templ"
+		loginContent := readFile(t, loginPath)
+
+		if !containsString(loginContent, "CSRFToken") {
+			t.Errorf("login.templ should include CSRFToken in props")
+		}
+		if !containsString(loginContent, "X-CSRF-Token") {
+			t.Errorf("login.templ should include X-CSRF-Token header for HTMX")
+		}
+
+		// Check register.templ includes CSRF token
+		registerPath := tmpDir + "/authcsrfapp/internal/web/auth/views/register.templ"
+		registerContent := readFile(t, registerPath)
+
+		if !containsString(registerContent, "CSRFToken") {
+			t.Errorf("register.templ should include CSRFToken in props")
+		}
+
+		// Check auth controller passes CSRF token
+		controllerPath := tmpDir + "/authcsrfapp/internal/web/auth/auth.go"
+		controllerContent := readFile(t, controllerPath)
+
+		if !containsString(controllerContent, "GetCSRFToken") {
+			t.Errorf("auth controller should call GetCSRFToken")
+		}
+	})
 }
 
 // containsString checks if s contains substr

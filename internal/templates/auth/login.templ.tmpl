@@ -6,9 +6,10 @@ import (
 
 // LoginProps contains props for the login page.
 type LoginProps struct {
-	Email  string
-	Error  string
-	Errors map[string]string
+	Email     string
+	Error     string
+	Errors    map[string]string
+	CSRFToken string
 }
 
 // LoginPage renders the login page.
@@ -27,7 +28,8 @@ templ LoginPage(props LoginProps) {
 						<p class="text-sm text-red-600 dark:text-red-400">{ props.Error }</p>
 					</div>
 				}
-				<form hx-post="/login" hx-target="body" class="space-y-4">
+				<form hx-post="/login" hx-target="body" hx-headers={ `{"X-CSRF-Token": "` + props.CSRFToken + `"}` } class="space-y-4">
+					<input type="hidden" name="csrf_token" value={ props.CSRFToken }/>
 					<!-- Email -->
 					<div class="space-y-2">
 						@components.Label("email", true) {
