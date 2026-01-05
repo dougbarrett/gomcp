@@ -259,3 +259,41 @@ func CreateTempDir(prefix string) (string, error) {
 func CreateTempFile(pattern string) (*os.File, error) {
 	return os.CreateTemp("", pattern)
 }
+
+// AppendToFileIfNotContains appends content to a file if the file doesn't already contain
+// the specified marker string. This is useful for adding instructions to existing files
+// without duplicating them.
+func AppendToFileIfNotContains(path, marker, content string) error {
+	// Check if file exists
+	if !FileExists(path) {
+		return nil // File doesn't exist, nothing to append to
+	}
+
+	// Read existing content
+	existing, err := ReadFileString(path)
+	if err != nil {
+		return err
+	}
+
+	// Check if marker already exists
+	if strings.Contains(existing, marker) {
+		return nil // Already contains the content
+	}
+
+	// Append new content
+	newContent := existing
+	if !strings.HasSuffix(newContent, "\n") {
+		newContent += "\n"
+	}
+	newContent += "\n" + content
+
+	return WriteFileString(path, newContent, true)
+}
+
+// CreateFileIfNotExists creates a file with the given content only if it doesn't exist.
+func CreateFileIfNotExists(path, content string) error {
+	if FileExists(path) {
+		return nil
+	}
+	return WriteFileString(path, content, false)
+}

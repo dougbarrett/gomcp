@@ -182,6 +182,14 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 		}
 	}
 
+	// Add MCP marker instructions to CLAUDE.md and AGENTS.md
+	if !input.DryRun {
+		if err := addMCPMarkerInstructions(projectPath); err != nil {
+			// Non-fatal error - just log and continue
+			// The project is still functional without these instructions
+		}
+	}
+
 	// Prepare result
 	result := gen.Result()
 
@@ -220,4 +228,82 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 		FilesUpdated: result.FilesUpdated,
 		NextSteps:    nextSteps,
 	}, nil
+}
+
+// mcpMarkerInstructions contains the warning about MCP marker comments.
+const mcpMarkerInstructions = `## MCP Scaffolding Markers - DO NOT MODIFY
+
+This project uses MCP (Model Context Protocol) scaffolding tools that rely on special marker comments for code injection. These markers enable the scaffolding tools to add new code (imports, dependencies, routes, etc.) to existing files without overwriting your changes.
+
+### Critical: Never modify or remove these marker comments:
+
+` + "```" + `
+// MCP:IMPORTS:START
+// MCP:IMPORTS:END
+
+// MCP:MODELS:START
+// MCP:MODELS:END
+
+// MCP:REPOS:START
+// MCP:REPOS:END
+
+// MCP:SERVICES:START
+// MCP:SERVICES:END
+
+// MCP:CONTROLLERS:START
+// MCP:CONTROLLERS:END
+
+// MCP:ROUTES:START
+// MCP:ROUTES:END
+
+// MCP:REPO_INTERFACE:START
+// MCP:REPO_INTERFACE:END
+
+// MCP:REPO_METHODS:START
+// MCP:REPO_METHODS:END
+
+// MCP:SERVICE_INTERFACE:START
+// MCP:SERVICE_INTERFACE:END
+
+// MCP:SERVICE_METHODS:START
+// MCP:SERVICE_METHODS:END
+
+// MCP:HANDLERS:START
+// MCP:HANDLERS:END
+` + "```" + `
+
+### Why this matters:
+- The scaffolding tools inject code **between** these markers
+- Removing or modifying the markers will break the ability to scaffold new domains
+- You can safely add your own code **outside** of these marker pairs
+- Code **inside** the markers may be regenerated - add custom code elsewhere
+
+### Files that contain these markers:
+- ` + "`cmd/web/main.go`" + ` - DI wiring (imports, repos, services, controllers, routes)
+- ` + "`internal/repository/{domain}/{domain}.go`" + ` - Repository interface and methods
+- ` + "`internal/services/{domain}/{domain}.go`" + ` - Service interface and methods
+- ` + "`internal/web/{domain}/{domain}.go`" + ` - Controller routes and handlers
+`
+
+// addMCPMarkerInstructions adds the MCP marker warning to CLAUDE.md and AGENTS.md if they exist.
+func addMCPMarkerInstructions(projectPath string) error {
+	marker := "## MCP Scaffolding Markers"
+
+	// Try to add to CLAUDE.md
+	claudePath := filepath.Join(projectPath, "CLAUDE.md")
+	if err := utils.AppendToFileIfNotContains(claudePath, marker, mcpMarkerInstructions); err != nil {
+		// Try parent directory (in case scaffolding in subdirectory)
+		parentClaudePath := filepath.Join(filepath.Dir(projectPath), "CLAUDE.md")
+		utils.AppendToFileIfNotContains(parentClaudePath, marker, mcpMarkerInstructions)
+	}
+
+	// Try to add to AGENTS.md
+	agentsPath := filepath.Join(projectPath, "AGENTS.md")
+	if err := utils.AppendToFileIfNotContains(agentsPath, marker, mcpMarkerInstructions); err != nil {
+		// Try parent directory
+		parentAgentsPath := filepath.Join(filepath.Dir(projectPath), "AGENTS.md")
+		utils.AppendToFileIfNotContains(parentAgentsPath, marker, mcpMarkerInstructions)
+	}
+
+	return nil
 }
