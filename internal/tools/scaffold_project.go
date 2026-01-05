@@ -36,6 +36,32 @@ Options:
 - with_user_management: true to include admin user management (requires with_auth)
 - dry_run: true to preview files without writing
 
+Examples:
+
+1. Simple project without auth:
+   scaffold_project: {
+     project_name: "myblog",
+     module_path: "github.com/myuser/myblog",
+     database_type: "sqlite"
+   }
+
+2. Full-featured app with auth and user management:
+   scaffold_project: {
+     project_name: "myapp",
+     module_path: "github.com/myuser/myapp",
+     database_type: "postgres",
+     with_auth: true,
+     with_user_management: true
+   }
+
+3. Scaffold in existing empty directory:
+   scaffold_project: {
+     project_name: "webapp",
+     module_path: "github.com/company/webapp",
+     in_current_dir: true,
+     with_auth: true
+   }
+
 After running: Execute 'go mod tidy' then 'task dev' to start.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldProjectInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldProject(registry, input)

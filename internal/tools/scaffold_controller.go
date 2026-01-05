@@ -23,6 +23,39 @@ Only use this tool when you need JUST HTTP handlers. Common cases:
 
 Generates: internal/web/{domain}/{domain}.go with HTTP handlers and routing.
 
+Layout options (layout parameter):
+- "dashboard" (default): Views wrapped in DashboardPage layout
+- "base": Views wrapped in BasePage layout
+- "none": Views rendered without layout wrapper
+
+Route group options (route_group parameter):
+- "public" (default): No authentication required
+- "authenticated": Requires user login
+- "admin": Requires admin role
+
+Examples:
+
+1. API endpoints (no views):
+   scaffold_controller: {
+     domain_name: "api",
+     layout: "none",
+     actions: [
+       {name: "health", method: "GET", path: "/health"},
+       {name: "version", method: "GET", path: "/version"}
+     ]
+   }
+
+2. Admin reports controller:
+   scaffold_controller: {
+     domain_name: "reports",
+     route_group: "admin",
+     base_path: "/admin/reports",
+     actions: [
+       {name: "sales", method: "GET", path: "/sales"},
+       {name: "users", method: "GET", path: "/users"}
+     ]
+   }
+
 Prefer scaffold_domain for new features - it generates all layers consistently.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldControllerInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldController(registry, input)

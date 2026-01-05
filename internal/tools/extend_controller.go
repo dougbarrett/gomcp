@@ -21,12 +21,6 @@ func RegisterExtendController(server *mcp.Server, registry *Registry) {
 Use this to add HTTP endpoints beyond standard CRUD. The controller must have been created
 with scaffold_domain (which includes injection markers).
 
-Example endpoints:
-- POST /{id}/cancel: Trigger an action on a resource
-- GET /{id}/stats: Get computed/aggregated data
-- POST /{id}/duplicate: Create a copy
-- PATCH /{id}/status: Partial update
-
 Each endpoint adds a route registration and handler method. Use the body parameter
 to provide the handler implementation, or leave empty for a TODO placeholder.
 
@@ -39,7 +33,45 @@ Template variables available in body:
 - [[.ModelName]]: The model name in PascalCase (e.g., "Order")
 - [[.VariableName]]: The variable name in camelCase (e.g., "order")
 - [[.PackageName]]: The package name (e.g., "order")
-- [[.URLPath]]: The base URL path (e.g., "/orders")`,
+- [[.URLPath]]: The base URL path (e.g., "/orders")
+
+Examples:
+
+1. Action endpoint (cancel an order):
+   extend_controller: {
+     domain: "order",
+     endpoints: [
+       {
+         name: "Cancel",
+         method: "POST",
+         path: "/{id}/cancel",
+         description: "Cancel an order"
+       }
+     ]
+   }
+
+2. Endpoint with full implementation:
+   extend_controller: {
+     domain: "product",
+     endpoints: [
+       {
+         name: "ToggleFeatured",
+         method: "POST",
+         path: "/{id}/toggle-featured",
+         body: "id := chi.URLParam(r, \"id\")\nidUint, _ := strconv.ParseUint(id, 10, 32)\nerr := c.service.ToggleFeatured(r.Context(), uint(idUint))\nif err != nil {\n\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\treturn\n}\nw.Header().Set(\"HX-Refresh\", \"true\")\nw.WriteHeader(http.StatusOK)"
+       }
+     ]
+   }
+
+3. Multiple endpoints:
+   extend_controller: {
+     domain: "order",
+     endpoints: [
+       {name: "Ship", method: "POST", path: "/{id}/ship"},
+       {name: "Refund", method: "POST", path: "/{id}/refund"},
+       {name: "Stats", method: "GET", path: "/stats"}
+     ]
+   }`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ExtendControllerInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := extendController(registry, input)
 		if err != nil {

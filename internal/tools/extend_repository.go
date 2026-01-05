@@ -21,19 +21,53 @@ func RegisterExtendRepository(server *mcp.Server, registry *Registry) {
 Use this to add data access methods beyond standard CRUD. The repository must have been created
 with scaffold_domain (which includes injection markers).
 
-Example methods:
-- FindByEmail: Look up by a specific field
-- FindByStatus: Filter by status
-- CountByCategory: Aggregate queries
-- SoftDelete: Custom delete behavior
-
 Each method is added to both the interface and the implementation. Use the body parameter
 to provide the implementation, or leave empty for a TODO placeholder.
 
 Template variables available in body:
 - [[.ModelName]]: The model name in PascalCase (e.g., "Order")
 - [[.VariableName]]: The variable name in camelCase (e.g., "order")
-- [[.PackageName]]: The package name (e.g., "order")`,
+- [[.PackageName]]: The package name (e.g., "order")
+
+Examples:
+
+1. Find by a specific field:
+   extend_repository: {
+     domain: "user",
+     methods: [
+       {
+         name: "FindByEmail",
+         params: [{name: "email", type: "string"}],
+         returns: "*models.User, error",
+         body: "var [[.VariableName]] models.[[.ModelName]]\nerr := r.db.Where(\"email = ?\", email).First(&[[.VariableName]]).Error\nif err != nil {\n\treturn nil, err\n}\nreturn &[[.VariableName]], nil"
+       }
+     ]
+   }
+
+2. Filter by status:
+   extend_repository: {
+     domain: "order",
+     methods: [
+       {
+         name: "FindByStatus",
+         params: [{name: "status", type: "string"}],
+         returns: "[]models.Order, error"
+       }
+     ]
+   }
+
+3. Aggregate query:
+   extend_repository: {
+     domain: "product",
+     methods: [
+       {
+         name: "CountByCategory",
+         params: [{name: "categoryID", type: "uint"}],
+         returns: "int64, error",
+         body: "var count int64\nerr := r.db.Model(&models.[[.ModelName]]{}).Where(\"category_id = ?\", categoryID).Count(&count).Error\nreturn count, err"
+       }
+     ]
+   }`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ExtendRepositoryInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := extendRepository(registry, input)
 		if err != nil {

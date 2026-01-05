@@ -34,6 +34,52 @@ Supported field types:
 - Slices: []byte, []string, []int, []uint
 - Custom types: any valid Go identifier (e.g., Status, models.Role)
 
+Layout options (layout parameter):
+- "dashboard" (default): Views wrapped in DashboardPage layout with sidebar
+- "base": Views wrapped in BasePage layout without sidebar
+- "none": Views rendered without layout wrapper
+
+Route group options (route_group parameter):
+- "public" (default): No authentication required
+- "authenticated": Requires user login (RequireAuth middleware)
+- "admin": Requires admin role (RequireAuth + RequireAdmin middleware)
+
+Examples:
+
+1. Simple public domain (blog posts):
+   scaffold_domain: {
+     domain_name: "post",
+     fields: [
+       {name: "Title", type: "string"},
+       {name: "Content", type: "string", form_type: "textarea"},
+       {name: "PublishedAt", type: "*time.Time"}
+     ]
+   }
+
+2. Authenticated user feature (orders):
+   scaffold_domain: {
+     domain_name: "order",
+     route_group: "authenticated",
+     fields: [
+       {name: "Total", type: "float64"},
+       {name: "Status", type: "string"}
+     ],
+     relationships: [
+       {type: "belongs_to", model: "User"}
+     ]
+   }
+
+3. Admin-only management (categories):
+   scaffold_domain: {
+     domain_name: "category",
+     route_group: "admin",
+     layout: "dashboard",
+     fields: [
+       {name: "Name", type: "string"},
+       {name: "Slug", type: "string", gorm_tags: "uniqueIndex"}
+     ]
+   }
+
 Automatically wires into main.go DI container. Run 'go mod tidy' and 'templ generate' after.
 
 Use dry_run: true to preview all generated files first.`,

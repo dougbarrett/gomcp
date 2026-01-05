@@ -29,6 +29,57 @@ Features available via config:
 - with_bulk_actions for batch operations
 - row_actions for view/edit/delete buttons
 
+Layout options (layout parameter):
+- "dashboard" (default): Views wrapped in DashboardPage layout with sidebar
+- "base": Views wrapped in BasePage layout without sidebar
+- "none": Views rendered without layout wrapper
+
+Examples:
+
+1. List view with pagination and search:
+   scaffold_view: {
+     domain_name: "product",
+     view_type: "list",
+     view_name: "product_list",
+     config: {
+       with_pagination: true,
+       with_search: true,
+       empty_state_message: "No products found"
+     }
+   }
+
+2. Table view with sorting and actions:
+   scaffold_view: {
+     domain_name: "order",
+     view_type: "table",
+     view_name: "order_table",
+     config: {
+       columns: [
+         {key: "id", label: "ID"},
+         {key: "total", label: "Total", format: "currency", sortable: true},
+         {key: "status", label: "Status", format: "badge"}
+       ],
+       row_actions: [
+         {type: "view"},
+         {type: "edit"},
+         {type: "delete", confirm: true}
+       ]
+     }
+   }
+
+3. Form without layout wrapper (for HTMX partials):
+   scaffold_view: {
+     domain_name: "comment",
+     view_type: "form",
+     view_name: "comment_form",
+     layout: "none",
+     config: {
+       fields: [
+         {name: "Content", type: "string", form_type: "textarea"}
+       ]
+     }
+   }
+
 Run 'templ generate' after creating views.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldViewInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldView(registry, input)

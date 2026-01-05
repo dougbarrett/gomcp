@@ -24,7 +24,7 @@ Use this when you have a repository with custom methods (like the auth user repo
 and want to create a service layer that wraps those methods.
 
 The tool:
-1. Reads the existing repository interface
+1. Reads the existing repository interface from internal/repository/{domain}/{domain}.go
 2. Generates a service with methods that wrap repository calls
 3. Creates a separate package to avoid import cycles
 
@@ -35,7 +35,13 @@ Example: Create a user management service from the auth user repository:
     exclude_methods: ["UpdateLastLogin", "UpdatePasswordHash"]
   }
 
-This generates internal/services/usermgmt/ with a service that delegates to userrepo.Repository.`,
+This generates internal/services/usermgmt/ with a service that delegates to userrepo.Repository.
+
+IMPORTANT: Unlike scaffold_domain, this tool does NOT automatically wire the service into main.go.
+You must manually:
+1. Import the service package in cmd/web/main.go
+2. Instantiate the service with the repository
+3. Wire it to any controllers that need it`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldServiceForRepoInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldServiceForRepo(registry, input)
 		if err != nil {

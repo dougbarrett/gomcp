@@ -21,12 +21,6 @@ func RegisterExtendService(server *mcp.Server, registry *Registry) {
 Use this to add business logic methods beyond standard CRUD. The service must have been created
 with scaffold_domain (which includes injection markers).
 
-Example methods:
-- CancelOrder: Business operation with validation
-- CalculateTotal: Computed values
-- ProcessPayment: Integration with external services
-- NotifyUser: Side effects like sending emails
-
 Each method is added to both the interface and the implementation. Use the body parameter
 to provide the implementation, or leave empty for a TODO placeholder.
 
@@ -35,7 +29,43 @@ The service has access to s.repo for repository operations.
 Template variables available in body:
 - [[.ModelName]]: The model name in PascalCase (e.g., "Order")
 - [[.VariableName]]: The variable name in camelCase (e.g., "order")
-- [[.PackageName]]: The package name (e.g., "order")`,
+- [[.PackageName]]: The package name (e.g., "order")
+
+Examples:
+
+1. Add a method with TODO placeholder:
+   extend_service: {
+     domain: "order",
+     methods: [
+       {
+         name: "Cancel",
+         params: [{name: "id", type: "uint"}],
+         returns: "error"
+       }
+     ]
+   }
+
+2. Add a method with full implementation:
+   extend_service: {
+     domain: "order",
+     methods: [
+       {
+         name: "CalculateTotal",
+         params: [{name: "id", type: "uint"}],
+         returns: "float64, error",
+         body: "[[.VariableName]], err := s.repo.FindByID(ctx, id)\nif err != nil {\n\treturn 0, err\n}\nreturn [[.VariableName]].Subtotal + [[.VariableName]].Tax, nil"
+       }
+     ]
+   }
+
+3. Add multiple methods at once:
+   extend_service: {
+     domain: "product",
+     methods: [
+       {name: "MarkAsFeatured", params: [{name: "id", type: "uint"}], returns: "error"},
+       {name: "GetFeatured", returns: "[]models.Product, error"}
+     ]
+   }`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ExtendServiceInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := extendService(registry, input)
 		if err != nil {
