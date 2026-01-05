@@ -547,8 +547,9 @@ func main() {}
 	}
 
 	result := injector.Content()
-	if !strings.Contains(result, "productController.RegisterRoutes(mux)") {
-		t.Error("Route should be injected")
+	expectedRoute := "productController.RegisterRoutes(router)"
+	if !strings.Contains(result, expectedRoute) {
+		t.Errorf("Route should be injected.\nExpected to contain: %s\nActual content:\n%s", expectedRoute, result)
 	}
 }
 
@@ -755,7 +756,7 @@ func main() {
 		"productRepo := product.NewRepository(db)",
 		"productService := product.NewService(productRepo)",
 		"productController := product.NewController(productService)",
-		"productController.RegisterRoutes(mux)",
+		"productController.RegisterRoutes(router)",
 	}
 
 	for _, check := range checks {

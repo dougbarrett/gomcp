@@ -29,12 +29,12 @@ func main() {
 	// MCP:CONTROLLERS:START
 	// MCP:CONTROLLERS:END
 
-	mux := http.NewServeMux()
+	router := http.NewServeMux()
 
 	// MCP:ROUTES:START
 	// MCP:ROUTES:END
 
-	http.ListenAndServe(":8080", mux)
+	http.ListenAndServe(":8080", router)
 }
 `
 
@@ -320,8 +320,9 @@ func TestUpdateDIWiring(t *testing.T) {
 		mainGoPath := filepath.Join(tmpDir, "cmd", "web", "main.go")
 		content := readFile(t, mainGoPath)
 
-		if !containsString(content, "productController.RegisterRoutes") {
-			t.Errorf("expected route registration")
+		// Check for full route registration with correct router variable name
+		if !containsString(content, "productController.RegisterRoutes(router)") {
+			t.Errorf("expected route registration with router variable, got:\n%s", content)
 		}
 	})
 

@@ -279,6 +279,6 @@ func (i *Injector) InjectController(domainName string) error {
 // InjectRoute adds a route registration.
 func (i *Injector) InjectRoute(domainName string) error {
 	varName := utils.ToControllerVariableName(domainName)
-	code := fmt.Sprintf(`%s.RegisterRoutes(mux)`, varName)
+	code := fmt.Sprintf(`%s.RegisterRoutes(router)`, varName)
 	return i.InjectBetweenMarkers(MarkerRoutesStart, MarkerRoutesEnd, code)
 }
