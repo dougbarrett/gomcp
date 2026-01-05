@@ -80,6 +80,11 @@ func (r *Registry) RegisterAll(server *mcp.Server) {
 	RegisterListDomains(server, r)
 	RegisterUpdateDIWiring(server, r)
 
+	// Phase 6: Extend tools for custom logic
+	RegisterExtendRepository(server, r)
+	RegisterExtendService(server, r)
+	RegisterExtendController(server, r)
+
 	// Utility tools
 	RegisterReportBug(server, r)
 }

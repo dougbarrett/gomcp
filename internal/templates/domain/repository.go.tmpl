@@ -17,6 +17,8 @@ type Repository interface {
 	FindAll(ctx context.Context, opts ...QueryOption) ([]models.[[.ModelName]], int64, error)
 	Update(ctx context.Context, [[.VariableName]] *models.[[.ModelName]]) error
 	Delete(ctx context.Context, id uint) error
+	// MCP:REPO_INTERFACE:START
+	// MCP:REPO_INTERFACE:END
 }
 
 // QueryOption is a function that modifies a query.
@@ -163,3 +165,6 @@ func (r *repository) Update(ctx context.Context, [[.VariableName]] *models.[[.Mo
 func (r *repository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&models.[[.ModelName]]{}, id).Error
 }
+
+// MCP:REPO_METHODS:START
+// MCP:REPO_METHODS:END

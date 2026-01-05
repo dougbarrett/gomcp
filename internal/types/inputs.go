@@ -453,3 +453,61 @@ type ReportBugInput struct {
 	// Description is a detailed description of the bug.
 	Description string `json:"description"`
 }
+
+// ExtendRepositoryInput is the input for the extend_repository tool.
+type ExtendRepositoryInput struct {
+	// Domain is the domain name (e.g., "order").
+	Domain string `json:"domain"`
+	// Methods is the list of methods to add.
+	Methods []ExtendMethodDef `json:"methods"`
+	// DryRun previews changes without writing files.
+	DryRun bool `json:"dry_run,omitempty"`
+}
+
+// ExtendServiceInput is the input for the extend_service tool.
+type ExtendServiceInput struct {
+	// Domain is the domain name (e.g., "order").
+	Domain string `json:"domain"`
+	// Methods is the list of methods to add.
+	Methods []ExtendMethodDef `json:"methods"`
+	// DryRun previews changes without writing files.
+	DryRun bool `json:"dry_run,omitempty"`
+}
+
+// ExtendControllerInput is the input for the extend_controller tool.
+type ExtendControllerInput struct {
+	// Domain is the domain name (e.g., "order").
+	Domain string `json:"domain"`
+	// Endpoints is the list of endpoints to add.
+	Endpoints []ExtendEndpointDef `json:"endpoints"`
+	// DryRun previews changes without writing files.
+	DryRun bool `json:"dry_run,omitempty"`
+}
+
+// ExtendMethodDef defines a method to add to a repository or service.
+type ExtendMethodDef struct {
+	// Name is the method name in PascalCase (e.g., "FindByEmail").
+	Name string `json:"name"`
+	// Description describes what the method does.
+	Description string `json:"description,omitempty"`
+	// Params is the list of parameters (excluding context which is added automatically).
+	Params []ParamDef `json:"params,omitempty"`
+	// Returns is the return type(s). For multiple returns, use comma separation (e.g., "*models.Order, error").
+	Returns string `json:"returns,omitempty"`
+	// Body is the method implementation. Use [[.ModelName]], [[.VariableName]], etc. for templating.
+	Body string `json:"body,omitempty"`
+}
+
+// ExtendEndpointDef defines an endpoint to add to a controller.
+type ExtendEndpointDef struct {
+	// Name is the handler method name in PascalCase (e.g., "Cancel").
+	Name string `json:"name"`
+	// Description describes what the endpoint does.
+	Description string `json:"description,omitempty"`
+	// Method is the HTTP method (GET, POST, PUT, DELETE, PATCH).
+	Method string `json:"method"`
+	// Path is the URL path (e.g., "/{id}/cancel"). Will be prefixed with domain base path.
+	Path string `json:"path"`
+	// Body is the handler implementation.
+	Body string `json:"body,omitempty"`
+}

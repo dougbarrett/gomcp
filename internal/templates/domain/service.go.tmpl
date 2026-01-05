@@ -22,6 +22,8 @@ type Service interface {
 	List(ctx context.Context, filter List[[.ModelName]]Filter) (*List[[.ModelName]]Result, error)
 	Update(ctx context.Context, id uint, input Update[[.ModelName]]Input) (*models.[[.ModelName]], error)
 	Delete(ctx context.Context, id uint) error
+	// MCP:SERVICE_INTERFACE:START
+	// MCP:SERVICE_INTERFACE:END
 }
 
 // service implements Service.
@@ -159,3 +161,6 @@ func (s *service) Delete(ctx context.Context, id uint) error {
 	}
 	return s.repo.Delete(ctx, id)
 }
+
+// MCP:SERVICE_METHODS:START
+// MCP:SERVICE_METHODS:END
