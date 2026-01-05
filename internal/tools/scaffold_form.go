@@ -45,7 +45,8 @@ func scaffoldForm(registry *Registry, input types.ScaffoldFormInput) (types.Scaf
 		return types.NewErrorResult("form name is required"), nil
 	}
 
-	if err := utils.ValidateDomainName(input.Domain); err != nil {
+	// Support nested paths like "admin/users"
+	if err := utils.ValidateDomainPath(input.Domain); err != nil {
 		return types.NewErrorResult(err.Error()), nil
 	}
 
@@ -82,9 +83,9 @@ func scaffoldForm(registry *Registry, input types.ScaffoldFormInput) (types.Scaf
 	// Prepare template data
 	data := generator.NewFormData(input, modulePath)
 
-	// Determine output path
-	pkgName := utils.ToPackageName(input.Domain)
-	viewDir := filepath.Join("internal", "web", pkgName, "views")
+	// Determine output path - support nested paths like "admin/users"
+	domainDir := utils.DomainPathToDir(input.Domain)
+	viewDir := filepath.Join("internal", "web", domainDir, "views")
 	outputPath := filepath.Join(viewDir, input.FormName+".templ")
 
 	// Ensure directory exists
@@ -105,10 +106,14 @@ func scaffoldForm(registry *Registry, input types.ScaffoldFormInput) (types.Scaf
 		return *conflictResult, nil
 	}
 
+	// Get base package name for the next steps message
+	baseDomain := utils.ParseDomainPath(input.Domain)
+	basePkgName := utils.ToPackageName(baseDomain)
+
 	nextSteps := []string{
 		"templ generate",
-		fmt.Sprintf("Import the form in internal/web/%s/%s.go", pkgName, pkgName),
-		fmt.Sprintf("Add form handler in the %s controller", pkgName),
+		fmt.Sprintf("Import the form in internal/web/%s/%s.go", domainDir, basePkgName),
+		fmt.Sprintf("Add form handler in the %s controller", basePkgName),
 	}
 
 	suggestedTools := []types.ToolHint{

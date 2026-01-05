@@ -76,9 +76,10 @@ func scaffoldView(registry *Registry, input types.ScaffoldViewInput) (types.Scaf
 	// Prepare template data
 	data := buildViewData(input, modulePath)
 
-	// Determine output path
-	pkgName := utils.ToPackageName(input.DomainName)
-	viewDir := filepath.Join("internal", "web", pkgName, "views")
+	// Determine output path - support nested paths like "admin/users"
+	// For nested paths, use full path for directory but base name for package
+	domainDir := utils.DomainPathToDir(input.DomainName)
+	viewDir := filepath.Join("internal", "web", domainDir, "views")
 	outputPath := filepath.Join(viewDir, input.ViewName+".templ")
 
 	// Ensure directory exists
@@ -102,9 +103,12 @@ func scaffoldView(registry *Registry, input types.ScaffoldViewInput) (types.Scaf
 		return *conflictResult, nil
 	}
 
+	// Get base package name for the next steps message
+	baseDomain := utils.ParseDomainPath(input.DomainName)
+	basePkgName := utils.ToPackageName(baseDomain)
 	nextSteps := []string{
 		"templ generate",
-		fmt.Sprintf("Import the view in internal/web/%s/%s.go", pkgName, pkgName),
+		fmt.Sprintf("Import the view in internal/web/%s/%s.go", domainDir, basePkgName),
 	}
 
 	// Suggest complementary tools based on view type
@@ -168,10 +172,12 @@ func getViewTemplatePath(viewType string) string {
 
 // buildViewData creates ViewData from ScaffoldViewInput.
 func buildViewData(input types.ScaffoldViewInput, modulePath string) generator.ViewData {
-	modelName := utils.ToModelName(input.DomainName)
-	pkgName := utils.ToPackageName(input.DomainName)
-	varName := utils.ToVariableName(input.DomainName)
-	urlPath := utils.ToURLPath(input.DomainName)
+	// For nested paths like "admin/users", use base name for model/package
+	baseDomain := utils.ParseDomainPath(input.DomainName)
+	modelName := utils.ToModelName(baseDomain)
+	pkgName := utils.ToPackageName(baseDomain)
+	varName := utils.ToVariableName(baseDomain)
+	urlPath := utils.ToURLPath(input.DomainName) // Keep full path for URL
 
 	// Build fields
 	fields := generator.NewFieldDataList(input.Config.Fields)
@@ -182,7 +188,7 @@ func buildViewData(input types.ScaffoldViewInput, modulePath string) generator.V
 	// Set defaults
 	emptyStateMsg := input.Config.EmptyStateMessage
 	if emptyStateMsg == "" {
-		emptyStateMsg = fmt.Sprintf("No %s found", utils.Pluralize(input.DomainName))
+		emptyStateMsg = fmt.Sprintf("No %s found", utils.Pluralize(baseDomain))
 	}
 
 	method := input.Config.Method
