@@ -156,9 +156,15 @@ func updateDIWiring(registry *Registry, input types.UpdateDIWiringInput) (types.
 		return types.NewErrorResult(fmt.Sprintf("failed to save main.go: %v", err)), nil
 	}
 
+	suggestedTools := []types.ToolHint{
+		types.HintScaffoldDomain,
+		types.HintScaffoldSeed,
+	}
+
 	return types.ScaffoldResult{
-		Success:      true,
-		Message:      fmt.Sprintf("Successfully updated main.go with wiring for %d domain(s)", len(input.Domains)),
-		FilesUpdated: []string{"cmd/web/main.go"},
+		Success:        true,
+		Message:        fmt.Sprintf("Successfully updated main.go with wiring for %d domain(s)", len(input.Domains)),
+		FilesUpdated:   []string{"cmd/web/main.go"},
+		SuggestedTools: suggestedTools,
 	}, nil
 }

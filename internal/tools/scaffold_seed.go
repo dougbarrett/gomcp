@@ -110,21 +110,32 @@ func scaffoldSeed(registry *Registry, input types.ScaffoldSeedInput) (types.Scaf
 		nextSteps = append([]string{"go get github.com/brianvoe/gofakeit/v6"}, nextSteps...)
 	}
 
+	suggestedTools := []types.ToolHint{
+		{
+			Tool:        "scaffold_seed",
+			Description: "Create seeders for related domains",
+			Priority:    "optional",
+		},
+		types.HintScaffoldTable,
+	}
+
 	if input.DryRun {
 		return types.ScaffoldResult{
-			Success:      true,
-			Message:      fmt.Sprintf("Dry run: Would create seeder for domain '%s'", input.Domain),
-			FilesCreated: result.FilesCreated,
-			NextSteps:    nextSteps,
+			Success:        true,
+			Message:        fmt.Sprintf("Dry run: Would create seeder for domain '%s'", input.Domain),
+			FilesCreated:   result.FilesCreated,
+			NextSteps:      nextSteps,
+			SuggestedTools: suggestedTools,
 		}, nil
 	}
 
 	return types.ScaffoldResult{
-		Success:      true,
-		Message:      fmt.Sprintf("Successfully created seeder for domain '%s'", input.Domain),
-		FilesCreated: result.FilesCreated,
-		FilesUpdated: result.FilesUpdated,
-		NextSteps:    nextSteps,
+		Success:        true,
+		Message:        fmt.Sprintf("Successfully created seeder for domain '%s'", input.Domain),
+		FilesCreated:   result.FilesCreated,
+		FilesUpdated:   result.FilesUpdated,
+		NextSteps:      nextSteps,
+		SuggestedTools: suggestedTools,
 	}, nil
 }
 

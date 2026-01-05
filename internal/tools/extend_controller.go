@@ -138,9 +138,23 @@ func (c *Controller) %s(w http.ResponseWriter, r *http.Request) {
 		return types.NewErrorResult(fmt.Sprintf("failed to write controller file: %v", err)), nil
 	}
 
+	suggestedTools := []types.ToolHint{
+		{
+			Tool:        "extend_service",
+			Description: fmt.Sprintf("Add business logic methods to support the new %s endpoints", input.Domain),
+			Priority:    "recommended",
+		},
+		{
+			Tool:        "scaffold_view",
+			Description: "Create views for the new endpoints",
+			Priority:    "optional",
+		},
+	}
+
 	return types.ScaffoldResult{
-		Success:      true,
-		Message:      fmt.Sprintf("Added %d endpoint(s) to %s controller", len(input.Endpoints), modelName),
-		FilesUpdated: []string{controllerPath},
+		Success:        true,
+		Message:        fmt.Sprintf("Added %d endpoint(s) to %s controller", len(input.Endpoints), modelName),
+		FilesUpdated:   []string{controllerPath},
+		SuggestedTools: suggestedTools,
 	}, nil
 }

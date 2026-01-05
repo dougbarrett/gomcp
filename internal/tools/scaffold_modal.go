@@ -91,20 +91,31 @@ func scaffoldModal(registry *Registry, input types.ScaffoldModalInput) (types.Sc
 		nextSteps = append(nextSteps, fmt.Sprintf("Add handler for HTMX endpoint: %s", data.HTMXURL))
 	}
 
+	suggestedTools := []types.ToolHint{
+		types.HintScaffoldForm,
+		{
+			Tool:        "extend_controller",
+			Description: "Add HTMX endpoint handler for this modal",
+			Priority:    "optional",
+		},
+	}
+
 	if input.DryRun {
 		return types.ScaffoldResult{
-			Success:      true,
-			Message:      fmt.Sprintf("Dry run: Would create %s modal '%s'", input.ModalType, input.ModalName),
-			FilesCreated: result.FilesCreated,
-			NextSteps:    nextSteps,
+			Success:        true,
+			Message:        fmt.Sprintf("Dry run: Would create %s modal '%s'", input.ModalType, input.ModalName),
+			FilesCreated:   result.FilesCreated,
+			NextSteps:      nextSteps,
+			SuggestedTools: suggestedTools,
 		}, nil
 	}
 
 	return types.ScaffoldResult{
-		Success:      true,
-		Message:      fmt.Sprintf("Successfully created %s modal '%s'", input.ModalType, input.ModalName),
-		FilesCreated: result.FilesCreated,
-		FilesUpdated: result.FilesUpdated,
-		NextSteps:    nextSteps,
+		Success:        true,
+		Message:        fmt.Sprintf("Successfully created %s modal '%s'", input.ModalType, input.ModalName),
+		FilesCreated:   result.FilesCreated,
+		FilesUpdated:   result.FilesUpdated,
+		NextSteps:      nextSteps,
+		SuggestedTools: suggestedTools,
 	}, nil
 }

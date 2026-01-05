@@ -15,6 +15,18 @@ type FileConflict struct {
 	ProposedContent string `json:"proposed_content"`
 }
 
+// ToolHint suggests a tool that could be called next.
+type ToolHint struct {
+	// Tool is the tool name (e.g., "scaffold_domain").
+	Tool string `json:"tool"`
+	// Description explains when/why to use this tool.
+	Description string `json:"description"`
+	// Example shows a sample invocation (optional).
+	Example string `json:"example,omitempty"`
+	// Priority indicates importance: "recommended" or "optional".
+	Priority string `json:"priority"`
+}
+
 // ScaffoldResult is the result returned by scaffolding tools.
 type ScaffoldResult struct {
 	// Success indicates if the operation succeeded.
@@ -25,8 +37,10 @@ type ScaffoldResult struct {
 	FilesCreated []string `json:"files_created,omitempty"`
 	// FilesUpdated is the list of files that were updated.
 	FilesUpdated []string `json:"files_updated,omitempty"`
-	// NextSteps is the list of suggested next actions.
+	// NextSteps is the list of suggested next actions (shell commands).
 	NextSteps []string `json:"next_steps,omitempty"`
+	// SuggestedTools hints at which MCP tools to call next.
+	SuggestedTools []ToolHint `json:"suggested_tools,omitempty"`
 	// Conflicts is the list of files that would be overwritten.
 	// When conflicts exist, Success is false and no files are written.
 	Conflicts []FileConflict `json:"conflicts,omitempty"`
@@ -138,6 +152,67 @@ func (r ScaffoldResult) WithFilesUpdated(files ...string) ScaffoldResult {
 	r.FilesUpdated = append(r.FilesUpdated, files...)
 	return r
 }
+
+// WithSuggestedTools adds tool hints to the result.
+func (r ScaffoldResult) WithSuggestedTools(tools ...ToolHint) ScaffoldResult {
+	r.SuggestedTools = append(r.SuggestedTools, tools...)
+	return r
+}
+
+// Common tool hints for reuse across scaffolding tools.
+var (
+	HintScaffoldDomain = ToolHint{
+		Tool:        "scaffold_domain",
+		Description: "Add a new feature with model, repository, service, and controller",
+		Example:     `scaffold_domain: { domain_name: "product", fields: [{ name: "Name", type: "string" }] }`,
+		Priority:    "recommended",
+	}
+	HintUpdateDIWiring = ToolHint{
+		Tool:        "update_di_wiring",
+		Description: "Wire the new domain into main.go dependency injection",
+		Priority:    "recommended",
+	}
+	HintScaffoldForm = ToolHint{
+		Tool:        "scaffold_form",
+		Description: "Create an HTMX-powered form for create/edit operations",
+		Priority:    "optional",
+	}
+	HintScaffoldTable = ToolHint{
+		Tool:        "scaffold_table",
+		Description: "Create a data table with sorting, pagination, and actions",
+		Priority:    "optional",
+	}
+	HintScaffoldView = ToolHint{
+		Tool:        "scaffold_view",
+		Description: "Create additional views (list, show, card)",
+		Priority:    "optional",
+	}
+	HintExtendService = ToolHint{
+		Tool:        "extend_service",
+		Description: "Add custom business logic methods to the service",
+		Priority:    "optional",
+	}
+	HintExtendRepository = ToolHint{
+		Tool:        "extend_repository",
+		Description: "Add custom data access methods to the repository",
+		Priority:    "optional",
+	}
+	HintExtendController = ToolHint{
+		Tool:        "extend_controller",
+		Description: "Add custom HTTP endpoints to the controller",
+		Priority:    "optional",
+	}
+	HintScaffoldSeed = ToolHint{
+		Tool:        "scaffold_seed",
+		Description: "Create a database seeder for test data",
+		Priority:    "optional",
+	}
+	HintScaffoldPage = ToolHint{
+		Tool:        "scaffold_page",
+		Description: "Create a standalone page with layout",
+		Priority:    "optional",
+	}
+)
 
 // DomainInfo describes a scaffolded domain.
 type DomainInfo struct {

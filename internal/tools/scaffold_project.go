@@ -220,31 +220,43 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 	if useCurrentDir {
 		nextSteps = []string{
 			"go mod tidy",
+			"templ generate",
 			"task dev  # Start development server",
+			"# If templ version mismatch: go get -u github.com/a-h/templ",
 		}
 	} else {
 		nextSteps = []string{
 			fmt.Sprintf("cd %s", input.ProjectName),
 			"go mod tidy",
+			"templ generate",
 			"task dev  # Start development server",
+			"# If templ version mismatch: go get -u github.com/a-h/templ",
 		}
+	}
+
+	// Suggest next tools to call
+	suggestedTools := []types.ToolHint{
+		types.HintScaffoldDomain,
+		types.HintScaffoldPage,
 	}
 
 	if input.DryRun {
 		return types.ScaffoldResult{
-			Success:      true,
-			Message:      fmt.Sprintf("Dry run: Would create project '%s' with %d files", input.ProjectName, len(result.FilesCreated)),
-			FilesCreated: result.FilesCreated,
-			NextSteps:    nextSteps,
+			Success:        true,
+			Message:        fmt.Sprintf("Dry run: Would create project '%s' with %d files", input.ProjectName, len(result.FilesCreated)),
+			FilesCreated:   result.FilesCreated,
+			NextSteps:      nextSteps,
+			SuggestedTools: suggestedTools,
 		}, nil
 	}
 
 	return types.ScaffoldResult{
-		Success:      true,
-		Message:      fmt.Sprintf("Successfully created project '%s'", input.ProjectName),
-		FilesCreated: result.FilesCreated,
-		FilesUpdated: result.FilesUpdated,
-		NextSteps:    nextSteps,
+		Success:        true,
+		Message:        fmt.Sprintf("Successfully created project '%s'", input.ProjectName),
+		FilesCreated:   result.FilesCreated,
+		FilesUpdated:   result.FilesUpdated,
+		NextSteps:      nextSteps,
+		SuggestedTools: suggestedTools,
 	}, nil
 }
 

@@ -108,21 +108,37 @@ func scaffoldPage(registry *Registry, input types.ScaffoldPageInput) (types.Scaf
 		fmt.Sprintf("Add route handler for '%s' in your router", input.Route),
 	}
 
+	suggestedTools := []types.ToolHint{
+		{
+			Tool:        "scaffold_component",
+			Description: "Create reusable UI components for this page",
+			Priority:    "optional",
+		},
+		{
+			Tool:        "scaffold_modal",
+			Description: "Add modal dialogs to this page",
+			Priority:    "optional",
+		},
+		types.HintScaffoldDomain,
+	}
+
 	if input.DryRun {
 		return types.ScaffoldResult{
-			Success:      true,
-			Message:      fmt.Sprintf("Dry run: Would create page '%s' at route '%s'", input.PageName, input.Route),
-			FilesCreated: result.FilesCreated,
-			NextSteps:    nextSteps,
+			Success:        true,
+			Message:        fmt.Sprintf("Dry run: Would create page '%s' at route '%s'", input.PageName, input.Route),
+			FilesCreated:   result.FilesCreated,
+			NextSteps:      nextSteps,
+			SuggestedTools: suggestedTools,
 		}, nil
 	}
 
 	return types.ScaffoldResult{
-		Success:      true,
-		Message:      fmt.Sprintf("Successfully created page '%s' at route '%s'", input.PageName, input.Route),
-		FilesCreated: result.FilesCreated,
-		FilesUpdated: result.FilesUpdated,
-		NextSteps:    nextSteps,
+		Success:        true,
+		Message:        fmt.Sprintf("Successfully created page '%s' at route '%s'", input.PageName, input.Route),
+		FilesCreated:   result.FilesCreated,
+		FilesUpdated:   result.FilesUpdated,
+		NextSteps:      nextSteps,
+		SuggestedTools: suggestedTools,
 	}, nil
 }
 

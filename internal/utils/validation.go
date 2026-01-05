@@ -236,6 +236,44 @@ func ValidateDomainName(name string) error {
 	return nil
 }
 
+// ValidateDomainPath validates a domain path that may include subdirectories.
+// Supports paths like "users" or "admin/users" for nested organization.
+func ValidateDomainPath(path string) error {
+	if path == "" {
+		return fmt.Errorf("domain path is required")
+	}
+
+	if len(path) > maxDomainNameLength*2 {
+		return fmt.Errorf("domain path is too long")
+	}
+
+	// Split by / and validate each segment
+	segments := strings.Split(path, "/")
+	for _, segment := range segments {
+		if segment == "" {
+			return fmt.Errorf("domain path contains empty segment")
+		}
+		if err := ValidateDomainName(segment); err != nil {
+			return fmt.Errorf("invalid segment '%s': %w", segment, err)
+		}
+	}
+
+	return nil
+}
+
+// ParseDomainPath extracts the base domain name from a path.
+// For "admin/users" returns "users", for "users" returns "users".
+func ParseDomainPath(path string) string {
+	segments := strings.Split(path, "/")
+	return segments[len(segments)-1]
+}
+
+// DomainPathToDir converts a domain path to a directory path.
+// For "admin/users" returns "admin/users", for "users" returns "users".
+func DomainPathToDir(path string) string {
+	return path // Already in the right format
+}
+
 // ValidateFieldName validates a field name.
 func ValidateFieldName(name string) error {
 	if name == "" {

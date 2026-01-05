@@ -40,8 +40,8 @@ Run 'templ generate' after creating views.`,
 }
 
 func scaffoldView(registry *Registry, input types.ScaffoldViewInput) (types.ScaffoldResult, error) {
-	// Validate input
-	if err := utils.ValidateDomainName(input.DomainName); err != nil {
+	// Validate input - support nested paths like "admin/users"
+	if err := utils.ValidateDomainPath(input.DomainName); err != nil {
 		return types.NewErrorResult(err.Error()), nil
 	}
 
@@ -107,21 +107,42 @@ func scaffoldView(registry *Registry, input types.ScaffoldViewInput) (types.Scaf
 		fmt.Sprintf("Import the view in internal/web/%s/%s.go", pkgName, pkgName),
 	}
 
+	// Suggest complementary tools based on view type
+	var suggestedTools []types.ToolHint
+	switch input.ViewType {
+	case "list", "table":
+		suggestedTools = []types.ToolHint{
+			types.HintScaffoldForm,
+			types.HintScaffoldSeed,
+		}
+	case "form":
+		suggestedTools = []types.ToolHint{
+			types.HintScaffoldTable,
+		}
+	default:
+		suggestedTools = []types.ToolHint{
+			types.HintScaffoldForm,
+			types.HintScaffoldTable,
+		}
+	}
+
 	if input.DryRun {
 		return types.ScaffoldResult{
-			Success:      true,
-			Message:      fmt.Sprintf("Dry run: Would create %s view '%s' for domain '%s'", input.ViewType, input.ViewName, input.DomainName),
-			FilesCreated: result.FilesCreated,
-			NextSteps:    nextSteps,
+			Success:        true,
+			Message:        fmt.Sprintf("Dry run: Would create %s view '%s' for domain '%s'", input.ViewType, input.ViewName, input.DomainName),
+			FilesCreated:   result.FilesCreated,
+			NextSteps:      nextSteps,
+			SuggestedTools: suggestedTools,
 		}, nil
 	}
 
 	return types.ScaffoldResult{
-		Success:      true,
-		Message:      fmt.Sprintf("Successfully created %s view '%s' for domain '%s'", input.ViewType, input.ViewName, input.DomainName),
-		FilesCreated: result.FilesCreated,
-		FilesUpdated: result.FilesUpdated,
-		NextSteps:    nextSteps,
+		Success:        true,
+		Message:        fmt.Sprintf("Successfully created %s view '%s' for domain '%s'", input.ViewType, input.ViewName, input.DomainName),
+		FilesCreated:   result.FilesCreated,
+		FilesUpdated:   result.FilesUpdated,
+		NextSteps:      nextSteps,
+		SuggestedTools: suggestedTools,
 	}, nil
 }
 

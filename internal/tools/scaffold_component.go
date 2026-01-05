@@ -84,21 +84,37 @@ func scaffoldComponent(registry *Registry, input types.ScaffoldComponentInput) (
 		"Import the component where needed",
 	}
 
+	suggestedTools := []types.ToolHint{
+		{
+			Tool:        "scaffold_component",
+			Description: "Create additional UI components",
+			Priority:    "optional",
+		},
+		{
+			Tool:        "scaffold_modal",
+			Description: "Create modal dialogs that use this component",
+			Priority:    "optional",
+		},
+		types.HintScaffoldPage,
+	}
+
 	if input.DryRun {
 		return types.ScaffoldResult{
-			Success:      true,
-			Message:      fmt.Sprintf("Dry run: Would create %s component '%s'", input.ComponentType, input.ComponentName),
-			FilesCreated: result.FilesCreated,
-			NextSteps:    nextSteps,
+			Success:        true,
+			Message:        fmt.Sprintf("Dry run: Would create %s component '%s'", input.ComponentType, input.ComponentName),
+			FilesCreated:   result.FilesCreated,
+			NextSteps:      nextSteps,
+			SuggestedTools: suggestedTools,
 		}, nil
 	}
 
 	return types.ScaffoldResult{
-		Success:      true,
-		Message:      fmt.Sprintf("Successfully created %s component '%s'", input.ComponentType, input.ComponentName),
-		FilesCreated: result.FilesCreated,
-		FilesUpdated: result.FilesUpdated,
-		NextSteps:    nextSteps,
+		Success:        true,
+		Message:        fmt.Sprintf("Successfully created %s component '%s'", input.ComponentType, input.ComponentName),
+		FilesCreated:   result.FilesCreated,
+		FilesUpdated:   result.FilesUpdated,
+		NextSteps:      nextSteps,
+		SuggestedTools: suggestedTools,
 	}, nil
 }
 

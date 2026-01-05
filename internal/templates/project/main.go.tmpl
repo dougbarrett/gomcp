@@ -67,19 +67,30 @@ func main() {
 [[- end]]
 	// MCP:CONTROLLERS:END
 
-	// Setup router
+	// Setup router (middleware only - no routes yet)
 	router := web.NewRouter(cfg)
 
 [[- if .WithAuth]]
 	// Apply flash middleware to read session flash messages
+	// This MUST come before any routes are registered (chi requirement)
 	router.Use(authMiddleware.FlashMiddleware)
 [[- end]]
+
+	// Register static routes (assets, health check)
+	// This comes after all middleware is applied
+	web.RegisterStaticRoutes(router)
 
 	// Register routes
 	// MCP:ROUTES:START
 [[- if .WithAuth]]
-	// Auth routes (login, register, logout)
-	router.Route("/", authController.RegisterRoutes)
+	// Auth routes (login, logout) - use RegisterLoginRoutes for login-only
+	// Change to authController.RegisterRoutes to also enable public registration
+	router.Route("/", authController.RegisterLoginRoutes)
+
+	// Home page redirects to dashboard (which redirects to login if not authenticated)
+	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	})
 
 	// Protected routes
 	router.Group(func(r chi.Router) {
@@ -88,6 +99,9 @@ func main() {
 		r.Route("/profile", profileController.RegisterRoutes)
 		r.Route("/settings", profileController.RegisterRoutes) // Settings alias for profile
 	})
+[[- else]]
+	// Home page
+	web.RegisterHomeRoute(router)
 [[- end]]
 	// MCP:ROUTES:END
 

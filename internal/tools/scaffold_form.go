@@ -111,20 +111,35 @@ func scaffoldForm(registry *Registry, input types.ScaffoldFormInput) (types.Scaf
 		fmt.Sprintf("Add form handler in the %s controller", pkgName),
 	}
 
+	suggestedTools := []types.ToolHint{
+		{
+			Tool:        "scaffold_table",
+			Description: fmt.Sprintf("Create a data table to list %s records", input.Domain),
+			Priority:    "optional",
+		},
+		{
+			Tool:        "extend_controller",
+			Description: fmt.Sprintf("Add custom endpoints to the %s controller", input.Domain),
+			Priority:    "optional",
+		},
+	}
+
 	if input.DryRun {
 		return types.ScaffoldResult{
-			Success:      true,
-			Message:      fmt.Sprintf("Dry run: Would create %s form '%s' for domain '%s'", input.Action, input.FormName, input.Domain),
-			FilesCreated: result.FilesCreated,
-			NextSteps:    nextSteps,
+			Success:        true,
+			Message:        fmt.Sprintf("Dry run: Would create %s form '%s' for domain '%s'", input.Action, input.FormName, input.Domain),
+			FilesCreated:   result.FilesCreated,
+			NextSteps:      nextSteps,
+			SuggestedTools: suggestedTools,
 		}, nil
 	}
 
 	return types.ScaffoldResult{
-		Success:      true,
-		Message:      fmt.Sprintf("Successfully created %s form '%s' for domain '%s'", input.Action, input.FormName, input.Domain),
-		FilesCreated: result.FilesCreated,
-		FilesUpdated: result.FilesUpdated,
-		NextSteps:    nextSteps,
+		Success:        true,
+		Message:        fmt.Sprintf("Successfully created %s form '%s' for domain '%s'", input.Action, input.FormName, input.Domain),
+		FilesCreated:   result.FilesCreated,
+		FilesUpdated:   result.FilesUpdated,
+		NextSteps:      nextSteps,
+		SuggestedTools: suggestedTools,
 	}, nil
 }

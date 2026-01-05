@@ -9,7 +9,12 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 )
 
-// NewRouter creates and configures the HTTP router.
+// NewRouter creates and configures the HTTP router with global middleware only.
+// Routes should be registered after calling this function and after any additional
+// middleware is applied (e.g., FlashMiddleware for auth).
+//
+// IMPORTANT: chi requires all middleware to be defined before routes.
+// Call RegisterStaticRoutes() after all middleware is registered.
 func NewRouter(cfg *config.Config) *chi.Mux {
 	r := chi.NewRouter()
 
@@ -30,18 +35,28 @@ func NewRouter(cfg *config.Config) *chi.Mux {
 	// If MethodOverride came first, it would consume the body before CSRF could read the token.
 	r.Use(middleware.MethodOverride)
 
+	return r
+}
+
+// RegisterStaticRoutes registers static file serving and health check routes.
+// Call this after all middleware is registered.
+func RegisterStaticRoutes(r *chi.Mux) {
 	// Serve static files
 	fileServer := http.FileServer(http.Dir("assets"))
 	r.Handle("/assets/*", http.StripPrefix("/assets/", fileServer))
 
 	// Health check
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
+}
 
-	// Home page
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+[[- if not .WithAuth]]
+// RegisterHomeRoute registers the default home page.
+// Only used when auth is not enabled.
+func RegisterHomeRoute(r *chi.Mux) {
+	r.Get("/", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte(`<!DOCTYPE html>
 <html>
@@ -55,16 +70,9 @@ func NewRouter(cfg *config.Config) *chi.Mux {
         <h1 class="text-4xl font-bold text-gray-800 mb-4">Welcome to [[.ProjectName]]</h1>
         <p class="text-gray-600">Your Go web application is running!</p>
         <p class="text-sm text-gray-400 mt-4">Start scaffolding domains with the MCP tools.</p>
-[[- if .WithAuth]]
-        <div class="mt-8 space-x-4">
-            <a href="/login" class="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Login</a>
-            <a href="/register" class="inline-block px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">Register</a>
-        </div>
-[[- end]]
     </div>
 </body>
 </html>`))
 	})
-
-	return r
 }
+[[- end]]

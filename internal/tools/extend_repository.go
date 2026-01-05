@@ -141,9 +141,18 @@ func (r *repository) %s(%s) %s {
 		return types.NewErrorResult(fmt.Sprintf("failed to write repository file: %v", err)), nil
 	}
 
+	suggestedTools := []types.ToolHint{
+		{
+			Tool:        "extend_service",
+			Description: fmt.Sprintf("Add service methods that use the new %s repository methods", input.Domain),
+			Priority:    "recommended",
+		},
+	}
+
 	return types.ScaffoldResult{
-		Success:      true,
-		Message:      fmt.Sprintf("Added %d method(s) to %s repository", len(input.Methods), modelName),
-		FilesUpdated: []string{repoPath},
+		Success:        true,
+		Message:        fmt.Sprintf("Added %d method(s) to %s repository", len(input.Methods), modelName),
+		FilesUpdated:   []string{repoPath},
+		SuggestedTools: suggestedTools,
 	}, nil
 }

@@ -143,9 +143,23 @@ func (s *service) %s(%s) %s {
 		return types.NewErrorResult(fmt.Sprintf("failed to write service file: %v", err)), nil
 	}
 
+	suggestedTools := []types.ToolHint{
+		{
+			Tool:        "extend_repository",
+			Description: fmt.Sprintf("Add data access methods to support the new %s service methods", input.Domain),
+			Priority:    "optional",
+		},
+		{
+			Tool:        "extend_controller",
+			Description: fmt.Sprintf("Add HTTP endpoints that call the new %s service methods", input.Domain),
+			Priority:    "optional",
+		},
+	}
+
 	return types.ScaffoldResult{
-		Success:      true,
-		Message:      fmt.Sprintf("Added %d method(s) to %s service", len(input.Methods), modelName),
-		FilesUpdated: []string{servicePath},
+		Success:        true,
+		Message:        fmt.Sprintf("Added %d method(s) to %s service", len(input.Methods), modelName),
+		FilesUpdated:   []string{servicePath},
+		SuggestedTools: suggestedTools,
 	}, nil
 }

@@ -220,21 +220,46 @@ func scaffoldDomain(registry *Registry, input types.ScaffoldDomainInput) (types.
 		fmt.Sprintf("Add business logic to internal/services/%s/%s.go", pkgName, pkgName),
 	}
 
+	// Suggest tools for extending the domain
+	suggestedTools := []types.ToolHint{
+		{
+			Tool:        "extend_service",
+			Description: fmt.Sprintf("Add custom business logic methods to the %s service", input.DomainName),
+			Example:     fmt.Sprintf(`extend_service: { domain: "%s", methods: [{ name: "Archive", params: [{ name: "id", type: "uint" }], returns: "error" }] }`, input.DomainName),
+			Priority:    "optional",
+		},
+		{
+			Tool:        "extend_repository",
+			Description: fmt.Sprintf("Add custom query methods to the %s repository", input.DomainName),
+			Example:     fmt.Sprintf(`extend_repository: { domain: "%s", methods: [{ name: "FindByStatus", params: [{ name: "status", type: "string" }], returns: "[]models.%s, error" }] }`, input.DomainName, utils.ToPascalCase(input.DomainName)),
+			Priority:    "optional",
+		},
+		{
+			Tool:        "extend_controller",
+			Description: fmt.Sprintf("Add custom HTTP endpoints to the %s controller", input.DomainName),
+			Example:     fmt.Sprintf(`extend_controller: { domain: "%s", endpoints: [{ name: "Archive", method: "POST", path: "/{id}/archive" }] }`, input.DomainName),
+			Priority:    "optional",
+		},
+		types.HintScaffoldSeed,
+	}
+
 	if input.DryRun {
 		return types.ScaffoldResult{
-			Success:      true,
-			Message:      fmt.Sprintf("Dry run: Would create domain '%s' with %d files", input.DomainName, len(result.FilesCreated)),
-			FilesCreated: result.FilesCreated,
-			NextSteps:    nextSteps,
+			Success:        true,
+			Message:        fmt.Sprintf("Dry run: Would create domain '%s' with %d files", input.DomainName, len(result.FilesCreated)),
+			FilesCreated:   result.FilesCreated,
+			NextSteps:      nextSteps,
+			SuggestedTools: suggestedTools,
 		}, nil
 	}
 
 	return types.ScaffoldResult{
-		Success:      true,
-		Message:      fmt.Sprintf("Successfully created domain '%s'", input.DomainName),
-		FilesCreated: result.FilesCreated,
-		FilesUpdated: result.FilesUpdated,
-		NextSteps:    nextSteps,
+		Success:        true,
+		Message:        fmt.Sprintf("Successfully created domain '%s'", input.DomainName),
+		FilesCreated:   result.FilesCreated,
+		FilesUpdated:   result.FilesUpdated,
+		NextSteps:      nextSteps,
+		SuggestedTools: suggestedTools,
 	}, nil
 }
 
