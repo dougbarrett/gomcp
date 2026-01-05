@@ -130,21 +130,36 @@ func buildPageData(input types.ScaffoldPageInput, modulePath string) generator.P
 
 	// Generate title from page name
 	title := utils.ToLabel(input.PageName)
+	modelName := utils.ToPascalCase(input.PageName)
+	pkgName := utils.ToPackageName(input.PageName)
+	varName := utils.ToVariableName(input.PageName)
 
 	return generator.PageData{
-		ModulePath:  modulePath,
-		PageName:    input.PageName,
-		Route:       input.Route,
-		Layout:      layout,
-		Sections:    sections,
-		Title:       title,
-		Description: fmt.Sprintf("%s page", title),
+		ModulePath:        modulePath,
+		PageName:          input.PageName,
+		ModelName:         modelName,
+		PackageName:       pkgName,
+		VariableName:      varName,
+		URLPath:           input.Route,
+		Route:             input.Route,
+		Layout:            layout,
+		Sections:          sections,
+		Title:             title,
+		Description:       fmt.Sprintf("%s page", title),
+		Fields:            []generator.FieldData{},
+		WithPagination:    false,
+		WithSearch:        false,
+		EmptyStateMessage: "",
 	}
 }
 
 // buildPageConfigData creates ConfigData for page TOML.
 func buildPageConfigData(input types.ScaffoldPageInput) generator.ConfigData {
 	title := utils.ToLabel(input.PageName)
+	layout := input.Layout
+	if layout == "" {
+		layout = "default"
+	}
 
 	content := map[string]interface{}{
 		"title":       title,
@@ -153,9 +168,14 @@ func buildPageConfigData(input types.ScaffoldPageInput) generator.ConfigData {
 	}
 
 	return generator.ConfigData{
-		ConfigType: "page",
-		Name:       input.PageName,
-		Locale:     "en",
-		Content:    content,
+		ConfigType:  "page",
+		Name:        input.PageName,
+		PageName:    input.PageName,
+		Locale:      "en",
+		Content:     content,
+		Title:       title,
+		Description: fmt.Sprintf("%s page", title),
+		Heading:     title,
+		Layout:      layout,
 	}
 }

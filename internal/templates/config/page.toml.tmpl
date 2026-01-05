@@ -32,7 +32,7 @@ per_page = 20
 [[- if .WithFilters]]
 [filters]
 [[- range .Filters]]
-[[.Key]] = { label = "[[.Label]]", type = "[[.Type]]"[[if .Options]], options = [[[range $i, $o := .Options]][[if $i]], [[end]]"[[.]]"[[end]]][[end]] }
+[[.Key]] = { label = "[[.Label]]", type = "[[.Type]]" }
 [[- end]]
 [[- end]]
 

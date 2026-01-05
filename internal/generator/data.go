@@ -213,6 +213,14 @@ type ViewData struct {
 	WithSearch bool
 	// WithFilters enables filters.
 	WithFilters bool
+	// WithSorting enables sorting (for table views).
+	WithSorting bool
+	// WithBulkActions enables bulk actions (for table views).
+	WithBulkActions bool
+	// WithSoftDelete indicates if soft delete is enabled.
+	WithSoftDelete bool
+	// RowActions is the list of row actions (for table views).
+	RowActions []RowActionData
 	// EmptyStateMessage is shown when empty.
 	EmptyStateMessage string
 	// SubmitURL is the form submission URL.
@@ -231,6 +239,12 @@ type FormData struct {
 	DomainName string
 	// ModelName is the model struct name.
 	ModelName string
+	// PackageName is the package name.
+	PackageName string
+	// VariableName is the variable name.
+	VariableName string
+	// URLPath is the URL path.
+	URLPath string
 	// FormName is the form component name.
 	FormName string
 	// Action is create or edit.
@@ -257,6 +271,9 @@ func NewFormData(input types.ScaffoldFormInput, modulePath string) FormData {
 		ModulePath:     modulePath,
 		DomainName:     input.Domain,
 		ModelName:      utils.ToModelName(input.Domain),
+		PackageName:    utils.ToPackageName(input.Domain),
+		VariableName:   utils.ToVariableName(input.Domain),
+		URLPath:        utils.ToURLPath(input.Domain),
 		FormName:       input.FormName,
 		Action:         input.Action,
 		Fields:         NewFieldDataList(input.Fields),
@@ -275,6 +292,10 @@ type TableData struct {
 	DomainName string
 	// ModelName is the model struct name.
 	ModelName string
+	// PackageName is the package name.
+	PackageName string
+	// VariableName is the variable name.
+	VariableName string
 	// TableName is the table component name.
 	TableName string
 	// URLPath is the URL path.
@@ -409,6 +430,14 @@ type PageData struct {
 	ModulePath string
 	// PageName is the page name.
 	PageName string
+	// ModelName is an alias for PageName (for template compatibility).
+	ModelName string
+	// PackageName is the package name.
+	PackageName string
+	// VariableName is the variable name.
+	VariableName string
+	// URLPath is the URL path (alias for Route).
+	URLPath string
 	// Route is the URL route.
 	Route string
 	// Layout is the layout type.
@@ -419,6 +448,14 @@ type PageData struct {
 	Title string
 	// Description is the page description.
 	Description string
+	// Fields is an empty list for template compatibility.
+	Fields []FieldData
+	// WithPagination for template compatibility.
+	WithPagination bool
+	// WithSearch for template compatibility.
+	WithSearch bool
+	// EmptyStateMessage for template compatibility.
+	EmptyStateMessage string
 }
 
 // SectionData is the template data for a page section.
@@ -435,10 +472,32 @@ type ConfigData struct {
 	ConfigType string
 	// Name is the config file name.
 	Name string
+	// PageName is an alias for Name.
+	PageName string
 	// Locale is the locale code.
 	Locale string
 	// Content is the configuration content.
 	Content map[string]interface{}
+	// Title is the page title.
+	Title string
+	// Description is the page description.
+	Description string
+	// Heading is the page heading.
+	Heading string
+	// Layout is the layout type.
+	Layout string
+	// EmptyStateMessage is shown when empty.
+	EmptyStateMessage string
+	// WithBreadcrumbs enables breadcrumbs.
+	WithBreadcrumbs bool
+	// WithTable enables table config.
+	WithTable bool
+	// WithFilters enables filters config.
+	WithFilters bool
+	// WithActions enables actions config.
+	WithActions bool
+	// Sidebar enables sidebar.
+	Sidebar bool
 }
 
 // SeedData is the template data for seeder scaffolding.

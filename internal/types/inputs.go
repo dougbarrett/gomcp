@@ -143,12 +143,20 @@ type ViewConfig struct {
 	WithSearch bool `json:"with_search,omitempty"`
 	// WithFilters enables filter controls.
 	WithFilters bool `json:"with_filters,omitempty"`
+	// WithSorting enables column sorting (for table views).
+	WithSorting bool `json:"with_sorting,omitempty"`
+	// WithBulkActions enables bulk actions (for table views).
+	WithBulkActions bool `json:"with_bulk_actions,omitempty"`
+	// WithSoftDelete indicates if soft delete is enabled.
+	WithSoftDelete bool `json:"with_soft_delete,omitempty"`
 	// EmptyStateMessage is shown when no items exist.
 	EmptyStateMessage string `json:"empty_state_message,omitempty"`
 	// Columns is the list of table columns (for table views).
 	Columns []ColumnDef `json:"columns,omitempty"`
 	// Fields is the list of form fields (for form views).
 	Fields []FieldDef `json:"fields,omitempty"`
+	// RowActions is the list of row actions (for table views).
+	RowActions []RowActionDef `json:"row_actions,omitempty"`
 	// SubmitURL is the HTMX post URL (for form views).
 	SubmitURL string `json:"submit_url,omitempty"`
 	// Method is POST or PUT (for form views).

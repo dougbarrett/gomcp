@@ -112,6 +112,8 @@ func scaffoldTable(registry *Registry, input types.ScaffoldTableInput) (types.Sc
 // buildTableData creates TableData from ScaffoldTableInput.
 func buildTableData(input types.ScaffoldTableInput, modulePath string) generator.TableData {
 	modelName := utils.ToModelName(input.Domain)
+	pkgName := utils.ToPackageName(input.Domain)
+	varName := utils.ToVariableName(input.Domain)
 	urlPath := utils.ToURLPath(input.Domain)
 
 	// Build columns
@@ -143,6 +145,8 @@ func buildTableData(input types.ScaffoldTableInput, modulePath string) generator
 		ModulePath:      modulePath,
 		DomainName:      input.Domain,
 		ModelName:       modelName,
+		PackageName:     pkgName,
+		VariableName:    varName,
 		TableName:       input.TableName,
 		URLPath:         urlPath,
 		Columns:         columns,

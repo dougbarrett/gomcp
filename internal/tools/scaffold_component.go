@@ -86,12 +86,11 @@ func getComponentTemplatePath(componentType string) string {
 	switch componentType {
 	case "card":
 		return "components/card.templ.tmpl"
-	case "modal":
-		return "components/modal.templ.tmpl"
 	case "form_field":
 		return "components/form_field.templ.tmpl"
 	default:
-		// Default to card for custom/unknown types
+		// Default to card for modal, custom, and unknown types
+		// Note: For full modal support, use scaffold_modal tool
 		return "components/card.templ.tmpl"
 	}
 }

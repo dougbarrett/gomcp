@@ -160,6 +160,12 @@ func buildViewData(input types.ScaffoldViewInput, modulePath string) generator.V
 		successRedirect = urlPath
 	}
 
+	// Build row actions
+	rowActions := make([]generator.RowActionData, len(input.Config.RowActions))
+	for i, action := range input.Config.RowActions {
+		rowActions[i] = generator.NewRowActionData(action)
+	}
+
 	return generator.ViewData{
 		ModulePath:        modulePath,
 		DomainName:        input.DomainName,
@@ -174,6 +180,10 @@ func buildViewData(input types.ScaffoldViewInput, modulePath string) generator.V
 		WithPagination:    input.Config.WithPagination,
 		WithSearch:        input.Config.WithSearch,
 		WithFilters:       input.Config.WithFilters,
+		WithSorting:       input.Config.WithSorting,
+		WithBulkActions:   input.Config.WithBulkActions,
+		WithSoftDelete:    input.Config.WithSoftDelete,
+		RowActions:        rowActions,
 		EmptyStateMessage: emptyStateMsg,
 		SubmitURL:         submitURL,
 		Method:            method,
