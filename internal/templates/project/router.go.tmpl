@@ -18,6 +18,7 @@ func NewRouter(cfg *config.Config) *chi.Mux {
 	r.Use(chimiddleware.RealIP)
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
+	r.Use(middleware.MethodOverride) // Support PUT/DELETE in HTML forms via _method field
 	r.Use(middleware.CORS)
 
 	// CSRF protection - uses session secret from config
@@ -50,6 +51,12 @@ func NewRouter(cfg *config.Config) *chi.Mux {
         <h1 class="text-4xl font-bold text-gray-800 mb-4">Welcome to [[.ProjectName]]</h1>
         <p class="text-gray-600">Your Go web application is running!</p>
         <p class="text-sm text-gray-400 mt-4">Start scaffolding domains with the MCP tools.</p>
+[[- if .WithAuth]]
+        <div class="mt-8 space-x-4">
+            <a href="/login" class="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Login</a>
+            <a href="/register" class="inline-block px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">Register</a>
+        </div>
+[[- end]]
     </div>
 </body>
 </html>`))

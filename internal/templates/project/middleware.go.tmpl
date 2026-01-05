@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/csrf"
 	"[[.ModulePath]]/internal/config"
@@ -53,6 +54,47 @@ func GetCSRFToken(ctx context.Context) string {
 		return ""
 	}
 	return token
+}
+
+// MethodOverride checks for a _method parameter in POST requests and overrides
+// the HTTP method accordingly. This enables HTML forms to submit PUT, PATCH, and
+// DELETE requests without requiring JavaScript/HTMX.
+//
+// Supports:
+//   - Form field: <input type="hidden" name="_method" value="PUT">
+//   - Header: X-HTTP-Method-Override: PUT
+//
+// Example form:
+//
+//	<form method="POST" action="/users/1">
+//	    <input type="hidden" name="_method" value="DELETE">
+//	    <button type="submit">Delete</button>
+//	</form>
+func MethodOverride(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			// Check header first (higher priority)
+			method := r.Header.Get("X-HTTP-Method-Override")
+
+			// Check form value if header not set
+			if method == "" {
+				// Parse form to get _method field
+				if err := r.ParseForm(); err == nil {
+					method = r.FormValue("_method")
+				}
+			}
+
+			// Override method if valid
+			if method != "" {
+				method = strings.ToUpper(method)
+				switch method {
+				case http.MethodPut, http.MethodPatch, http.MethodDelete:
+					r.Method = method
+				}
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // CORS adds CORS headers to responses.

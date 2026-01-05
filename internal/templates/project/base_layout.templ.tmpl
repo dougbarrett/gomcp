@@ -40,6 +40,8 @@ templ Base(title string) {
 	</html>
 }
 
+// Dashboard renders a dashboard layout with children (for use in templ files).
+// For composing from Go code, use DashboardPage instead.
 templ Dashboard(title string) {
 	@Base(title) {
 		<div class="flex h-full">
@@ -54,10 +56,57 @@ templ Dashboard(title string) {
 			</aside>
 			<!-- Main content -->
 			<main class="flex-1 overflow-auto">
-				<div class="p-6">
+				<div id="main-content" class="p-6">
 					{ children... }
 				</div>
 			</main>
+		</div>
+	}
+}
+
+// DashboardPage renders a dashboard layout with content passed as a component.
+// This is designed for easy composition from Go controller code.
+//
+// Example usage in a controller:
+//
+//	res.RenderWithLayout(
+//	    func(c templ.Component) templ.Component {
+//	        return layouts.DashboardPage("Users", c)
+//	    },
+//	    views.UserList(props),
+//	)
+//
+// Or using the simpler pattern:
+//
+//	res.Render(layouts.DashboardPage("Users", views.UserList(props)))
+templ DashboardPage(title string, content templ.Component) {
+	@Base(title) {
+		<div class="flex h-full">
+			<!-- Sidebar -->
+			<aside class="w-64 bg-card border-r hidden md:block">
+				<div class="p-4">
+					<h1 class="text-xl font-bold">[[.ProjectName]]</h1>
+				</div>
+				<nav id="sidebar-nav" class="p-4">
+					<!-- Navigation loaded from menu config -->
+				</nav>
+			</aside>
+			<!-- Main content -->
+			<main class="flex-1 overflow-auto">
+				<div id="main-content" class="p-6">
+					@content
+				</div>
+			</main>
+		</div>
+	}
+}
+
+// BasePage renders a base layout with content passed as a component.
+// Similar to DashboardPage but without the sidebar.
+templ BasePage(title string, content templ.Component) {
+	@Base(title) {
+		<div id="main-content">
+			@content
 		</div>
 	}
 }

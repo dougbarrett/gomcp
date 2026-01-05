@@ -4,9 +4,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/BurntSushi/toml"
 )
+
+var sessionSecretWarningOnce sync.Once
 
 // Config holds the application configuration.
 type Config struct {
@@ -107,6 +110,8 @@ func getDefaultDSN() string {
 func getDefaultSessionSecret() string {
 	// WARNING: This default is for development only.
 	// In production, always set SESSION_SECRET environment variable.
-	log.Println("WARNING: Using default session secret. Set SESSION_SECRET environment variable in production.")
+	sessionSecretWarningOnce.Do(func() {
+		log.Println("WARNING: Using default session secret. Set SESSION_SECRET environment variable in production.")
+	})
 	return "[[.ProjectName]]-dev-secret-change-me-in-production"
 }

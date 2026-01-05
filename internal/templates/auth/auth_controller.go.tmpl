@@ -20,13 +20,26 @@ func NewController(authService *auth.Service) *Controller {
 	return &Controller{authService: authService}
 }
 
-// RegisterRoutes registers auth routes.
+// RegisterRoutes registers all auth routes (login, register, logout).
+// For applications that don't want public registration, use RegisterLoginRoutes instead.
 func (c *Controller) RegisterRoutes(r chi.Router) {
+	c.RegisterLoginRoutes(r)
+	c.RegisterRegistrationRoutes(r)
+}
+
+// RegisterLoginRoutes registers only login and logout routes.
+// Use this for admin-only applications where registration is not public.
+func (c *Controller) RegisterLoginRoutes(r chi.Router) {
 	r.Get("/login", c.ShowLogin)
 	r.Post("/login", c.Login)
+	r.Post("/logout", c.Logout)
+}
+
+// RegisterRegistrationRoutes registers only registration routes.
+// Only mount this if you want public user registration.
+func (c *Controller) RegisterRegistrationRoutes(r chi.Router) {
 	r.Get("/register", c.ShowRegister)
 	r.Post("/register", c.Register)
-	r.Post("/logout", c.Logout)
 }
 
 // ShowLogin renders the login page.

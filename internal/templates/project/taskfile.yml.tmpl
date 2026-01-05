@@ -11,9 +11,10 @@ tasks:
       - task --list
 
   templ:
-    desc: Generate templ files with hot reload
+    desc: Generate templ files with hot reload (access at http://localhost:7331)
     cmds:
-      - templ generate --watch --proxy="http://localhost:8080" --cmd="go run ./cmd/web"
+      - echo "Starting templ proxy on http://localhost:7331 (proxying to :8080)"
+      - templ generate --watch --proxy="http://localhost:8080" --open-browser=false --cmd="go run ./cmd/web"
 
   tailwind:
     desc: Watch Tailwind CSS changes
@@ -26,7 +27,7 @@ tasks:
       - "{{.TAILWIND_CMD}} -i ./assets/css/input.css -o ./assets/css/output.css --minify"
 
   dev:
-    desc: Start development server with hot reload
+    desc: Start development server with hot reload (access at http://localhost:7331)
     deps: [templ, tailwind]
 
   build:

@@ -1,8 +1,7 @@
 package components
 
-import (
-	"[[.ModulePath]]/internal/web/components"
-)
+// Note: This component is in the same package as common.templ, so it can
+// use Icon, Button, ModalBackdrop, ModalDialog directly without import.
 
 // [[.ModalName]]Props contains properties for the [[.ModalName]] modal.
 type [[.ModalName]]Props struct {
@@ -19,8 +18,8 @@ type [[.ModalName]]Props struct {
 [[- if .IsDialog]]
 // [[.ModalName]] renders a dialog modal.
 templ [[.ModalName]](props [[.ModalName]]Props) {
-	@components.ModalBackdrop() {
-		@components.ModalDialog(props.Size) {
+	@ModalBackdrop() {
+		@ModalDialog(props.Size) {
 			<!-- Header -->
 			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
 				<div>
@@ -38,7 +37,7 @@ templ [[.ModalName]](props [[.ModalName]]Props) {
 					class="text-gray-400 hover:text-gray-500 focus:outline-none"
 					_="on click remove closest .fixed"
 				>
-					@components.Icon("x", "h-5 w-5")
+					@Icon("x", "h-5 w-5")
 				</button>
 			</div>
 			<!-- Content -->
@@ -77,7 +76,7 @@ templ [[.ModalName]](props [[.ModalName]]Props) {
 					class="text-gray-400 hover:text-gray-500 focus:outline-none"
 					_="on click remove closest .fixed"
 				>
-					@components.Icon("x", "h-5 w-5")
+					@Icon("x", "h-5 w-5")
 				</button>
 			</div>
 			<!-- Content -->
@@ -92,13 +91,13 @@ templ [[.ModalName]](props [[.ModalName]]Props) {
 [[- if .IsConfirm]]
 // [[.ModalName]] renders a confirm dialog modal.
 templ [[.ModalName]](props [[.ModalName]]Props) {
-	@components.ModalBackdrop() {
-		@components.ModalDialog("md") {
+	@ModalBackdrop() {
+		@ModalDialog("md") {
 			<!-- Content -->
 			<div class="p-6">
 				<div class="flex items-start gap-4">
 					<div class="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
-						@components.Icon("alert-triangle", "h-6 w-6 text-red-600")
+						@Icon("alert-triangle", "h-6 w-6 text-red-600")
 					</div>
 					<div>
 						<h3 class="text-lg font-medium text-gray-900 dark:text-white">
@@ -114,7 +113,7 @@ templ [[.ModalName]](props [[.ModalName]]Props) {
 			</div>
 			<!-- Footer -->
 			<div class="flex justify-end gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
-				@components.Button(components.ButtonProps{
+				@Button(ButtonProps{
 					Variant: "outline",
 					Attributes: templ.Attributes{
 						"_": "on click remove closest .fixed",
@@ -126,7 +125,7 @@ templ [[.ModalName]](props [[.ModalName]]Props) {
 						Cancel
 					}
 				}
-				@components.Button(components.ButtonProps{
+				@Button(ButtonProps{
 					Variant: "destructive",
 					Attributes: templ.Attributes{
 						"hx-delete": props.OnConfirm,
@@ -148,8 +147,8 @@ templ [[.ModalName]](props [[.ModalName]]Props) {
 
 // ModalLoading renders a loading state for modal content.
 templ ModalLoading() {
-	@components.ModalBackdrop() {
-		@components.ModalDialog("sm") {
+	@ModalBackdrop() {
+		@ModalDialog("sm") {
 			<div class="p-8">
 				<div class="flex items-center gap-3">
 					<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>

@@ -177,6 +177,17 @@ func (m *SessionManager) AddFlashError(w http.ResponseWriter, r *http.Request, m
 	return session.Save(r, w)
 }
 
+// AddFlashSuccess adds a success flash message.
+func (m *SessionManager) AddFlashSuccess(w http.ResponseWriter, r *http.Request, message string) error {
+	session, err := m.GetSession(r)
+	if err != nil {
+		return err
+	}
+
+	session.AddFlash(message, "success")
+	return session.Save(r, w)
+}
+
 // AddFlashInfo adds an info flash message.
 func (m *SessionManager) AddFlashInfo(w http.ResponseWriter, r *http.Request, message string) error {
 	session, err := m.GetSession(r)
@@ -196,6 +207,25 @@ func (m *SessionManager) GetFlashErrors(w http.ResponseWriter, r *http.Request) 
 	}
 
 	flashes := session.Flashes("error")
+	session.Save(r, w)
+
+	var messages []string
+	for _, flash := range flashes {
+		if msg, ok := flash.(string); ok {
+			messages = append(messages, msg)
+		}
+	}
+	return messages
+}
+
+// GetFlashSuccess retrieves and clears success flash messages.
+func (m *SessionManager) GetFlashSuccess(w http.ResponseWriter, r *http.Request) []string {
+	session, err := m.GetSession(r)
+	if err != nil {
+		return nil
+	}
+
+	flashes := session.Flashes("success")
 	session.Save(r, w)
 
 	var messages []string

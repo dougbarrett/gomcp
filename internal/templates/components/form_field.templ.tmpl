@@ -1,8 +1,7 @@
 package components
 
-import (
-	"[[.ModulePath]]/internal/web/components"
-)
+// Note: This component is in the same package as common.templ, so it can
+// use Label, Input, Textarea, Checkbox, Select, FormError, FormHelp directly.
 
 // FormFieldProps contains properties for a form field.
 type FormFieldProps struct {
@@ -37,7 +36,7 @@ type SelectOption struct {
 templ FormField(props FormFieldProps) {
 	<div class={ "space-y-2 " + props.Class }>
 		if props.Label != "" && props.Type != "checkbox" {
-			@components.Label(props.ID, props.Required) {
+			@Label(props.ID, props.Required) {
 				{ props.Label }
 			}
 		}
@@ -71,17 +70,17 @@ templ FormField(props FormFieldProps) {
 			@FormInput(props, "text")
 		}
 
-		@components.FormError(props.Error)
+		@FormError(props.Error)
 
 		if props.HelpText != "" && props.Error == "" {
-			@components.FormHelp(props.HelpText)
+			@FormHelp(props.HelpText)
 		}
 	</div>
 }
 
 // FormInput renders an input field.
 templ FormInput(props FormFieldProps, inputType string) {
-	@components.Input(components.InputProps{
+	@Input(InputProps{
 		ID:          props.ID,
 		Name:        props.Name,
 		Type:        inputType,
@@ -101,7 +100,7 @@ templ FormInput(props FormFieldProps, inputType string) {
 
 // FormTextarea renders a textarea field.
 templ FormTextarea(props FormFieldProps) {
-	@components.Textarea(components.TextareaProps{
+	@Textarea(TextareaProps{
 		ID:          props.ID,
 		Name:        props.Name,
 		Placeholder: props.Placeholder,
@@ -116,7 +115,7 @@ templ FormTextarea(props FormFieldProps) {
 // FormCheckbox renders a checkbox field.
 templ FormCheckbox(props FormFieldProps) {
 	<div class="flex items-center gap-2">
-		@components.Checkbox(props.ID, props.Name, "true", props.Value == "true" || props.Value == "1", props.Disabled, nil)
+		@Checkbox(props.ID, props.Name, "true", props.Value == "true" || props.Value == "1", props.Disabled, nil)
 		if props.Label != "" {
 			<label for={ props.ID } class="text-sm text-gray-700 dark:text-gray-300">{ props.Label }</label>
 		}
@@ -125,7 +124,7 @@ templ FormCheckbox(props FormFieldProps) {
 
 // FormSelect renders a select field.
 templ FormSelect(props FormFieldProps) {
-	@components.Select(components.SelectProps{
+	@Select(SelectProps{
 		ID:       props.ID,
 		Name:     props.Name,
 		Required: props.Required,

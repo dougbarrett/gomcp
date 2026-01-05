@@ -23,7 +23,11 @@ Only use this tool when you need JUST a repository layer without service/control
 
 Generates: internal/repository/{domain}/{domain}.go with standard CRUD operations.
 
-Prefer scaffold_domain for new features - it generates all layers consistently.`,
+Prefer scaffold_domain for new features - it generates all layers consistently.
+
+NOTE: The 'user' domain created by scaffold_project --with_auth has a custom repository
+with specialized methods (FindByEmail, ExistsByEmail, UpdateLastLogin, etc.). Do not
+overwrite it with this tool - extend it manually if needed.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldRepositoryInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldRepository(registry, input)
 		if err != nil {

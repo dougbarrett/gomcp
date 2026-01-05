@@ -48,10 +48,15 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 				</div>
 			}
 			@components.CardContent("") {
+				// Form uses POST with _method override for PUT (non-JS fallback)
+				// HTMX will use the proper HTTP method when JS is enabled
 				<form
+					method="POST"
 					if props.IsEdit {
+						action={ templ.SafeURL(fmt.Sprintf("%s/%d", props.getBasePath(), props.Item.ID)) }
 						hx-put={ fmt.Sprintf("%s/%d", props.getBasePath(), props.Item.ID) }
 					} else {
+						action={ templ.SafeURL(props.getBasePath()) }
 						hx-post={ props.getBasePath() }
 					}
 					hx-target="#main-content"
@@ -60,6 +65,10 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 				>
 					<!-- CSRF Token -->
 					<input type="hidden" name="csrf_token" value={ props.CSRFToken }/>
+					// Method override for non-JS PUT requests
+					if props.IsEdit {
+						<input type="hidden" name="_method" value="PUT"/>
+					}
 					[[- range .Fields]]
 					<!-- [[.Label]] Field -->
 					<div class="space-y-2">

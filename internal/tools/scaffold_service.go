@@ -25,7 +25,13 @@ Generates:
 - internal/services/{domain}/{domain}.go (service with repository dependency)
 - internal/services/{domain}/dto.go (Create/Update DTOs)
 
-Prefer scaffold_domain for new features - it generates all layers consistently.`,
+Prefer scaffold_domain for new features - it generates all layers consistently.
+
+IMPORTANT: Do NOT use this tool for domains that already have custom repositories with
+specialized methods (e.g., the 'user' domain created by scaffold_project --with_auth).
+The auth user repository has methods like FindByEmail, ExistsByEmail, UpdateLastLogin
+that aren't part of the generic repository interface. For such domains, write the
+service manually to properly utilize the custom repository methods.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldServiceInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldService(registry, input)
 		if err != nil {
