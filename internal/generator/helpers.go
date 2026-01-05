@@ -47,6 +47,18 @@ func TemplateFuncMap() template.FuncMap {
 		"trimSuffix": strings.TrimSuffix,
 		"split":      strings.Split,
 		"join":       strings.Join,
+		"slice": func(s string, start, end int) string {
+			if start < 0 {
+				start = 0
+			}
+			if end > len(s) {
+				end = len(s)
+			}
+			if start > end {
+				return ""
+			}
+			return s[start:end]
+		},
 
 		// Comparison and logic
 		"eq":  func(a, b interface{}) bool { return a == b },

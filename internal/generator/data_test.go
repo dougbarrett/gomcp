@@ -692,3 +692,354 @@ func TestNewAuthData(t *testing.T) {
 		t.Errorf("SessionType = %q, want %q (default)", data.SessionType, "cookie")
 	}
 }
+
+// TestNewRelationshipData tests RelationshipData creation for all relationship types.
+func TestNewRelationshipData(t *testing.T) {
+	tests := []struct {
+		name             string
+		input            types.RelationshipDef
+		domainName       string
+		wantFieldName    string
+		wantForeignKey   string
+		wantReferences   string
+		wantOnDelete     string
+		wantIsBelongsTo  bool
+		wantIsHasOne     bool
+		wantIsHasMany    bool
+		wantIsManyToMany bool
+		wantHasFKField   bool
+	}{
+		{
+			name: "belongs_to with defaults",
+			input: types.RelationshipDef{
+				Type:  "belongs_to",
+				Model: "User",
+			},
+			domainName:      "order",
+			wantFieldName:   "User",
+			wantForeignKey:  "UserID",
+			wantReferences:  "ID",
+			wantOnDelete:    "CASCADE",
+			wantIsBelongsTo: true,
+			wantHasFKField:  true,
+		},
+		{
+			name: "belongs_to with custom foreign key",
+			input: types.RelationshipDef{
+				Type:       "belongs_to",
+				Model:      "User",
+				ForeignKey: "AuthorID",
+			},
+			domainName:      "post",
+			wantFieldName:   "User",
+			wantForeignKey:  "AuthorID",
+			wantReferences:  "ID",
+			wantOnDelete:    "CASCADE",
+			wantIsBelongsTo: true,
+			wantHasFKField:  true,
+		},
+		{
+			name: "has_one with defaults",
+			input: types.RelationshipDef{
+				Type:  "has_one",
+				Model: "Profile",
+			},
+			domainName:     "user",
+			wantFieldName:  "Profile",
+			wantForeignKey: "UserID",
+			wantReferences: "ID",
+			wantOnDelete:   "CASCADE",
+			wantIsHasOne:   true,
+			wantHasFKField: false,
+		},
+		{
+			name: "has_many with defaults",
+			input: types.RelationshipDef{
+				Type:  "has_many",
+				Model: "Order",
+			},
+			domainName:     "user",
+			wantFieldName:  "Orders",
+			wantForeignKey: "UserID",
+			wantReferences: "ID",
+			wantOnDelete:   "CASCADE",
+			wantIsHasMany:  true,
+			wantHasFKField: false,
+		},
+		{
+			name: "has_many with SET NULL on delete",
+			input: types.RelationshipDef{
+				Type:     "has_many",
+				Model:    "Comment",
+				OnDelete: "SET NULL",
+			},
+			domainName:     "post",
+			wantFieldName:  "Comments",
+			wantForeignKey: "PostID",
+			wantReferences: "ID",
+			wantOnDelete:   "SET NULL",
+			wantIsHasMany:  true,
+			wantHasFKField: false,
+		},
+		{
+			name: "many_to_many with join table",
+			input: types.RelationshipDef{
+				Type:      "many_to_many",
+				Model:     "Tag",
+				JoinTable: "post_tags",
+			},
+			domainName:       "post",
+			wantFieldName:    "Tags",
+			wantForeignKey:   "",
+			wantReferences:   "ID",
+			wantOnDelete:     "CASCADE",
+			wantIsManyToMany: true,
+			wantHasFKField:   false,
+		},
+		{
+			name: "many_to_many without join table",
+			input: types.RelationshipDef{
+				Type:  "many_to_many",
+				Model: "Category",
+			},
+			domainName:       "product",
+			wantFieldName:    "Categories",
+			wantForeignKey:   "",
+			wantReferences:   "ID",
+			wantOnDelete:     "CASCADE",
+			wantIsManyToMany: true,
+			wantHasFKField:   false,
+		},
+		{
+			name: "belongs_to with preload",
+			input: types.RelationshipDef{
+				Type:    "belongs_to",
+				Model:   "Category",
+				Preload: true,
+			},
+			domainName:      "product",
+			wantFieldName:   "Category",
+			wantForeignKey:  "CategoryID",
+			wantReferences:  "ID",
+			wantOnDelete:    "CASCADE",
+			wantIsBelongsTo: true,
+			wantHasFKField:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := NewRelationshipData(tt.input, tt.domainName)
+
+			if data.Type != tt.input.Type {
+				t.Errorf("Type = %q, want %q", data.Type, tt.input.Type)
+			}
+			if data.Model != tt.input.Model {
+				t.Errorf("Model = %q, want %q", data.Model, tt.input.Model)
+			}
+			if data.FieldName != tt.wantFieldName {
+				t.Errorf("FieldName = %q, want %q", data.FieldName, tt.wantFieldName)
+			}
+			if data.ForeignKey != tt.wantForeignKey {
+				t.Errorf("ForeignKey = %q, want %q", data.ForeignKey, tt.wantForeignKey)
+			}
+			if data.References != tt.wantReferences {
+				t.Errorf("References = %q, want %q", data.References, tt.wantReferences)
+			}
+			if data.OnDelete != tt.wantOnDelete {
+				t.Errorf("OnDelete = %q, want %q", data.OnDelete, tt.wantOnDelete)
+			}
+			if data.IsBelongsTo != tt.wantIsBelongsTo {
+				t.Errorf("IsBelongsTo = %v, want %v", data.IsBelongsTo, tt.wantIsBelongsTo)
+			}
+			if data.IsHasOne != tt.wantIsHasOne {
+				t.Errorf("IsHasOne = %v, want %v", data.IsHasOne, tt.wantIsHasOne)
+			}
+			if data.IsHasMany != tt.wantIsHasMany {
+				t.Errorf("IsHasMany = %v, want %v", data.IsHasMany, tt.wantIsHasMany)
+			}
+			if data.IsManyToMany != tt.wantIsManyToMany {
+				t.Errorf("IsManyToMany = %v, want %v", data.IsManyToMany, tt.wantIsManyToMany)
+			}
+			if data.Preload != tt.input.Preload {
+				t.Errorf("Preload = %v, want %v", data.Preload, tt.input.Preload)
+			}
+
+			// Check FK field
+			hasFKField := data.ForeignKeyField != nil
+			if hasFKField != tt.wantHasFKField {
+				t.Errorf("has ForeignKeyField = %v, want %v", hasFKField, tt.wantHasFKField)
+			}
+
+			// If belongs_to, verify FK field details
+			if tt.wantIsBelongsTo && data.ForeignKeyField != nil {
+				if data.ForeignKeyField.Name != tt.wantForeignKey {
+					t.Errorf("ForeignKeyField.Name = %q, want %q", data.ForeignKeyField.Name, tt.wantForeignKey)
+				}
+				if data.ForeignKeyField.Type != "uint" {
+					t.Errorf("ForeignKeyField.Type = %q, want %q", data.ForeignKeyField.Type, "uint")
+				}
+			}
+		})
+	}
+}
+
+// TestNewRelationshipDataList tests creating list of RelationshipData.
+func TestNewRelationshipDataList(t *testing.T) {
+	rels := []types.RelationshipDef{
+		{Type: "belongs_to", Model: "User"},
+		{Type: "has_many", Model: "OrderItem"},
+		{Type: "many_to_many", Model: "Tag", JoinTable: "order_tags"},
+	}
+
+	result := NewRelationshipDataList(rels, "order")
+
+	if len(result) != 3 {
+		t.Fatalf("len(result) = %d, want 3", len(result))
+	}
+
+	if result[0].FieldName != "User" {
+		t.Errorf("result[0].FieldName = %q, want %q", result[0].FieldName, "User")
+	}
+	if result[1].FieldName != "OrderItems" {
+		t.Errorf("result[1].FieldName = %q, want %q", result[1].FieldName, "OrderItems")
+	}
+	if result[2].FieldName != "Tags" {
+		t.Errorf("result[2].FieldName = %q, want %q", result[2].FieldName, "Tags")
+	}
+}
+
+// TestNewRelationshipDataList_Empty tests empty relationship list.
+func TestNewRelationshipDataList_Empty(t *testing.T) {
+	result := NewRelationshipDataList(nil, "order")
+	if len(result) != 0 {
+		t.Errorf("len(result) = %d, want 0", len(result))
+	}
+
+	result = NewRelationshipDataList([]types.RelationshipDef{}, "order")
+	if len(result) != 0 {
+		t.Errorf("len(result) = %d, want 0 for empty slice", len(result))
+	}
+}
+
+// TestBuildGORMTag tests GORM tag generation for relationships.
+func TestBuildGORMTag(t *testing.T) {
+	tests := []struct {
+		name       string
+		relType    string
+		foreignKey string
+		references string
+		joinTable  string
+		onDelete   string
+		want       string
+	}{
+		{
+			name:       "belongs_to",
+			relType:    "belongs_to",
+			foreignKey: "UserID",
+			references: "ID",
+			want:       "foreignKey:UserID;references:ID",
+		},
+		{
+			name:       "has_one",
+			relType:    "has_one",
+			foreignKey: "UserID",
+			references: "ID",
+			onDelete:   "CASCADE",
+			want:       "foreignKey:UserID;references:ID",
+		},
+		{
+			name:       "has_many with SET NULL",
+			relType:    "has_many",
+			foreignKey: "PostID",
+			references: "ID",
+			onDelete:   "SET NULL",
+			want:       "foreignKey:PostID;references:ID;constraint:OnDelete:SET NULL",
+		},
+		{
+			name:      "many_to_many with join table",
+			relType:   "many_to_many",
+			joinTable: "post_tags",
+			want:      "many2many:post_tags",
+		},
+		{
+			name:    "many_to_many without join table",
+			relType: "many_to_many",
+			want:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := buildGORMTag(tt.relType, tt.foreignKey, tt.references, tt.joinTable, tt.onDelete)
+			if result != tt.want {
+				t.Errorf("buildGORMTag() = %q, want %q", result, tt.want)
+			}
+		})
+	}
+}
+
+// TestNewDomainData_WithRelationships tests DomainData creation with relationships.
+func TestNewDomainData_WithRelationships(t *testing.T) {
+	input := types.ScaffoldDomainInput{
+		DomainName: "order",
+		Fields: []types.FieldDef{
+			{Name: "Total", Type: "float64"},
+			{Name: "Status", Type: "string"},
+		},
+		Relationships: []types.RelationshipDef{
+			{Type: "belongs_to", Model: "User", Preload: true},
+			{Type: "has_many", Model: "OrderItem"},
+			{Type: "many_to_many", Model: "Tag", JoinTable: "order_tags", Preload: true},
+		},
+	}
+
+	data := NewDomainData(input, "github.com/user/app")
+
+	// Check relationships
+	if !data.HasRelationships {
+		t.Error("HasRelationships should be true")
+	}
+	if len(data.Relationships) != 3 {
+		t.Fatalf("len(Relationships) = %d, want 3", len(data.Relationships))
+	}
+
+	// Check preload relationships
+	if len(data.PreloadRelationships) != 2 {
+		t.Fatalf("len(PreloadRelationships) = %d, want 2", len(data.PreloadRelationships))
+	}
+
+	// Verify the preloaded ones are User and Tags
+	preloadNames := make(map[string]bool)
+	for _, rel := range data.PreloadRelationships {
+		preloadNames[rel.FieldName] = true
+	}
+	if !preloadNames["User"] {
+		t.Error("User should be in PreloadRelationships")
+	}
+	if !preloadNames["Tags"] {
+		t.Error("Tags should be in PreloadRelationships")
+	}
+}
+
+// TestNewDomainData_WithoutRelationships tests DomainData with no relationships.
+func TestNewDomainData_WithoutRelationships(t *testing.T) {
+	input := types.ScaffoldDomainInput{
+		DomainName: "product",
+		Fields: []types.FieldDef{
+			{Name: "Name", Type: "string"},
+		},
+	}
+
+	data := NewDomainData(input, "github.com/user/app")
+
+	if data.HasRelationships {
+		t.Error("HasRelationships should be false")
+	}
+	if len(data.Relationships) != 0 {
+		t.Errorf("len(Relationships) = %d, want 0", len(data.Relationships))
+	}
+	if len(data.PreloadRelationships) != 0 {
+		t.Errorf("len(PreloadRelationships) = %d, want 0", len(data.PreloadRelationships))
+	}
+}

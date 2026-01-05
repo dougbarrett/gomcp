@@ -11,6 +11,9 @@ import (
 type Repository interface {
 	Create(ctx context.Context, [[.VariableName]] *models.[[.ModelName]]) error
 	FindByID(ctx context.Context, id uint) (*models.[[.ModelName]], error)
+[[- if .HasRelationships]]
+	FindByIDWithRelations(ctx context.Context, id uint, preloads ...string) (*models.[[.ModelName]], error)
+[[- end]]
 	FindAll(ctx context.Context, opts ...QueryOption) ([]models.[[.ModelName]], int64, error)
 	Update(ctx context.Context, [[.VariableName]] *models.[[.ModelName]]) error
 	Delete(ctx context.Context, id uint) error
@@ -56,6 +59,25 @@ func WithOrder(field string, desc bool) QueryOption {
 		return db.Order(order)
 	}
 }
+[[- if .HasRelationships]]
+
+// WithPreload adds a preload for a relationship.
+func WithPreload(relation string) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload(relation)
+	}
+}
+
+// WithPreloads adds multiple preloads for relationships.
+func WithPreloads(relations ...string) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		for _, rel := range relations {
+			db = db.Preload(rel)
+		}
+		return db
+	}
+}
+[[- end]]
 
 // repository implements Repository.
 type repository struct {
@@ -81,6 +103,32 @@ func (r *repository) FindByID(ctx context.Context, id uint) (*models.[[.ModelNam
 	}
 	return &[[.VariableName]], nil
 }
+[[- if .HasRelationships]]
+
+// FindByIDWithRelations finds a [[.ModelName]] by ID with specified preloads.
+// If no preloads are specified, it loads the default preloaded relationships.
+func (r *repository) FindByIDWithRelations(ctx context.Context, id uint, preloads ...string) (*models.[[.ModelName]], error) {
+	var [[.VariableName]] models.[[.ModelName]]
+	db := r.db.WithContext(ctx)
+
+	if len(preloads) == 0 {
+		// Default preloads
+[[- range .PreloadRelationships]]
+		db = db.Preload("[[.FieldName]]")
+[[- end]]
+	} else {
+		for _, rel := range preloads {
+			db = db.Preload(rel)
+		}
+	}
+
+	err := db.First(&[[.VariableName]], id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &[[.VariableName]], nil
+}
+[[- end]]
 
 // FindAll finds all [[pluralize .ModelName]] with optional query options.
 func (r *repository) FindAll(ctx context.Context, opts ...QueryOption) ([]models.[[.ModelName]], int64, error) {

@@ -17,6 +17,22 @@ type [[.ModelName]] struct {
 [[- range .Fields]]
 	[[.Name]] [[.Type]] `[[if .GORMTags]]gorm:"[[.GORMTags]]" [[end]]json:"[[.JSONName]][[if .Omitempty]],omitempty[[end]]"`
 [[- end]]
+[[- if .HasRelationships]]
+
+	// Relationships
+[[- range .Relationships]]
+[[- if .IsBelongsTo]]
+	[[.ForeignKeyField.Name]] [[.ForeignKeyField.Type]] `json:"[[.ForeignKeyField.JSONName]],omitempty"`
+	[[.FieldName]] *[[.Model]] `gorm:"[[.GORMTag]]" json:"[[.FieldName | toLower]],omitempty"`
+[[- else if .IsHasOne]]
+	[[.FieldName]] *[[.Model]] `gorm:"[[.GORMTag]]" json:"[[.FieldName | toLower]],omitempty"`
+[[- else if .IsHasMany]]
+	[[.FieldName]] [][[.Model]] `gorm:"[[.GORMTag]]" json:"[[.FieldName | toLower]],omitempty"`
+[[- else if .IsManyToMany]]
+	[[.FieldName]] [][[.Model]] `[[if .GORMTag]]gorm:"[[.GORMTag]]" [[end]]json:"[[.FieldName | toLower]],omitempty"`
+[[- end]]
+[[- end]]
+[[- end]]
 }
 
 // TableName returns the table name for the model.

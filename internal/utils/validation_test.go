@@ -530,3 +530,122 @@ func TestValidateComponentName(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateRelationshipType(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		errMsg  string
+	}{
+		// Valid types
+		{"belongs_to", "belongs_to", false, ""},
+		{"has_one", "has_one", false, ""},
+		{"has_many", "has_many", false, ""},
+		{"many_to_many", "many_to_many", false, ""},
+
+		// Invalid types
+		{"empty", "", true, "relationship type is required"},
+		{"invalid type", "invalid", true, "invalid relationship type"},
+		{"typo belongs", "belongsto", true, "invalid relationship type"},
+		{"uppercase", "BELONGS_TO", true, "invalid relationship type"},
+		{"camelCase", "belongsTo", true, "invalid relationship type"},
+		{"one_to_one", "one_to_one", true, "invalid relationship type"},
+		{"one_to_many", "one_to_many", true, "invalid relationship type"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateRelationshipType(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateRelationshipType(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				return
+			}
+			if tt.wantErr && tt.errMsg != "" && err != nil {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("ValidateRelationshipType(%q) error = %v, want error containing %q", tt.input, err, tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateRelationshipModel(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		errMsg  string
+	}{
+		// Valid model names (PascalCase)
+		{"simple", "User", false, ""},
+		{"two words", "UserProfile", false, ""},
+		{"with numbers", "User123", false, ""},
+		{"acronym", "APIKey", false, ""},
+		{"longer name", "OrderLineItem", false, ""},
+
+		// Invalid model names
+		{"empty", "", true, "related model name is required"},
+		{"lowercase", "user", true, "must be in PascalCase"},
+		{"camelCase", "userProfile", true, "must be in PascalCase"},
+		{"snake_case", "user_profile", true, "must be in PascalCase"},
+		{"kebab-case", "user-profile", true, "not a valid identifier"},
+		{"with spaces", "User Profile", true, "not a valid identifier"},
+		{"starts with number", "123User", true, "not a valid identifier"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateRelationshipModel(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateRelationshipModel(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				return
+			}
+			if tt.wantErr && tt.errMsg != "" && err != nil {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("ValidateRelationshipModel(%q) error = %v, want error containing %q", tt.input, err, tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateOnDelete(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		errMsg  string
+	}{
+		// Valid actions
+		{"empty (defaults to CASCADE)", "", false, ""},
+		{"CASCADE", "CASCADE", false, ""},
+		{"SET NULL", "SET NULL", false, ""},
+		{"RESTRICT", "RESTRICT", false, ""},
+		{"NO ACTION", "NO ACTION", false, ""},
+		{"lowercase cascade", "cascade", false, ""},
+		{"lowercase set null", "set null", false, ""},
+		{"mixed case", "Cascade", false, ""},
+
+		// Invalid actions
+		{"invalid action", "DELETE", true, "invalid ON DELETE action"},
+		{"typo", "CASCAD", true, "invalid ON DELETE action"},
+		{"SET_NULL with underscore", "SET_NULL", true, "invalid ON DELETE action"},
+		{"random text", "something", true, "invalid ON DELETE action"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateOnDelete(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateOnDelete(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				return
+			}
+			if tt.wantErr && tt.errMsg != "" && err != nil {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("ValidateOnDelete(%q) error = %v, want error containing %q", tt.input, err, tt.errMsg)
+				}
+			}
+		})
+	}
+}

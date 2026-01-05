@@ -82,6 +82,16 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 		"utils",
 	}
 
+	// Add auth directories if WithAuth is enabled
+	if input.WithAuth {
+		directories = append(directories,
+			"internal/repository/user",
+			"internal/services/auth",
+			"internal/web/auth",
+			"internal/web/auth/views",
+		)
+	}
+
 	for _, dir := range directories {
 		if err := gen.EnsureDir(dir); err != nil {
 			return types.NewErrorResult(fmt.Sprintf("failed to create directory %s: %v", dir, err)), nil
@@ -116,6 +126,31 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 	for _, f := range files {
 		if err := gen.GenerateFile(f.template, f.output, data); err != nil {
 			return types.NewErrorResult(fmt.Sprintf("failed to generate %s: %v", f.output, err)), nil
+		}
+	}
+
+	// Generate auth files if WithAuth is enabled
+	if input.WithAuth {
+		authData := generator.NewAuthData(input.ModulePath, input.ProjectName)
+		authFiles := []struct {
+			template string
+			output   string
+		}{
+			{"auth/user_model.go.tmpl", "internal/models/user.go"},
+			{"auth/user_repository.go.tmpl", "internal/repository/user/user.go"},
+			{"auth/auth_service.go.tmpl", "internal/services/auth/auth.go"},
+			{"auth/session.go.tmpl", "internal/services/auth/session.go"},
+			{"auth/auth_middleware.go.tmpl", "internal/web/middleware/auth.go"},
+			{"auth/auth_controller.go.tmpl", "internal/web/auth/auth.go"},
+			{"auth/auth_layout.templ.tmpl", "internal/web/auth/views/layout.templ"},
+			{"auth/login.templ.tmpl", "internal/web/auth/views/login.templ"},
+			{"auth/register.templ.tmpl", "internal/web/auth/views/register.templ"},
+		}
+
+		for _, f := range authFiles {
+			if err := gen.GenerateFile(f.template, f.output, authData); err != nil {
+				return types.NewErrorResult(fmt.Sprintf("failed to generate auth file %s: %v", f.output, err)), nil
+			}
 		}
 	}
 

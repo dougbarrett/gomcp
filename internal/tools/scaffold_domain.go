@@ -51,6 +51,21 @@ func scaffoldDomain(registry *Registry, input types.ScaffoldDomainInput) (types.
 		}
 	}
 
+	// Validate relationships
+	for _, rel := range input.Relationships {
+		if err := utils.ValidateRelationshipType(rel.Type); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("relationship to '%s': %v", rel.Model, err)), nil
+		}
+		if err := utils.ValidateRelationshipModel(rel.Model); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("relationship: %v", err)), nil
+		}
+		if rel.OnDelete != "" {
+			if err := utils.ValidateOnDelete(rel.OnDelete); err != nil {
+				return types.NewErrorResult(fmt.Sprintf("relationship to '%s': %v", rel.Model, err)), nil
+			}
+		}
+	}
+
 	// Get module path from go.mod
 	modulePath, err := utils.GetModulePath(registry.WorkingDir)
 	if err != nil {

@@ -1,0 +1,155 @@
+package user
+
+import (
+	"context"
+
+	"[[.ModulePath]]/internal/models"
+	"gorm.io/gorm"
+)
+
+// Repository handles User data operations.
+type Repository struct {
+	db *gorm.DB
+}
+
+// NewRepository creates a new User repository.
+func NewRepository(db *gorm.DB) *Repository {
+	return &Repository{db: db}
+}
+
+// Create creates a new user.
+func (r *Repository) Create(ctx context.Context, user *models.User) error {
+	return r.db.WithContext(ctx).Create(user).Error
+}
+
+// FindByID finds a user by ID.
+func (r *Repository) FindByID(ctx context.Context, id uint) (*models.User, error) {
+	var user models.User
+	err := r.db.WithContext(ctx).First(&user, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// FindByEmail finds a user by email.
+func (r *Repository) FindByEmail(ctx context.Context, email string) (*models.User, error) {
+	var user models.User
+	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// FindAll finds all users with optional filters.
+func (r *Repository) FindAll(ctx context.Context, opts ...QueryOption) ([]models.User, int64, error) {
+	var users []models.User
+	var total int64
+
+	db := r.db.WithContext(ctx).Model(&models.User{})
+
+	// Count total before pagination
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Apply query options
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	if err := db.Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
+}
+
+// Update updates a user.
+func (r *Repository) Update(ctx context.Context, user *models.User) error {
+	return r.db.WithContext(ctx).Save(user).Error
+}
+
+// Delete deletes a user by ID.
+func (r *Repository) Delete(ctx context.Context, id uint) error {
+	return r.db.WithContext(ctx).Delete(&models.User{}, id).Error
+}
+
+// ExistsByEmail checks if a user with the given email exists.
+func (r *Repository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.User{}).Where("email = ?", email).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// UpdateLastLogin updates the user's last login timestamp.
+func (r *Repository) UpdateLastLogin(ctx context.Context, id uint) error {
+	return r.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", id).Update("last_login_at", gorm.Expr("NOW()")).Error
+}
+
+// SetActive sets the user's active status.
+func (r *Repository) SetActive(ctx context.Context, id uint, active bool) error {
+	return r.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", id).Update("active", active).Error
+}
+
+// QueryOption is a function that modifies a query.
+type QueryOption func(*gorm.DB) *gorm.DB
+
+// WithPagination adds pagination to the query.
+func WithPagination(page, pageSize int) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if page < 1 {
+			page = 1
+		}
+		if pageSize < 1 {
+			pageSize = 10
+		}
+		offset := (page - 1) * pageSize
+		return db.Offset(offset).Limit(pageSize)
+	}
+}
+
+// WithSearch adds a search filter to the query.
+func WithSearch(search string) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if search == "" {
+			return db
+		}
+		return db.Where("name LIKE ? OR email LIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+}
+
+// WithRole filters by role.
+func WithRole(role models.UserRole) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if role == "" {
+			return db
+		}
+		return db.Where("role = ?", role)
+	}
+}
+
+// WithActive filters by active status.
+func WithActive(active bool) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("active = ?", active)
+	}
+}
+
+// WithOrder adds ordering to the query.
+func WithOrder(field string, desc bool) QueryOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if field == "" {
+			return db
+		}
+		order := field
+		if desc {
+			order += " DESC"
+		}
+		return db.Order(order)
+	}
+}

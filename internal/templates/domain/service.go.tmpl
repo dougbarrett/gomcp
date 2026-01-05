@@ -16,6 +16,9 @@ var (
 type Service interface {
 	Create(ctx context.Context, input Create[[.ModelName]]Input) (*models.[[.ModelName]], error)
 	GetByID(ctx context.Context, id uint) (*models.[[.ModelName]], error)
+[[- if .HasRelationships]]
+	GetByIDWithRelations(ctx context.Context, id uint, preloads ...string) (*models.[[.ModelName]], error)
+[[- end]]
 	List(ctx context.Context, filter List[[.ModelName]]Filter) (*List[[.ModelName]]Result, error)
 	Update(ctx context.Context, id uint, input Update[[.ModelName]]Input) (*models.[[.ModelName]], error)
 	Delete(ctx context.Context, id uint) error
@@ -37,6 +40,11 @@ func (s *service) Create(ctx context.Context, input Create[[.ModelName]]Input) (
 [[- range .Fields]]
 		[[.Name]]: input.[[.Name]],
 [[- end]]
+[[- range .Relationships]]
+[[- if .IsBelongsTo]]
+		[[.ForeignKey]]: input.[[.ForeignKey]],
+[[- end]]
+[[- end]]
 	}
 
 	if err := s.repo.Create(ctx, [[.VariableName]]); err != nil {
@@ -54,6 +62,18 @@ func (s *service) GetByID(ctx context.Context, id uint) (*models.[[.ModelName]],
 	}
 	return [[.VariableName]], nil
 }
+[[- if .HasRelationships]]
+
+// GetByIDWithRelations gets a [[.ModelName]] by ID with specified relationships preloaded.
+// If no preloads are specified, it loads the default preloaded relationships.
+func (s *service) GetByIDWithRelations(ctx context.Context, id uint, preloads ...string) (*models.[[.ModelName]], error) {
+	[[.VariableName]], err := s.repo.FindByIDWithRelations(ctx, id, preloads...)
+	if err != nil {
+		return nil, Err[[.ModelName]]NotFound
+	}
+	return [[.VariableName]], nil
+}
+[[- end]]
 
 // List lists [[pluralize .ModelName]] with filtering and pagination.
 func (s *service) List(ctx context.Context, filter List[[.ModelName]]Filter) (*List[[.ModelName]]Result, error) {
@@ -83,6 +103,13 @@ func (s *service) List(ctx context.Context, filter List[[.ModelName]]Filter) (*L
 	} else {
 		opts = append(opts, WithOrder("created_at", true))
 	}
+[[- if .HasRelationships]]
+
+	// Apply preloads if specified
+	if len(filter.Preloads) > 0 {
+		opts = append(opts, WithPreloads(filter.Preloads...))
+	}
+[[- end]]
 
 	[[pluralize .VariableName]], total, err := s.repo.FindAll(ctx, opts...)
 	if err != nil {
@@ -108,6 +135,13 @@ func (s *service) Update(ctx context.Context, id uint, input Update[[.ModelName]
 	if input.[[.Name]] != nil {
 		[[$.VariableName]].[[.Name]] = *input.[[.Name]]
 	}
+[[- end]]
+[[- range .Relationships]]
+[[- if .IsBelongsTo]]
+	if input.[[.ForeignKey]] != nil {
+		[[$.VariableName]].[[.ForeignKey]] = *input.[[.ForeignKey]]
+	}
+[[- end]]
 [[- end]]
 
 	if err := s.repo.Update(ctx, [[.VariableName]]); err != nil {

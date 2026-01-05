@@ -385,3 +385,56 @@ func ValidateComponentName(name string) error {
 	}
 	return nil
 }
+
+// validRelationshipTypes are the supported relationship types.
+var validRelationshipTypes = map[string]bool{
+	"belongs_to":   true,
+	"has_one":      true,
+	"has_many":     true,
+	"many_to_many": true,
+}
+
+// validOnDeleteActions are the supported ON DELETE actions.
+var validOnDeleteActions = map[string]bool{
+	"":          true, // empty defaults to CASCADE
+	"CASCADE":   true,
+	"SET NULL":  true,
+	"RESTRICT":  true,
+	"NO ACTION": true,
+}
+
+// ValidateRelationshipType validates a relationship type.
+func ValidateRelationshipType(relType string) error {
+	if relType == "" {
+		return fmt.Errorf("relationship type is required")
+	}
+	if !validRelationshipTypes[relType] {
+		return fmt.Errorf("invalid relationship type '%s': must be belongs_to, has_one, has_many, or many_to_many", relType)
+	}
+	return nil
+}
+
+// ValidateRelationshipModel validates a related model name.
+func ValidateRelationshipModel(model string) error {
+	if model == "" {
+		return fmt.Errorf("related model name is required")
+	}
+	// Model should be PascalCase identifier
+	if !validIdentifierRegex.MatchString(model) {
+		return fmt.Errorf("related model '%s' is not a valid identifier", model)
+	}
+	// First character should be uppercase
+	if !unicode.IsUpper(rune(model[0])) {
+		return fmt.Errorf("related model '%s' must be in PascalCase", model)
+	}
+	return nil
+}
+
+// ValidateOnDelete validates an ON DELETE action.
+func ValidateOnDelete(action string) error {
+	upper := strings.ToUpper(action)
+	if !validOnDeleteActions[upper] {
+		return fmt.Errorf("invalid ON DELETE action '%s': must be CASCADE, SET NULL, RESTRICT, or NO ACTION", action)
+	}
+	return nil
+}

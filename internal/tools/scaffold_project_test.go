@@ -362,7 +362,7 @@ func TestScaffoldProject(t *testing.T) {
 		}
 	})
 
-	t.Run("with_auth flag is passed to templates", func(t *testing.T) {
+	t.Run("with_auth generates auth files", func(t *testing.T) {
 		registry, _ := testRegistry(t)
 		input := types.ScaffoldProjectInput{
 			ProjectName: "authapp",
@@ -378,7 +378,66 @@ func TestScaffoldProject(t *testing.T) {
 		if !result.Success {
 			t.Fatalf("expected success, got: %s", result.Message)
 		}
-		// Test passes if no error - with_auth is handled by templates
+
+		// Check that auth files are included
+		authFiles := []string{
+			"internal/models/user.go",
+			"internal/repository/user/user.go",
+			"internal/services/auth/auth.go",
+			"internal/services/auth/session.go",
+			"internal/web/middleware/auth.go",
+			"internal/web/auth/auth.go",
+			"internal/web/auth/views/layout.templ",
+			"internal/web/auth/views/login.templ",
+			"internal/web/auth/views/register.templ",
+		}
+
+		for _, authFile := range authFiles {
+			found := false
+			for _, createdFile := range result.FilesCreated {
+				if containsString(createdFile, authFile) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("expected auth file %q to be created, files: %v", authFile, result.FilesCreated)
+			}
+		}
+
+		// Should have base files (18) + auth files (9) = 27 files
+		expectedFileCount := 27
+		if len(result.FilesCreated) != expectedFileCount {
+			t.Errorf("expected %d files with auth, got %d", expectedFileCount, len(result.FilesCreated))
+		}
+	})
+
+	t.Run("without_auth does not generate auth files", func(t *testing.T) {
+		registry, _ := testRegistry(t)
+		input := types.ScaffoldProjectInput{
+			ProjectName: "noauthapp",
+			ModulePath:  "github.com/test/noauthapp",
+			WithAuth:    false,
+			DryRun:      true,
+		}
+
+		result, err := scaffoldProject(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.Success {
+			t.Fatalf("expected success, got: %s", result.Message)
+		}
+
+		// Check that auth files are NOT included
+		for _, createdFile := range result.FilesCreated {
+			if containsString(createdFile, "internal/models/user.go") ||
+				containsString(createdFile, "internal/repository/user") ||
+				containsString(createdFile, "internal/services/auth") ||
+				containsString(createdFile, "internal/web/auth") {
+				t.Errorf("unexpected auth file %q when WithAuth is false", createdFile)
+			}
+		}
 	})
 
 	t.Run("creates correct number of files", func(t *testing.T) {

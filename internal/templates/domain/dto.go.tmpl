@@ -7,12 +7,22 @@ type Create[[.ModelName]]Input struct {
 [[- range .Fields]]
 	[[.Name]] [[.Type]] `json:"[[.JSONName]]"[[if .Required]] validate:"required"[[end]]`
 [[- end]]
+[[- range .Relationships]]
+[[- if .IsBelongsTo]]
+	[[.ForeignKey]] uint `json:"[[.ForeignKey | toJSONTag]]"`
+[[- end]]
+[[- end]]
 }
 
 // Update[[.ModelName]]Input is the input for updating a [[.ModelName]].
 type Update[[.ModelName]]Input struct {
 [[- range .Fields]]
 	[[.Name]] *[[.Type]] `json:"[[.JSONName]],omitempty"`
+[[- end]]
+[[- range .Relationships]]
+[[- if .IsBelongsTo]]
+	[[.ForeignKey]] *uint `json:"[[.ForeignKey | toJSONTag]],omitempty"`
+[[- end]]
 [[- end]]
 }
 
@@ -23,6 +33,9 @@ type List[[.ModelName]]Filter struct {
 	PageSize int    `json:"page_size"`
 	SortBy   string `json:"sort_by"`
 	SortDesc bool   `json:"sort_desc"`
+[[- if .HasRelationships]]
+	Preloads []string `json:"preloads,omitempty"`
+[[- end]]
 }
 
 // List[[.ModelName]]Result is the result of listing [[pluralize .ModelName]].
@@ -39,18 +52,75 @@ type [[.ModelName]]Response struct {
 [[- range .Fields]]
 	[[.Name]] [[.Type]] `json:"[[.JSONName]]"`
 [[- end]]
+[[- range .Relationships]]
+[[- if .IsBelongsTo]]
+	[[.ForeignKey]] uint `json:"[[.ForeignKey | toJSONTag]]"`
+	[[.FieldName]] *[[.Model]]Summary `json:"[[.FieldName | toLower]],omitempty"`
+[[- else if .IsHasOne]]
+	[[.FieldName]] *[[.Model]]Summary `json:"[[.FieldName | toLower]],omitempty"`
+[[- else if .IsHasMany]]
+	[[.FieldName]] [][[.Model]]Summary `json:"[[.FieldName | toLower]],omitempty"`
+[[- else if .IsManyToMany]]
+	[[.FieldName]] [][[.Model]]Summary `json:"[[.FieldName | toLower]],omitempty"`
+[[- end]]
+[[- end]]
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 }
+[[- if .HasRelationships]]
+[[- range .Relationships]]
+
+// [[.Model]]Summary is a summary of a related [[.Model]].
+type [[.Model]]Summary struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name,omitempty"`
+}
+[[- end]]
+[[- end]]
 
 // To[[.ModelName]]Response converts a model to a response.
 func To[[.ModelName]]Response([[.VariableName]] *models.[[.ModelName]]) *[[.ModelName]]Response {
-	return &[[.ModelName]]Response{
+	resp := &[[.ModelName]]Response{
 		ID:        [[.VariableName]].ID,
 [[- range .Fields]]
 		[[.Name]]: [[$.VariableName]].[[.Name]],
 [[- end]]
+[[- range .Relationships]]
+[[- if .IsBelongsTo]]
+		[[.ForeignKey]]: [[$.VariableName]].[[.ForeignKey]],
+[[- end]]
+[[- end]]
 		CreatedAt: [[.VariableName]].CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt: [[.VariableName]].UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
+[[- if .HasRelationships]]
+
+	// Map relationships if loaded
+[[- range .Relationships]]
+[[- if .IsBelongsTo]]
+	if [[$.VariableName]].[[.FieldName]] != nil {
+		resp.[[.FieldName]] = &[[.Model]]Summary{
+			ID: [[$.VariableName]].[[.FieldName]].ID,
+		}
+	}
+[[- else if .IsHasOne]]
+	if [[$.VariableName]].[[.FieldName]] != nil {
+		resp.[[.FieldName]] = &[[.Model]]Summary{
+			ID: [[$.VariableName]].[[.FieldName]].ID,
+		}
+	}
+[[- else if or .IsHasMany .IsManyToMany]]
+	if len([[$.VariableName]].[[.FieldName]]) > 0 {
+		resp.[[.FieldName]] = make([][[.Model]]Summary, len([[$.VariableName]].[[.FieldName]]))
+		for i, item := range [[$.VariableName]].[[.FieldName]] {
+			resp.[[.FieldName]][i] = [[.Model]]Summary{
+				ID: item.ID,
+			}
+		}
+	}
+[[- end]]
+[[- end]]
+[[- end]]
+
+	return resp
 }

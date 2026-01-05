@@ -33,12 +33,32 @@ type FieldDef struct {
 	Label string `json:"label,omitempty"`
 }
 
+// RelationshipDef defines a model relationship.
+type RelationshipDef struct {
+	// Type is the relationship type: belongs_to, has_one, has_many, many_to_many.
+	Type string `json:"type"`
+	// Model is the related model name in PascalCase (e.g., "User", "OrderItem").
+	Model string `json:"model"`
+	// ForeignKey is the foreign key field name. Defaults to {Model}ID for belongs_to.
+	ForeignKey string `json:"foreign_key,omitempty"`
+	// References is the referenced field. Defaults to "ID".
+	References string `json:"references,omitempty"`
+	// JoinTable is the join table name (for many_to_many).
+	JoinTable string `json:"join_table,omitempty"`
+	// OnDelete is the delete behavior: CASCADE, SET NULL, RESTRICT. Defaults to CASCADE.
+	OnDelete string `json:"on_delete,omitempty"`
+	// Preload indicates if the relationship should be preloaded by default.
+	Preload bool `json:"preload,omitempty"`
+}
+
 // ScaffoldDomainInput is the input for the scaffold_domain tool.
 type ScaffoldDomainInput struct {
 	// DomainName is the domain name in singular form (e.g., "product").
 	DomainName string `json:"domain_name"`
 	// Fields is the list of model fields.
 	Fields []FieldDef `json:"fields"`
+	// Relationships is the list of model relationships.
+	Relationships []RelationshipDef `json:"relationships,omitempty"`
 	// WithCrudViews generates CRUD templ views. Defaults to true.
 	WithCrudViews *bool `json:"with_crud_views,omitempty"`
 	// WithSoftDelete includes soft delete support. Defaults to true.

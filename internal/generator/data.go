@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"strings"
+
 	"github.com/dbb1dev/go-mcp/internal/types"
 	"github.com/dbb1dev/go-mcp/internal/utils"
 )
@@ -125,6 +127,12 @@ type DomainData struct {
 	URLPath string
 	// Fields is the list of fields.
 	Fields []FieldData
+	// Relationships is the list of model relationships.
+	Relationships []RelationshipData
+	// HasRelationships is true if any relationships are defined.
+	HasRelationships bool
+	// PreloadRelationships is the list of relationships to preload.
+	PreloadRelationships []RelationshipData
 	// WithSoftDelete enables soft delete.
 	WithSoftDelete bool
 	// WithCrudViews generates CRUD views.
@@ -133,17 +141,30 @@ type DomainData struct {
 
 // NewDomainData creates DomainData from ScaffoldDomainInput and module path.
 func NewDomainData(input types.ScaffoldDomainInput, modulePath string) DomainData {
+	relationships := NewRelationshipDataList(input.Relationships, input.DomainName)
+
+	// Filter relationships that should be preloaded
+	var preloadRels []RelationshipData
+	for _, rel := range relationships {
+		if rel.Preload {
+			preloadRels = append(preloadRels, rel)
+		}
+	}
+
 	return DomainData{
-		ModulePath:     modulePath,
-		DomainName:     input.DomainName,
-		ModelName:      utils.ToModelName(input.DomainName),
-		PackageName:    utils.ToPackageName(input.DomainName),
-		VariableName:   utils.ToVariableName(input.DomainName),
-		TableName:      utils.ToTableName(input.DomainName),
-		URLPath:        utils.ToURLPath(input.DomainName),
-		Fields:         NewFieldDataList(input.Fields),
-		WithSoftDelete: input.GetWithSoftDelete(),
-		WithCrudViews:  input.GetWithCrudViews(),
+		ModulePath:           modulePath,
+		DomainName:           input.DomainName,
+		ModelName:            utils.ToModelName(input.DomainName),
+		PackageName:          utils.ToPackageName(input.DomainName),
+		VariableName:         utils.ToVariableName(input.DomainName),
+		TableName:            utils.ToTableName(input.DomainName),
+		URLPath:              utils.ToURLPath(input.DomainName),
+		Fields:               NewFieldDataList(input.Fields),
+		Relationships:        relationships,
+		HasRelationships:     len(relationships) > 0,
+		PreloadRelationships: preloadRels,
+		WithSoftDelete:       input.GetWithSoftDelete(),
+		WithCrudViews:        input.GetWithCrudViews(),
 	}
 }
 
@@ -537,4 +558,142 @@ func NewAuthData(modulePath, projectName string) AuthData {
 		ProjectName: projectName,
 		SessionType: "cookie", // default to cookie-based sessions
 	}
+}
+
+// RelationshipData is the template data for a model relationship.
+type RelationshipData struct {
+	// Type is the relationship type: belongs_to, has_one, has_many, many_to_many.
+	Type string
+	// Model is the related model name in PascalCase (e.g., "User").
+	Model string
+	// FieldName is the struct field name (e.g., "User" for belongs_to, "Orders" for has_many).
+	FieldName string
+	// ForeignKey is the foreign key field name.
+	ForeignKey string
+	// References is the referenced field (usually "ID").
+	References string
+	// JoinTable is the join table name (for many_to_many).
+	JoinTable string
+	// OnDelete is the delete behavior.
+	OnDelete string
+	// Preload indicates if the relationship should be preloaded by default.
+	Preload bool
+	// IsBelongsTo is true for belongs_to relationships.
+	IsBelongsTo bool
+	// IsHasOne is true for has_one relationships.
+	IsHasOne bool
+	// IsHasMany is true for has_many relationships.
+	IsHasMany bool
+	// IsManyToMany is true for many_to_many relationships.
+	IsManyToMany bool
+	// GORMTag is the complete GORM struct tag for the relationship.
+	GORMTag string
+	// ForeignKeyField is the FK field definition (for belongs_to).
+	ForeignKeyField *FieldData
+}
+
+// NewRelationshipData creates RelationshipData from a RelationshipDef.
+func NewRelationshipData(rel types.RelationshipDef, domainName string) RelationshipData {
+	fieldName := rel.Model
+	foreignKey := rel.ForeignKey
+	references := rel.References
+	onDelete := rel.OnDelete
+
+	// Defaults
+	if references == "" {
+		references = "ID"
+	}
+	if onDelete == "" {
+		onDelete = "CASCADE"
+	}
+
+	// Determine field name based on relationship type
+	switch rel.Type {
+	case "belongs_to":
+		// belongs_to: field name is singular (e.g., "User")
+		if foreignKey == "" {
+			foreignKey = rel.Model + "ID"
+		}
+	case "has_one":
+		// has_one: field name is singular (e.g., "Profile")
+		if foreignKey == "" {
+			foreignKey = utils.ToModelName(domainName) + "ID"
+		}
+	case "has_many":
+		// has_many: field name is plural (e.g., "Orders")
+		fieldName = utils.Pluralize(rel.Model)
+		if foreignKey == "" {
+			foreignKey = utils.ToModelName(domainName) + "ID"
+		}
+	case "many_to_many":
+		// many_to_many: field name is plural (e.g., "Tags")
+		fieldName = utils.Pluralize(rel.Model)
+	}
+
+	// Build GORM tag
+	gormTag := buildGORMTag(rel.Type, foreignKey, references, rel.JoinTable, onDelete)
+
+	// Create FK field for belongs_to relationships
+	var fkField *FieldData
+	if rel.Type == "belongs_to" {
+		fkField = &FieldData{
+			Name:      foreignKey,
+			Type:      "uint",
+			GORMTags:  "",
+			JSONName:  utils.ToJSONTag(foreignKey),
+			Omitempty: true,
+		}
+	}
+
+	return RelationshipData{
+		Type:            rel.Type,
+		Model:           rel.Model,
+		FieldName:       fieldName,
+		ForeignKey:      foreignKey,
+		References:      references,
+		JoinTable:       rel.JoinTable,
+		OnDelete:        onDelete,
+		Preload:         rel.Preload,
+		IsBelongsTo:     rel.Type == "belongs_to",
+		IsHasOne:        rel.Type == "has_one",
+		IsHasMany:       rel.Type == "has_many",
+		IsManyToMany:    rel.Type == "many_to_many",
+		GORMTag:         gormTag,
+		ForeignKeyField: fkField,
+	}
+}
+
+// buildGORMTag builds the GORM struct tag for a relationship.
+func buildGORMTag(relType, foreignKey, references, joinTable, onDelete string) string {
+	var parts []string
+
+	switch relType {
+	case "belongs_to":
+		parts = append(parts, "foreignKey:"+foreignKey)
+		parts = append(parts, "references:"+references)
+	case "has_one", "has_many":
+		parts = append(parts, "foreignKey:"+foreignKey)
+		parts = append(parts, "references:"+references)
+		if onDelete != "" && onDelete != "CASCADE" {
+			parts = append(parts, "constraint:OnDelete:"+onDelete)
+		}
+	case "many_to_many":
+		if joinTable != "" {
+			parts = append(parts, "many2many:"+joinTable)
+		}
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.Join(parts, ";")
+}
+
+// NewRelationshipDataList creates a list of RelationshipData from RelationshipDefs.
+func NewRelationshipDataList(rels []types.RelationshipDef, domainName string) []RelationshipData {
+	result := make([]RelationshipData, len(rels))
+	for i, rel := range rels {
+		result[i] = NewRelationshipData(rel, domainName)
+	}
+	return result
 }
