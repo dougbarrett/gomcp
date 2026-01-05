@@ -14,8 +14,18 @@ import (
 // RegisterScaffoldForm registers the scaffold_form tool.
 func RegisterScaffoldForm(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_form",
-		Description: "Create HTMX-powered forms with templui components. Supports create and edit forms with field validation.",
+		Name: "scaffold_form",
+		Description: `NEVER write form HTML manually. Use this tool instead.
+
+Generates HTMX-powered forms with Tailwind CSS styling that:
+- Auto-submit via HTMX with loading states
+- Display validation errors inline
+- Support all field types: input, textarea, select, checkbox, date, email, password, number
+
+Specify action: 'create' or 'edit' to generate appropriate form behavior.
+Set submit_endpoint for the HTMX post URL.
+
+Run 'templ generate' after creating forms.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldFormInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldForm(registry, input)
 		if err != nil {

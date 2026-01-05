@@ -1,11 +1,7 @@
 package views
 
 import (
-	"github.com/templui/templui/components/button"
-	"github.com/templui/templui/components/card"
-	"github.com/templui/templui/components/input"
-	"github.com/templui/templui/components/label"
-	"github.com/templui/templui/components/checkbox"
+	"[[.ModulePath]]/internal/web/components"
 )
 
 // LoginProps contains props for the login page.
@@ -18,14 +14,14 @@ type LoginProps struct {
 // LoginPage renders the login page.
 templ LoginPage(props LoginProps) {
 	@AuthLayout("Login") {
-		@card.Card(card.Props{Class: "w-full max-w-md"}) {
-			@card.Header(card.HeaderProps{Class: "text-center"}) {
+		@components.Card(components.CardProps{Class: "w-full max-w-md"}) {
+			@components.CardHeader("text-center") {
 				<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Welcome back</h1>
 				<p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
 					Sign in to your account to continue
 				</p>
 			}
-			@card.Content(card.ContentProps{}) {
+			@components.CardContent("") {
 				if props.Error != "" {
 					<div class="mb-4 p-3 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-lg">
 						<p class="text-sm text-red-600 dark:text-red-400">{ props.Error }</p>
@@ -34,63 +30,58 @@ templ LoginPage(props LoginProps) {
 				<form hx-post="/login" hx-target="body" class="space-y-4">
 					<!-- Email -->
 					<div class="space-y-2">
-						@label.Label(label.Props{For: "email"}) {
+						@components.Label("email", true) {
 							Email
 						}
-						@input.Input(input.Props{
+						@components.Input(components.InputProps{
 							ID:          "email",
 							Name:        "email",
 							Type:        "email",
 							Placeholder: "you@example.com",
 							Required:    true,
+							Value:       props.Email,
+							Error:       props.Errors["email"],
 							Attributes: templ.Attributes{
-								"value":        props.Email,
 								"autocomplete": "email",
 							},
 						})
-						if err, ok := props.Errors["email"]; ok {
-							<p class="text-sm text-red-500">{ err }</p>
-						}
+						@components.FormError(props.Errors["email"])
 					</div>
 
 					<!-- Password -->
 					<div class="space-y-2">
 						<div class="flex items-center justify-between">
-							@label.Label(label.Props{For: "password"}) {
+							@components.Label("password", true) {
 								Password
 							}
-							<a href="/forgot-password" class="text-sm text-primary-600 hover:text-primary-500">
+							<a href="/forgot-password" class="text-sm text-blue-600 hover:text-blue-500">
 								Forgot password?
 							</a>
 						</div>
-						@input.Input(input.Props{
+						@components.Input(components.InputProps{
 							ID:          "password",
 							Name:        "password",
 							Type:        "password",
 							Placeholder: "Enter your password",
 							Required:    true,
+							Error:       props.Errors["password"],
 							Attributes: templ.Attributes{
 								"autocomplete": "current-password",
 							},
 						})
-						if err, ok := props.Errors["password"]; ok {
-							<p class="text-sm text-red-500">{ err }</p>
-						}
+						@components.FormError(props.Errors["password"])
 					</div>
 
 					<!-- Remember Me -->
 					<div class="flex items-center gap-2">
-						@checkbox.Checkbox(checkbox.Props{
-							ID:   "remember",
-							Name: "remember",
-						})
+						@components.Checkbox("remember", "remember", "true", false, false, nil)
 						<label for="remember" class="text-sm text-gray-600 dark:text-gray-400">
 							Remember me for 30 days
 						</label>
 					</div>
 
 					<!-- Submit -->
-					@button.Button(button.Props{
+					@components.Button(components.ButtonProps{
 						Type:    "submit",
 						Variant: "default",
 						Class:   "w-full",
@@ -99,10 +90,10 @@ templ LoginPage(props LoginProps) {
 					}
 				</form>
 			}
-			@card.Footer(card.FooterProps{Class: "text-center"}) {
+			@components.CardFooter("text-center") {
 				<p class="text-sm text-gray-600 dark:text-gray-400">
 					Don't have an account?
-					<a href="/register" class="text-primary-600 hover:text-primary-500 font-medium">
+					<a href="/register" class="text-blue-600 hover:text-blue-500 font-medium">
 						Sign up
 					</a>
 				</p>

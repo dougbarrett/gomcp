@@ -14,8 +14,18 @@ import (
 // RegisterScaffoldComponent registers the scaffold_component tool.
 func RegisterScaffoldComponent(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_component",
-		Description: "Create reusable templ components with templui patterns. Supports card, modal, dropdown, form_field, table, and custom component types.",
+		Name: "scaffold_component",
+		Description: `Create reusable templ components with Tailwind CSS styling.
+
+Component types: card, modal, dropdown, form_field, table, custom
+
+Features:
+- Props with types and defaults
+- Optional HTMX attributes (with_htmx: true)
+- Alpine.js state integration (alpine_state)
+
+Use scaffold_modal for full modal dialogs, scaffold_form for forms.
+Run 'templ generate' after creating components.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldComponentInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldComponent(registry, input)
 		if err != nil {

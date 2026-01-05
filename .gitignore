@@ -1,0 +1,6 @@
+# Binaries
+gomcp
+mcp-mgr
+
+# Private bug tracker MCP (not for public distribution)
+cmd/mcp-mgr/

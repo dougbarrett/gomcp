@@ -13,8 +13,16 @@ import (
 // RegisterScaffoldConfig registers the scaffold_config tool.
 func RegisterScaffoldConfig(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_config",
-		Description: "Generate TOML configuration files for pages, menus, app settings, or messages.",
+		Name: "scaffold_config",
+		Description: `Generate TOML configuration files for i18n and app settings.
+
+Config types:
+- page: Page-specific content (title, description, headings)
+- menu: Navigation menu structure
+- app: Application settings (server, database)
+- messages: Localized message strings
+
+Supports multiple locales (default: en). Files go to config/{locale}/.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldConfigInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldConfig(registry, input)
 		if err != nil {

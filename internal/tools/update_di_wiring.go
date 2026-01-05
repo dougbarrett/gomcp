@@ -14,8 +14,18 @@ import (
 // RegisterUpdateDIWiring registers the update_di_wiring tool.
 func RegisterUpdateDIWiring(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "update_di_wiring",
-		Description: "Update the main.go dependency injection wiring to include specified domains. Uses marker comments to inject imports, repository/service/controller instantiations, and route registrations.",
+		Name: "update_di_wiring",
+		Description: `IMPORTANT: Run this after scaffold_domain to wire up new domains.
+
+Automatically updates cmd/web/main.go to:
+- Add import statements for repository, service, controller
+- Instantiate repository, service, and controller
+- Register routes
+
+Uses marker comments (MCP:IMPORTS:START, MCP:REPOS:START, etc.) in main.go.
+scaffold_domain calls this automatically, but use this tool to re-wire or add missing domains.
+
+Use dry_run: true to verify markers exist without making changes.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.UpdateDIWiringInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := updateDIWiring(registry, input)
 		if err != nil {

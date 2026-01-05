@@ -1,9 +1,7 @@
 package components
 
 import (
-	"github.com/templui/templui/components/card"
-	"github.com/templui/templui/components/button"
-	"github.com/templui/templui/components/icon"
+	"[[.ModulePath]]/internal/web/components"
 )
 
 // [[.ComponentName]]Props contains properties for the [[.ComponentName]] component.
@@ -16,8 +14,8 @@ type [[.ComponentName]]Props struct {
 
 // [[.ComponentName]] renders a card component.
 templ [[.ComponentName]](props [[.ComponentName]]Props) {
-	@card.Card(card.Props{Class: props.Class}) {
-		@card.Header(card.HeaderProps{}) {
+	@components.Card(components.CardProps{Class: props.Class}) {
+		@components.CardHeader("") {
 			<div class="flex items-center justify-between">
 				<div>
 					[[- range .Props]]
@@ -40,7 +38,7 @@ templ [[.ComponentName]](props [[.ComponentName]]Props) {
 				{ children... }
 			</div>
 		}
-		@card.Content(card.ContentProps{}) {
+		@components.CardContent("") {
 			{ children... }
 		}
 	}
@@ -48,8 +46,8 @@ templ [[.ComponentName]](props [[.ComponentName]]Props) {
 
 // [[.ComponentName]]WithActions renders a card with action buttons.
 templ [[.ComponentName]]WithActions(props [[.ComponentName]]Props, editURL string, deleteURL string) {
-	@card.Card(card.Props{Class: "hover:shadow-md transition-shadow " + props.Class}) {
-		@card.Header(card.HeaderProps{}) {
+	@components.Card(components.CardProps{Class: "hover:shadow-md transition-shadow " + props.Class}) {
+		@components.CardHeader("") {
 			<div class="flex items-center justify-between">
 				<div>
 					[[- range .Props]]
@@ -64,7 +62,7 @@ templ [[.ComponentName]]WithActions(props [[.ComponentName]]Props, editURL strin
 				</div>
 				<div class="flex items-center gap-1">
 					if editURL != "" {
-						@button.Button(button.Props{
+						@components.Button(components.ButtonProps{
 							Variant: "ghost",
 							Size:    "sm",
 							Attributes: templ.Attributes{
@@ -73,11 +71,11 @@ templ [[.ComponentName]]WithActions(props [[.ComponentName]]Props, editURL strin
 								"hx-swap":   "innerHTML",
 							},
 						}) {
-							@icon.Icon(icon.Props{Name: "pencil", Class: "h-4 w-4"})
+							@components.Icon("pencil", "h-4 w-4")
 						}
 					}
 					if deleteURL != "" {
-						@button.Button(button.Props{
+						@components.Button(components.ButtonProps{
 							Variant: "ghost",
 							Size:    "sm",
 							Attributes: templ.Attributes{
@@ -87,13 +85,13 @@ templ [[.ComponentName]]WithActions(props [[.ComponentName]]Props, editURL strin
 								"hx-swap":    "outerHTML swap:300ms",
 							},
 						}) {
-							@icon.Icon(icon.Props{Name: "trash", Class: "h-4 w-4 text-red-500"})
+							@components.Icon("trash", "h-4 w-4 text-red-500")
 						}
 					}
 				</div>
 			</div>
 		}
-		@card.Content(card.ContentProps{}) {
+		@components.CardContent("") {
 			{ children... }
 		}
 	}
@@ -101,8 +99,8 @@ templ [[.ComponentName]]WithActions(props [[.ComponentName]]Props, editURL strin
 
 // [[.ComponentName]]Simple renders a simple card without header.
 templ [[.ComponentName]]Simple(props [[.ComponentName]]Props) {
-	@card.Card(card.Props{Class: props.Class}) {
-		@card.Content(card.ContentProps{}) {
+	@components.Card(components.CardProps{Class: props.Class}) {
+		@components.CardContent("") {
 			{ children... }
 		}
 	}
@@ -116,8 +114,8 @@ templ [[.ComponentName]]Clickable(props [[.ComponentName]]Props, href string) {
 		hx-target="#main-content"
 		hx-push-url="true"
 	>
-		@card.Card(card.Props{Class: "hover:shadow-md hover:border-primary-500 transition-all " + props.Class}) {
-			@card.Content(card.ContentProps{}) {
+		@components.Card(components.CardProps{Class: "hover:shadow-md hover:border-blue-500 transition-all " + props.Class}) {
+			@components.CardContent("") {
 				{ children... }
 			}
 		}
@@ -126,8 +124,8 @@ templ [[.ComponentName]]Clickable(props [[.ComponentName]]Props, href string) {
 
 // [[.ComponentName]]Stats renders a stats card.
 templ [[.ComponentName]]Stats(title string, value string, change string, changeType string) {
-	@card.Card(card.Props{}) {
-		@card.Content(card.ContentProps{}) {
+	@components.Card(components.CardProps{}) {
+		@components.CardContent("") {
 			<div class="space-y-2">
 				<p class="text-sm font-medium text-gray-500 dark:text-gray-400">
 					{ title }
@@ -138,10 +136,10 @@ templ [[.ComponentName]]Stats(title string, value string, change string, changeT
 				if change != "" {
 					<div class="flex items-center gap-1 text-sm">
 						if changeType == "up" {
-							@icon.Icon(icon.Props{Name: "trending-up", Class: "h-4 w-4 text-green-500"})
+							@components.Icon("trending-up", "h-4 w-4 text-green-500")
 							<span class="text-green-500">{ change }</span>
 						} else if changeType == "down" {
-							@icon.Icon(icon.Props{Name: "trending-down", Class: "h-4 w-4 text-red-500"})
+							@components.Icon("trending-down", "h-4 w-4 text-red-500")
 							<span class="text-red-500">{ change }</span>
 						} else {
 							<span class="text-gray-500">{ change }</span>

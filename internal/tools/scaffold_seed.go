@@ -14,8 +14,15 @@ import (
 // RegisterScaffoldSeed registers the scaffold_seed tool.
 func RegisterScaffoldSeed(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_seed",
-		Description: "Generate database seed files with optional faker support for realistic test data.",
+		Name: "scaffold_seed",
+		Description: `Generate database seeders for test data.
+
+Features:
+- with_faker: true for realistic fake data (names, emails, addresses, etc.)
+- count: Number of records to seed (default: 10)
+- dependencies: Other seeders to run first (e.g., ["user"] before "order")
+
+Register the seeder in cmd/seed/main.go after generating.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldSeedInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldSeed(registry, input)
 		if err != nil {

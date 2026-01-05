@@ -1,11 +1,7 @@
 package components
 
 import (
-	"github.com/templui/templui/components/input"
-	"github.com/templui/templui/components/textarea"
-	"github.com/templui/templui/components/checkbox"
-	"github.com/templui/templui/components/select_box"
-	"github.com/templui/templui/components/label"
+	"[[.ModulePath]]/internal/web/components"
 )
 
 // FormFieldProps contains properties for a form field.
@@ -40,12 +36,9 @@ type SelectOption struct {
 // FormField renders a form field with label and error handling.
 templ FormField(props FormFieldProps) {
 	<div class={ "space-y-2 " + props.Class }>
-		if props.Label != "" {
-			@label.Label(label.Props{For: props.ID}) {
+		if props.Label != "" && props.Type != "checkbox" {
+			@components.Label(props.ID, props.Required) {
 				{ props.Label }
-				if props.Required {
-					<span class="text-red-500 ml-1">*</span>
-				}
 			}
 		}
 
@@ -78,28 +71,26 @@ templ FormField(props FormFieldProps) {
 			@FormInput(props, "text")
 		}
 
-		if props.Error != "" {
-			<p class="text-sm text-red-500">{ props.Error }</p>
-		}
+		@components.FormError(props.Error)
 
 		if props.HelpText != "" && props.Error == "" {
-			<p class="text-sm text-gray-500 dark:text-gray-400">{ props.HelpText }</p>
+			@components.FormHelp(props.HelpText)
 		}
 	</div>
 }
 
 // FormInput renders an input field.
 templ FormInput(props FormFieldProps, inputType string) {
-	@input.Input(input.Props{
+	@components.Input(components.InputProps{
 		ID:          props.ID,
 		Name:        props.Name,
 		Type:        inputType,
 		Placeholder: props.Placeholder,
 		Required:    props.Required,
 		Disabled:    props.Disabled,
-		Class:       inputErrorClass(props.Error),
+		Value:       props.Value,
+		Error:       props.Error,
 		Attributes: templ.Attributes{
-			"value":   props.Value,
 			"min":     props.Min,
 			"max":     props.Max,
 			"step":    props.Step,
@@ -110,44 +101,36 @@ templ FormInput(props FormFieldProps, inputType string) {
 
 // FormTextarea renders a textarea field.
 templ FormTextarea(props FormFieldProps) {
-	@textarea.Textarea(textarea.Props{
+	@components.Textarea(components.TextareaProps{
 		ID:          props.ID,
 		Name:        props.Name,
 		Placeholder: props.Placeholder,
 		Required:    props.Required,
 		Disabled:    props.Disabled,
 		Rows:        getRows(props.Rows),
-		Class:       inputErrorClass(props.Error),
-	}) {
-		{ props.Value }
-	}
+		Value:       props.Value,
+		Error:       props.Error,
+	})
 }
 
 // FormCheckbox renders a checkbox field.
 templ FormCheckbox(props FormFieldProps) {
 	<div class="flex items-center gap-2">
-		@checkbox.Checkbox(checkbox.Props{
-			ID:       props.ID,
-			Name:     props.Name,
-			Disabled: props.Disabled,
-			Attributes: templ.Attributes{
-				"checked": props.Value == "true" || props.Value == "1",
-			},
-		})
+		@components.Checkbox(props.ID, props.Name, "true", props.Value == "true" || props.Value == "1", props.Disabled, nil)
 		if props.Label != "" {
-			<span class="text-sm text-gray-700 dark:text-gray-300">{ props.Label }</span>
+			<label for={ props.ID } class="text-sm text-gray-700 dark:text-gray-300">{ props.Label }</label>
 		}
 	</div>
 }
 
 // FormSelect renders a select field.
 templ FormSelect(props FormFieldProps) {
-	@select_box.SelectBox(select_box.Props{
+	@components.Select(components.SelectProps{
 		ID:       props.ID,
 		Name:     props.Name,
 		Required: props.Required,
 		Disabled: props.Disabled,
-		Class:    inputErrorClass(props.Error),
+		Error:    props.Error,
 	}) {
 		if props.Placeholder != "" {
 			<option value="" disabled selected>{ props.Placeholder }</option>
@@ -190,14 +173,6 @@ templ FormActions() {
 	<div class="flex justify-end gap-3 pt-4">
 		{ children... }
 	</div>
-}
-
-// inputErrorClass returns the appropriate class for error state.
-func inputErrorClass(err string) string {
-	if err != "" {
-		return "border-red-500 focus:ring-red-500"
-	}
-	return ""
 }
 
 // getRows returns the number of rows for textarea.

@@ -14,8 +14,16 @@ import (
 // RegisterScaffoldController registers the scaffold_controller tool.
 func RegisterScaffoldController(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_controller",
-		Description: "Create a standalone HTTP controller. Use this when you need custom endpoints without the full domain scaffolding.",
+		Name: "scaffold_controller",
+		Description: `Create a standalone HTTP controller. Use scaffold_domain instead for complete features.
+
+Only use this tool when you need JUST HTTP handlers. Common cases:
+- Adding endpoints for an existing service
+- Creating utility/health endpoints
+
+Generates: internal/web/{domain}/{domain}.go with HTTP handlers and routing.
+
+Prefer scaffold_domain for new features - it generates all layers consistently.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldControllerInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldController(registry, input)
 		if err != nil {

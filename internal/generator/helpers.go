@@ -182,27 +182,23 @@ func TemplateFuncMap() template.FuncMap {
 			return t
 		},
 
-		// templui form type mapping
+		// Form component type mapping
 		"formComponent": func(formType string) string {
 			componentMap := map[string]string{
-				"input":    "input.Input",
-				"textarea": "textarea.Textarea",
-				"select":   "select_box.SelectBox",
-				"checkbox": "checkbox.Checkbox",
-				"switch":   "switch_comp.Switch",
-				"date":     "date_picker.DatePicker",
-				"time":     "time_picker.TimePicker",
-				"email":    "input.Input",
-				"password": "input.Input",
-				"number":   "input.Input",
-				"rating":   "rating.Rating",
-				"tags":     "tags_input.TagsInput",
-				"slider":   "slider.Slider",
+				"input":    "components.Input",
+				"textarea": "components.Textarea",
+				"select":   "components.Select",
+				"checkbox": "components.Checkbox",
+				"date":     "components.Input",
+				"time":     "components.Input",
+				"email":    "components.Input",
+				"password": "components.Input",
+				"number":   "components.Input",
 			}
 			if comp, ok := componentMap[formType]; ok {
 				return comp
 			}
-			return "input.Input"
+			return "components.Input"
 		},
 
 		// Input type attribute for form fields

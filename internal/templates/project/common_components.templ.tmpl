@@ -1,11 +1,15 @@
 package components
 
+// =============================================================================
+// PAGE COMPONENTS
+// =============================================================================
+
 // PageHeader renders a page header with title and optional actions.
 templ PageHeader(title, subtitle string) {
 	<div class="mb-6">
-		<h1 class="text-2xl font-bold text-foreground">{ title }</h1>
+		<h1 class="text-2xl font-bold text-gray-900 dark:text-white">{ title }</h1>
 		if subtitle != "" {
-			<p class="text-muted-foreground mt-1">{ subtitle }</p>
+			<p class="text-gray-500 dark:text-gray-400 mt-1">{ subtitle }</p>
 		}
 	</div>
 }
@@ -14,49 +18,570 @@ templ PageHeader(title, subtitle string) {
 templ PageHeaderWithAction(title, subtitle, actionLabel, actionURL string) {
 	<div class="flex justify-between items-center mb-6">
 		<div>
-			<h1 class="text-2xl font-bold text-foreground">{ title }</h1>
+			<h1 class="text-2xl font-bold text-gray-900 dark:text-white">{ title }</h1>
 			if subtitle != "" {
-				<p class="text-muted-foreground mt-1">{ subtitle }</p>
+				<p class="text-gray-500 dark:text-gray-400 mt-1">{ subtitle }</p>
 			}
 		</div>
 		<a
 			href={ templ.SafeURL(actionURL) }
-			class="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+			class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
 		>
 			{ actionLabel }
 		</a>
 	</div>
 }
 
+// =============================================================================
+// BUTTON COMPONENTS
+// =============================================================================
+
+// ButtonProps contains properties for a button.
+type ButtonProps struct {
+	Type       string            // button, submit, reset
+	Variant    string            // default, outline, ghost, destructive, success, secondary
+	Size       string            // sm, md, lg
+	Class      string            // Additional classes
+	Disabled   bool
+	Attributes templ.Attributes
+}
+
+// Button renders a button element.
+templ Button(props ButtonProps) {
+	<button
+		type={ buttonType(props.Type) }
+		disabled?={ props.Disabled }
+		class={ buttonClasses(props.Variant, props.Size, props.Class, props.Disabled) }
+		{ props.Attributes... }
+	>
+		{ children... }
+	</button>
+}
+
+// ButtonLink renders a button-styled anchor element.
+templ ButtonLink(href string, props ButtonProps) {
+	<a
+		href={ templ.SafeURL(href) }
+		class={ buttonClasses(props.Variant, props.Size, props.Class, props.Disabled) }
+		{ props.Attributes... }
+	>
+		{ children... }
+	</a>
+}
+
+func buttonType(t string) string {
+	if t == "" {
+		return "button"
+	}
+	return t
+}
+
+func buttonClasses(variant, size, extra string, disabled bool) string {
+	base := "inline-flex items-center justify-center font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+
+	// Size classes
+	sizeClass := "px-4 py-2 text-sm" // default (md)
+	switch size {
+	case "sm":
+		sizeClass = "px-3 py-1.5 text-xs"
+	case "lg":
+		sizeClass = "px-6 py-3 text-base"
+	}
+
+	// Variant classes
+	variantClass := "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500" // default
+	switch variant {
+	case "outline":
+		variantClass = "border border-gray-300 dark:border-gray-600 bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 focus:ring-gray-500"
+	case "ghost":
+		variantClass = "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-gray-500"
+	case "destructive":
+		variantClass = "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
+	case "success":
+		variantClass = "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500"
+	case "secondary":
+		variantClass = "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600 focus:ring-gray-500"
+	}
+
+	classes := base + " " + sizeClass + " " + variantClass
+	if disabled {
+		classes += " opacity-50 cursor-not-allowed"
+	}
+	if extra != "" {
+		classes += " " + extra
+	}
+	return classes
+}
+
+// =============================================================================
+// CARD COMPONENTS
+// =============================================================================
+
+// CardProps contains properties for a card.
+type CardProps struct {
+	Class string
+}
+
+// Card renders a card container.
+templ Card(props CardProps) {
+	<div class={ cardClasses(props.Class) }>
+		{ children... }
+	</div>
+}
+
+// CardHeader renders a card header.
+templ CardHeader(class string) {
+	<div class={ "px-4 py-4 border-b border-gray-200 dark:border-gray-700 " + class }>
+		{ children... }
+	</div>
+}
+
+// CardContent renders card content.
+templ CardContent(class string) {
+	<div class={ "px-4 py-4 " + class }>
+		{ children... }
+	</div>
+}
+
+// CardFooter renders a card footer.
+templ CardFooter(class string) {
+	<div class={ "px-4 py-4 border-t border-gray-200 dark:border-gray-700 " + class }>
+		{ children... }
+	</div>
+}
+
+func cardClasses(extra string) string {
+	base := "bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
+	if extra != "" {
+		return base + " " + extra
+	}
+	return base
+}
+
+// =============================================================================
+// BADGE COMPONENTS
+// =============================================================================
+
+// BadgeProps contains properties for a badge.
+type BadgeProps struct {
+	Variant string // default, success, warning, destructive, secondary, outline
+	Size    string // sm, md
+	Class   string
+}
+
+// Badge renders a badge/tag element.
+templ Badge(props BadgeProps) {
+	<span class={ badgeClasses(props.Variant, props.Size, props.Class) }>
+		{ children... }
+	</span>
+}
+
+func badgeClasses(variant, size, extra string) string {
+	base := "inline-flex items-center font-medium rounded-full"
+
+	// Size
+	sizeClass := "px-2.5 py-0.5 text-xs" // default (md)
+	if size == "sm" {
+		sizeClass = "px-2 py-0.5 text-xs"
+	}
+
+	// Variant
+	variantClass := "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" // default
+	switch variant {
+	case "success":
+		variantClass = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+	case "warning":
+		variantClass = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+	case "destructive":
+		variantClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+	case "secondary":
+		variantClass = "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+	case "outline":
+		variantClass = "border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+	}
+
+	classes := base + " " + sizeClass + " " + variantClass
+	if extra != "" {
+		classes += " " + extra
+	}
+	return classes
+}
+
+// =============================================================================
+// FORM INPUT COMPONENTS
+// =============================================================================
+
+// InputProps contains properties for an input field.
+type InputProps struct {
+	ID          string
+	Name        string
+	Type        string // text, email, password, number, date, datetime-local, etc.
+	Value       string
+	Placeholder string
+	Required    bool
+	Disabled    bool
+	Class       string
+	Error       string
+	Attributes  templ.Attributes
+}
+
+// Input renders an input element.
+templ Input(props InputProps) {
+	<input
+		type={ inputType(props.Type) }
+		id={ props.ID }
+		name={ props.Name }
+		value={ props.Value }
+		placeholder={ props.Placeholder }
+		required?={ props.Required }
+		disabled?={ props.Disabled }
+		class={ inputClasses(props.Error, props.Class) }
+		{ props.Attributes... }
+	/>
+}
+
+func inputType(t string) string {
+	if t == "" {
+		return "text"
+	}
+	return t
+}
+
+func inputClasses(err, extra string) string {
+	base := "block w-full px-3 py-2 border rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-sm"
+
+	if err != "" {
+		base += " border-red-500 focus:ring-red-500 focus:border-red-500"
+	} else {
+		base += " border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500"
+	}
+
+	if extra != "" {
+		base += " " + extra
+	}
+	return base
+}
+
+// TextareaProps contains properties for a textarea.
+type TextareaProps struct {
+	ID          string
+	Name        string
+	Value       string
+	Placeholder string
+	Rows        int
+	Required    bool
+	Disabled    bool
+	Class       string
+	Error       string
+	Attributes  templ.Attributes
+}
+
+// Textarea renders a textarea element.
+templ Textarea(props TextareaProps) {
+	<textarea
+		id={ props.ID }
+		name={ props.Name }
+		placeholder={ props.Placeholder }
+		rows={ textareaRows(props.Rows) }
+		required?={ props.Required }
+		disabled?={ props.Disabled }
+		class={ inputClasses(props.Error, props.Class) }
+		{ props.Attributes... }
+	>{ props.Value }</textarea>
+}
+
+func textareaRows(rows int) string {
+	if rows <= 0 {
+		return "4"
+	}
+	return fmt.Sprintf("%d", rows)
+}
+
+// Label renders a form label.
+templ Label(forID string, required bool) {
+	<label for={ forID } class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+		{ children... }
+		if required {
+			<span class="text-red-500 ml-1">*</span>
+		}
+	</label>
+}
+
+// SelectProps contains properties for a select element.
+type SelectProps struct {
+	ID         string
+	Name       string
+	Required   bool
+	Disabled   bool
+	Class      string
+	Error      string
+	Attributes templ.Attributes
+}
+
+// Select renders a select element.
+templ Select(props SelectProps) {
+	<select
+		id={ props.ID }
+		name={ props.Name }
+		required?={ props.Required }
+		disabled?={ props.Disabled }
+		class={ inputClasses(props.Error, props.Class) }
+		{ props.Attributes... }
+	>
+		{ children... }
+	</select>
+}
+
+// Checkbox renders a checkbox input.
+templ Checkbox(id, name, value string, checked, disabled bool, attrs templ.Attributes) {
+	<input
+		type="checkbox"
+		id={ id }
+		name={ name }
+		value={ value }
+		checked?={ checked }
+		disabled?={ disabled }
+		class="h-4 w-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 dark:bg-gray-800"
+		{ attrs... }
+	/>
+}
+
+// FormError renders a form error message.
+templ FormError(message string) {
+	if message != "" {
+		<p class="mt-1 text-sm text-red-500">{ message }</p>
+	}
+}
+
+// FormHelp renders a form help text.
+templ FormHelp(message string) {
+	if message != "" {
+		<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{ message }</p>
+	}
+}
+
+// =============================================================================
+// ICON COMPONENTS (SVG-based)
+// =============================================================================
+
+// Icon renders an SVG icon. Uses heroicons-style icons.
+templ Icon(name, class string) {
+	switch name {
+	case "plus":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+		</svg>
+	case "pencil":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+		</svg>
+	case "trash":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+		</svg>
+	case "eye":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+		</svg>
+	case "x":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+		</svg>
+	case "check":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+		</svg>
+	case "check-circle":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+		</svg>
+	case "x-circle":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+		</svg>
+	case "alert-triangle":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+		</svg>
+	case "search":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+		</svg>
+	case "arrow-left":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+		</svg>
+	case "arrow-right":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+		</svg>
+	case "chevron-up":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+		</svg>
+	case "chevron-down":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+		</svg>
+	case "chevron-left":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+		</svg>
+	case "chevron-right":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+		</svg>
+	case "inbox":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+		</svg>
+	case "trending-up":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+		</svg>
+	case "trending-down":
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+		</svg>
+	default:
+		// Fallback: render a simple circle
+		<svg class={ iconClass(class) } fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+		</svg>
+	}
+}
+
+func iconClass(class string) string {
+	if class == "" {
+		return "h-5 w-5"
+	}
+	return class
+}
+
+// =============================================================================
+// TABLE COMPONENTS
+// =============================================================================
+
+// Table renders a table element.
+templ Table(class string) {
+	<table class={ "min-w-full divide-y divide-gray-200 dark:divide-gray-700 " + class }>
+		{ children... }
+	</table>
+}
+
+// TableHeader renders a table header section.
+templ TableHeader() {
+	<thead class="bg-gray-50 dark:bg-gray-800">
+		{ children... }
+	</thead>
+}
+
+// TableBody renders a table body section.
+templ TableBody() {
+	<tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+		{ children... }
+	</tbody>
+}
+
+// TableRow renders a table row.
+templ TableRow(class string) {
+	<tr class={ class }>
+		{ children... }
+	</tr>
+}
+
+// TableHead renders a table header cell.
+templ TableHead(class string) {
+	<th scope="col" class={ "px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider " + class }>
+		{ children... }
+	</th>
+}
+
+// TableCell renders a table data cell.
+templ TableCell(class string) {
+	<td class={ "px-4 py-3 text-sm text-gray-900 dark:text-gray-100 " + class }>
+		{ children... }
+	</td>
+}
+
+// =============================================================================
+// ALERT / NOTIFICATION COMPONENTS
+// =============================================================================
+
 // LoadingSpinner renders a loading spinner.
 templ LoadingSpinner() {
 	<div class="flex justify-center items-center p-4">
-		<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+		<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
 	</div>
 }
 
 // EmptyState renders an empty state message.
 templ EmptyState(message string) {
 	<div class="text-center py-12">
-		<p class="text-muted-foreground">{ message }</p>
+		<p class="text-gray-500 dark:text-gray-400">{ message }</p>
+	</div>
+}
+
+// EmptyStateWithIcon renders an empty state with an icon.
+templ EmptyStateWithIcon(icon, title, message string) {
+	<div class="text-center py-12">
+		<div class="mx-auto h-12 w-12 text-gray-400">
+			@Icon(icon, "h-12 w-12")
+		</div>
+		<h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">{ title }</h3>
+		<p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{ message }</p>
 	</div>
 }
 
 // ErrorAlert renders an error alert.
 templ ErrorAlert(message string) {
-	<div class="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-md">
+	<div class="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-md">
 		{ message }
 	</div>
 }
 
 // SuccessAlert renders a success alert.
 templ SuccessAlert(message string) {
-	<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-md">
+	<div class="bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-md">
 		{ message }
 	</div>
 }
 
-// Breadcrumb item type.
+// Toast renders a toast notification that auto-dismisses.
+templ Toast(message, variant string) {
+	<div
+		class={ toastClasses(variant) }
+		_="on load wait 3s then transition opacity to 0 over 300ms then remove me"
+	>
+		if variant == "success" {
+			@Icon("check-circle", "h-5 w-5")
+		} else if variant == "error" {
+			@Icon("x-circle", "h-5 w-5")
+		} else {
+			@Icon("alert-triangle", "h-5 w-5")
+		}
+		<span>{ message }</span>
+	</div>
+}
+
+func toastClasses(variant string) string {
+	base := "fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg"
+	switch variant {
+	case "success":
+		return base + " bg-green-500 text-white"
+	case "error":
+		return base + " bg-red-500 text-white"
+	default:
+		return base + " bg-gray-800 text-white"
+	}
+}
+
+// =============================================================================
+// BREADCRUMB COMPONENTS
+// =============================================================================
+
+// BreadcrumbItem represents a breadcrumb item.
 type BreadcrumbItem struct {
 	Label string
 	URL   string
@@ -69,12 +594,12 @@ templ Breadcrumbs(items []BreadcrumbItem) {
 			for i, item := range items {
 				<li class="inline-flex items-center">
 					if i > 0 {
-						<span class="mx-2 text-muted-foreground">/</span>
+						<span class="mx-2 text-gray-400">/</span>
 					}
 					if i == len(items)-1 {
-						<span class="text-muted-foreground">{ item.Label }</span>
+						<span class="text-gray-500 dark:text-gray-400">{ item.Label }</span>
 					} else {
-						<a href={ templ.SafeURL(item.URL) } class="text-primary hover:underline">
+						<a href={ templ.SafeURL(item.URL) } class="text-blue-600 hover:underline">
 							{ item.Label }
 						</a>
 					}
@@ -82,4 +607,158 @@ templ Breadcrumbs(items []BreadcrumbItem) {
 			}
 		</ol>
 	</nav>
+}
+
+// =============================================================================
+// PAGINATION COMPONENTS
+// =============================================================================
+
+// PaginationProps contains properties for pagination.
+type PaginationProps struct {
+	CurrentPage int
+	TotalPages  int
+	BaseURL     string
+}
+
+// Pagination renders pagination controls.
+templ Pagination(props PaginationProps) {
+	<div class="flex items-center justify-between px-4 py-3 sm:px-6">
+		<div class="flex flex-1 justify-between sm:hidden">
+			if props.CurrentPage > 1 {
+				<a
+					href={ templ.SafeURL(fmt.Sprintf("%s?page=%d", props.BaseURL, props.CurrentPage-1)) }
+					class="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+				>
+					Previous
+				</a>
+			}
+			if props.CurrentPage < props.TotalPages {
+				<a
+					href={ templ.SafeURL(fmt.Sprintf("%s?page=%d", props.BaseURL, props.CurrentPage+1)) }
+					class="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+				>
+					Next
+				</a>
+			}
+		</div>
+		<div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+			<div>
+				<p class="text-sm text-gray-700 dark:text-gray-400">
+					Page <span class="font-medium">{ fmt.Sprintf("%d", props.CurrentPage) }</span> of <span class="font-medium">{ fmt.Sprintf("%d", props.TotalPages) }</span>
+				</p>
+			</div>
+			<div>
+				<nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+					if props.CurrentPage > 1 {
+						<a
+							href={ templ.SafeURL(fmt.Sprintf("%s?page=%d", props.BaseURL, props.CurrentPage-1)) }
+							class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20"
+						>
+							@Icon("chevron-left", "h-5 w-5")
+						</a>
+					}
+					if props.CurrentPage < props.TotalPages {
+						<a
+							href={ templ.SafeURL(fmt.Sprintf("%s?page=%d", props.BaseURL, props.CurrentPage+1)) }
+							class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20"
+						>
+							@Icon("chevron-right", "h-5 w-5")
+						</a>
+					}
+				</nav>
+			</div>
+		</div>
+	</div>
+}
+
+// =============================================================================
+// MODAL COMPONENTS
+// =============================================================================
+
+// ModalContainer is a placeholder for modals loaded via HTMX.
+templ ModalContainer() {
+	<div id="modal-container"></div>
+}
+
+// ModalBackdrop renders a modal backdrop.
+templ ModalBackdrop() {
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+		_="on click if event.target === me remove me"
+	>
+		{ children... }
+	</div>
+}
+
+// ModalDialog renders a modal dialog container.
+templ ModalDialog(size string) {
+	<div class={ modalDialogClasses(size) }>
+		{ children... }
+	</div>
+}
+
+func modalDialogClasses(size string) string {
+	base := "bg-white dark:bg-gray-900 rounded-lg shadow-xl mx-4 overflow-hidden"
+	switch size {
+	case "sm":
+		return base + " max-w-sm w-full"
+	case "lg":
+		return base + " max-w-2xl w-full"
+	case "xl":
+		return base + " max-w-4xl w-full"
+	case "full":
+		return base + " max-w-6xl w-full max-h-[90vh] overflow-y-auto"
+	default:
+		return base + " max-w-lg w-full"
+	}
+}
+
+// ModalHeader renders a modal header.
+templ ModalHeader(title string) {
+	<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+		<h2 class="text-lg font-semibold text-gray-900 dark:text-white">{ title }</h2>
+		<button
+			type="button"
+			class="text-gray-400 hover:text-gray-500 focus:outline-none"
+			_="on click remove closest .fixed"
+		>
+			@Icon("x", "h-5 w-5")
+		</button>
+	</div>
+}
+
+// ModalBody renders modal body content.
+templ ModalBody() {
+	<div class="p-4">
+		{ children... }
+	</div>
+}
+
+// ModalFooter renders a modal footer.
+templ ModalFooter() {
+	<div class="flex justify-end gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
+		{ children... }
+	</div>
+}
+
+// =============================================================================
+// SKELETON LOADING COMPONENTS
+// =============================================================================
+
+// Skeleton renders a skeleton loading placeholder.
+templ Skeleton(class string) {
+	<div class={ "animate-pulse bg-gray-200 dark:bg-gray-700 rounded " + class }></div>
+}
+
+// SkeletonText renders skeleton text lines.
+templ SkeletonText(lines int) {
+	<div class="animate-pulse space-y-3">
+		for i := 0; i < lines; i++ {
+			if i == lines-1 {
+				<div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/6"></div>
+			} else {
+				<div class="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+			}
+		}
+	</div>
 }

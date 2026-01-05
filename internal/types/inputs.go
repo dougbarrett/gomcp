@@ -403,14 +403,6 @@ type ScaffoldSeedInput struct {
 	DryRun bool `json:"dry_run,omitempty"`
 }
 
-// AddTempluiComponentInput is the input for the add_templui_component tool.
-type AddTempluiComponentInput struct {
-	// Components is the list of templui component names to install.
-	Components []string `json:"components"`
-	// Force overwrites existing components.
-	Force bool `json:"force,omitempty"`
-}
-
 // ListDomainsInput is the input for the list_domains tool.
 type ListDomainsInput struct {
 	// No input required - scans the project structure.
@@ -422,4 +414,12 @@ type UpdateDIWiringInput struct {
 	Domains []string `json:"domains"`
 	// DryRun previews changes without writing files.
 	DryRun bool `json:"dry_run,omitempty"`
+}
+
+// ReportBugInput is the input for the report_bug tool.
+type ReportBugInput struct {
+	// Title is a short summary of the bug.
+	Title string `json:"title"`
+	// Description is a detailed description of the bug.
+	Description string `json:"description"`
 }

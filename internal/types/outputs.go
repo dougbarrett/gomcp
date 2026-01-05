@@ -100,35 +100,29 @@ func NewListDomainsError(message string) ListDomainsResult {
 	}
 }
 
-// AddComponentResult is the result of the add_templui_component tool.
-type AddComponentResult struct {
-	// Success indicates if the operation succeeded.
+// ReportBugResult is the result of the report_bug tool.
+type ReportBugResult struct {
+	// Success indicates if the bug was reported successfully.
 	Success bool `json:"success"`
 	// Message describes the result.
 	Message string `json:"message"`
-	// ComponentsAdded is the list of components that were added.
-	ComponentsAdded []string `json:"components_added,omitempty"`
-	// ComponentsSkipped is the list of components that were skipped (already exist).
-	ComponentsSkipped []string `json:"components_skipped,omitempty"`
-	// Errors is the list of errors that occurred.
-	Errors []string `json:"errors,omitempty"`
+	// BugID is the ID of the created bug.
+	BugID string `json:"bug_id,omitempty"`
 }
 
-// NewAddComponentResult creates a successful add component result.
-func NewAddComponentResult(added, skipped []string) AddComponentResult {
-	return AddComponentResult{
-		Success:           true,
-		Message:           "Components added successfully",
-		ComponentsAdded:   added,
-		ComponentsSkipped: skipped,
+// NewReportBugResult creates a successful report bug result.
+func NewReportBugResult(bugID string) ReportBugResult {
+	return ReportBugResult{
+		Success: true,
+		Message: "Bug reported successfully",
+		BugID:   bugID,
 	}
 }
 
-// NewAddComponentError creates an error add component result.
-func NewAddComponentError(message string, errors []string) AddComponentResult {
-	return AddComponentResult{
+// NewReportBugError creates an error report bug result.
+func NewReportBugError(message string) ReportBugResult {
+	return ReportBugResult{
 		Success: false,
 		Message: message,
-		Errors:  errors,
 	}
 }

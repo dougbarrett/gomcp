@@ -14,8 +14,22 @@ import (
 // RegisterScaffoldView registers the scaffold_view tool.
 func RegisterScaffoldView(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_view",
-		Description: "Create templ views using templui components. Supports list, show, form, card, table, and custom view types.",
+		Name: "scaffold_view",
+		Description: `ALWAYS use this instead of manually writing templ view files.
+
+Generates templ views with reusable components. View types:
+- list: List page with optional pagination, search, filters
+- show: Detail view for a single item
+- form: Create/edit forms (also see scaffold_form for more options)
+- table: Data table (also see scaffold_table for more options)
+- card: Card-based item display
+
+Features available via config:
+- with_pagination, with_search, with_filters, with_sorting
+- with_bulk_actions for batch operations
+- row_actions for view/edit/delete buttons
+
+Run 'templ generate' after creating views.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldViewInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldView(registry, input)
 		if err != nil {

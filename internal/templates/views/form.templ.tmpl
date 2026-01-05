@@ -3,14 +3,7 @@ package views
 import (
 	"[[.ModulePath]]/internal/models"
 	"[[.ModulePath]]/internal/services/[[.PackageName]]"
-	"github.com/templui/templui/components/button"
-	"github.com/templui/templui/components/card"
-	"github.com/templui/templui/components/icon"
-	"github.com/templui/templui/components/input"
-	"github.com/templui/templui/components/textarea"
-	"github.com/templui/templui/components/checkbox"
-	"github.com/templui/templui/components/label"
-	"github.com/templui/templui/components/select_box"
+	"[[.ModulePath]]/internal/web/components"
 )
 
 // [[.ModelName]]FormProps contains props for the [[.ModelName]] form.
@@ -24,8 +17,8 @@ type [[.ModelName]]FormProps struct {
 templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
 		 _="on click if event.target === me remove me">
-		@card.Card(card.Props{Class: "w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"}) {
-			@card.Header(card.HeaderProps{}) {
+		@components.Card(components.CardProps{Class: "w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"}) {
+			@components.CardHeader("") {
 				<div class="flex items-center justify-between">
 					<h2 class="text-xl font-semibold text-gray-900 dark:text-white">
 						if props.IsEdit {
@@ -34,18 +27,16 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 							Create [[.ModelName]]
 						}
 					</h2>
-					@button.Button(button.Props{
-						Variant: "ghost",
-						Size:    "sm",
-						Attributes: templ.Attributes{
-							"_": "on click remove closest .fixed",
-						},
-					}) {
-						@icon.Icon(icon.Props{Name: "x", Class: "h-4 w-4"})
-					}
+					<button
+						type="button"
+						class="text-gray-400 hover:text-gray-500 focus:outline-none"
+						_="on click remove closest .fixed"
+					>
+						@components.Icon("x", "h-5 w-5")
+					</button>
 				</div>
 			}
-			@card.Content(card.ContentProps{}) {
+			@components.CardContent("") {
 				<form
 					if props.IsEdit {
 						hx-put={ fmt.Sprintf("[[.URLPath]]/%d", props.Item.ID) }
@@ -59,14 +50,11 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 					[[- range .Fields]]
 					<!-- [[.Label]] Field -->
 					<div class="space-y-2">
-						@label.Label(label.Props{For: "[[.JSONName]]"}) {
+						@components.Label("[[.JSONName]]", [[.Required]]) {
 							[[.Label]]
-							[[- if .Required]]
-							<span class="text-red-500">*</span>
-							[[- end]]
 						}
 						[[- if eq .FormType "textarea"]]
-						@textarea.Textarea(textarea.Props{
+						@components.Textarea(components.TextareaProps{
 							ID:          "[[.JSONName]]",
 							Name:        "[[.JSONName]]",
 							Placeholder: "Enter [[.Label | toLower]]",
@@ -74,37 +62,27 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 							[[- if .Required]]
 							Required:    true,
 							[[- end]]
-							Attributes: templ.Attributes{
-								if props.Item != nil {
-									"value": props.Item.[[.Name]],
-								}
-							},
+							Value:       [[if eq .Type "string"]]func() string { if props.Item != nil { return props.Item.[[.Name]] }; return "" }()[[else]]""[[end]],
+							Error:       props.Errors["[[.JSONName]]"],
 						})
 						[[- else if eq .FormType "checkbox"]]
 						<div class="flex items-center gap-2">
-							@checkbox.Checkbox(checkbox.Props{
-								ID:   "[[.JSONName]]",
-								Name: "[[.JSONName]]",
-								Attributes: templ.Attributes{
-									if props.Item != nil && props.Item.[[.Name]] {
-										"checked": "checked",
-									}
-								},
-							})
+							@components.Checkbox("[[.JSONName]]", "[[.JSONName]]", "true", props.Item != nil && props.Item.[[.Name]], false, nil)
 						</div>
 						[[- else if eq .FormType "select"]]
-						@select_box.SelectBox(select_box.Props{
+						@components.Select(components.SelectProps{
 							ID:   "[[.JSONName]]",
 							Name: "[[.JSONName]]",
 							[[- if .Required]]
 							Required: true,
 							[[- end]]
+							Error: props.Errors["[[.JSONName]]"],
 						}) {
 							<option value="">Select [[.Label | toLower]]</option>
 							<!-- Add your options here -->
 						}
 						[[- else if eq .FormType "number"]]
-						@input.Input(input.Props{
+						@components.Input(components.InputProps{
 							ID:          "[[.JSONName]]",
 							Name:        "[[.JSONName]]",
 							Type:        "number",
@@ -112,14 +90,11 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 							[[- if .Required]]
 							Required:    true,
 							[[- end]]
-							Attributes: templ.Attributes{
-								if props.Item != nil {
-									"value": fmt.Sprintf("%v", props.Item.[[.Name]]),
-								}
-							},
+							Value:       func() string { if props.Item != nil { return fmt.Sprintf("%v", props.Item.[[.Name]]) }; return "" }(),
+							Error:       props.Errors["[[.JSONName]]"],
 						})
 						[[- else if eq .FormType "email"]]
-						@input.Input(input.Props{
+						@components.Input(components.InputProps{
 							ID:          "[[.JSONName]]",
 							Name:        "[[.JSONName]]",
 							Type:        "email",
@@ -127,14 +102,11 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 							[[- if .Required]]
 							Required:    true,
 							[[- end]]
-							Attributes: templ.Attributes{
-								if props.Item != nil {
-									"value": props.Item.[[.Name]],
-								}
-							},
+							Value:       [[if eq .Type "string"]]func() string { if props.Item != nil { return props.Item.[[.Name]] }; return "" }()[[else]]""[[end]],
+							Error:       props.Errors["[[.JSONName]]"],
 						})
 						[[- else if eq .FormType "password"]]
-						@input.Input(input.Props{
+						@components.Input(components.InputProps{
 							ID:          "[[.JSONName]]",
 							Name:        "[[.JSONName]]",
 							Type:        "password",
@@ -142,37 +114,32 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 							[[- if .Required]]
 							Required:    true,
 							[[- end]]
+							Error:       props.Errors["[[.JSONName]]"],
 						})
 						[[- else if eq .FormType "date"]]
-						@input.Input(input.Props{
+						@components.Input(components.InputProps{
 							ID:          "[[.JSONName]]",
 							Name:        "[[.JSONName]]",
 							Type:        "date",
 							[[- if .Required]]
 							Required:    true,
 							[[- end]]
-							Attributes: templ.Attributes{
-								if props.Item != nil && props.Item.[[.Name]] != nil {
-									"value": props.Item.[[.Name]].Format("2006-01-02"),
-								}
-							},
+							Value:       func() string { if props.Item != nil && props.Item.[[.Name]] != nil { return props.Item.[[.Name]].Format("2006-01-02") }; return "" }(),
+							Error:       props.Errors["[[.JSONName]]"],
 						})
 						[[- else if eq .FormType "datetime"]]
-						@input.Input(input.Props{
+						@components.Input(components.InputProps{
 							ID:          "[[.JSONName]]",
 							Name:        "[[.JSONName]]",
 							Type:        "datetime-local",
 							[[- if .Required]]
 							Required:    true,
 							[[- end]]
-							Attributes: templ.Attributes{
-								if props.Item != nil {
-									"value": props.Item.[[.Name]].Format("2006-01-02T15:04"),
-								}
-							},
+							Value:       func() string { if props.Item != nil { return props.Item.[[.Name]].Format("2006-01-02T15:04") }; return "" }(),
+							Error:       props.Errors["[[.JSONName]]"],
 						})
 						[[- else]]
-						@input.Input(input.Props{
+						@components.Input(components.InputProps{
 							ID:          "[[.JSONName]]",
 							Name:        "[[.JSONName]]",
 							Type:        "text",
@@ -180,33 +147,20 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 							[[- if .Required]]
 							Required:    true,
 							[[- end]]
-							Attributes: templ.Attributes{
-								if props.Item != nil {
-									"value": [[if eq .Type "string"]]props.Item.[[.Name]][[else]]fmt.Sprintf("%v", props.Item.[[.Name]])[[end]],
-								}
-							},
+							Value:       [[if eq .Type "string"]]func() string { if props.Item != nil { return props.Item.[[.Name]] }; return "" }()[[else]]func() string { if props.Item != nil { return fmt.Sprintf("%v", props.Item.[[.Name]]) }; return "" }()[[end]],
+							Error:       props.Errors["[[.JSONName]]"],
 						})
 						[[- end]]
-						if err, ok := props.Errors["[[.JSONName]]"]; ok {
-							<p class="text-sm text-red-500">{ err }</p>
-						}
+						@components.FormError(props.Errors["[[.JSONName]]"])
 					</div>
 					[[- end]]
 				}
 			}
-			@card.Footer(card.FooterProps{Class: "flex justify-end gap-3"}) {
-				@button.Button(button.Props{
-					Variant: "outline",
-					Attributes: templ.Attributes{
-						"_": "on click remove closest .fixed",
-					},
-				}) {
+			@components.CardFooter("flex justify-end gap-3") {
+				@components.Button(components.ButtonProps{Variant: "outline", Attributes: templ.Attributes{"_": "on click remove closest .fixed"}}) {
 					Cancel
 				}
-				@button.Button(button.Props{
-					Type:    "submit",
-					Variant: "default",
-				}) {
+				@components.Button(components.ButtonProps{Type: "submit", Variant: "default"}) {
 					if props.IsEdit {
 						Save Changes
 					} else {

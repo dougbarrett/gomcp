@@ -12,8 +12,16 @@ import (
 // RegisterListDomains registers the list_domains tool.
 func RegisterListDomains(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "list_domains",
-		Description: "List all scaffolded domains in the project by scanning the models, repository, services, and web directories.",
+		Name: "list_domains",
+		Description: `Discover all scaffolded domains in the project.
+
+Scans internal/models, internal/repository, internal/services, and internal/web directories.
+
+Returns for each domain:
+- Which layers exist (model, repository, service, controller)
+- List of views in internal/web/{domain}/views
+
+Use this to understand project structure before adding new domains.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ListDomainsInput) (*mcp.CallToolResult, types.ListDomainsResult, error) {
 		result, err := listDomains(registry)
 		if err != nil {

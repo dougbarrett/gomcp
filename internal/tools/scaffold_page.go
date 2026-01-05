@@ -14,8 +14,16 @@ import (
 // RegisterScaffoldPage registers the scaffold_page tool.
 func RegisterScaffoldPage(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_page",
-		Description: "Create a complete page with layout, components, and TOML configuration. Supports default, dashboard, landing, and blank layouts.",
+		Name: "scaffold_page",
+		Description: `Create complete pages with layout and optional TOML configuration.
+
+Layouts: default, dashboard, landing, blank
+
+Set create_toml_config: true to generate a TOML file for i18n content.
+
+Sections allow composing pages from: hero, content, table, cards, form.
+
+Run 'templ generate' after creating pages.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldPageInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldPage(registry, input)
 		if err != nil {

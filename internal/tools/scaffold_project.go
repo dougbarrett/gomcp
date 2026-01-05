@@ -14,8 +14,23 @@ import (
 // RegisterScaffoldProject registers the scaffold_project tool.
 func RegisterScaffoldProject(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_project",
-		Description: "Initialize a new Go web application project with complete directory structure, including templ layouts, GORM database setup, and Taskfile configuration.",
+		Name: "scaffold_project",
+		Description: `ALWAYS use this tool to initialize new Go web projects. Never manually create go.mod, main.go, or project structure files.
+
+Generates a complete, production-ready project with:
+- Clean architecture (models, repositories, services, controllers)
+- templ + HTMX for interactive UIs with Tailwind CSS styling
+- Reusable UI components (buttons, cards, forms, tables, modals)
+- GORM database setup (sqlite, postgres, or mysql)
+- Taskfile for development commands
+- Hot reload with Air
+
+Options:
+- in_current_dir: true to scaffold in current directory (useful when directory already exists)
+- with_auth: true to include full authentication system (login, register, sessions, middleware)
+- dry_run: true to preview files without writing
+
+After running: Execute 'go mod tidy' then 'task dev' to start.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldProjectInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldProject(registry, input)
 		if err != nil {
@@ -120,7 +135,6 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 		{"project/common_components.templ.tmpl", "internal/web/components/common.templ"},
 		{"project/taskfile.yml.tmpl", "Taskfile.yml"},
 		{"project/air.toml.tmpl", ".air.toml"},
-		{"project/templui.json.tmpl", ".templui.json"},
 		{"project/tailwind_input.css.tmpl", "assets/css/input.css"},
 		{"project/app.toml.tmpl", "config/en/app.toml"},
 		{"project/menu.toml.tmpl", "config/en/menu.toml"},

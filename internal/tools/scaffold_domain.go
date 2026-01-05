@@ -15,8 +15,22 @@ import (
 // RegisterScaffoldDomain registers the scaffold_domain tool.
 func RegisterScaffoldDomain(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_domain",
-		Description: "Create a complete domain with model, repository, service, controller, and optional CRUD views. This is the most comprehensive scaffolding tool that generates all layers following clean architecture.",
+		Name: "scaffold_domain",
+		Description: `PRIMARY TOOL for adding new features. ALWAYS use this instead of manually creating models, repositories, services, or controllers.
+
+Generates ALL layers at once following clean architecture:
+- Model (internal/models/{domain}.go)
+- Repository with CRUD operations (internal/repository/{domain}/)
+- Service with DTOs (internal/services/{domain}/)
+- Controller with HTTP handlers (internal/web/{domain}/)
+- Optional CRUD views (with_crud_views: true, default)
+
+Supports relationships: belongs_to, has_one, has_many, many_to_many
+Supports field types: string, int, int64, uint, float32, float64, bool, time.Time, pointers
+
+Automatically wires into main.go DI container. Run 'go mod tidy' and 'templ generate' after.
+
+Use dry_run: true to preview all generated files first.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldDomainInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldDomain(registry, input)
 		if err != nil {

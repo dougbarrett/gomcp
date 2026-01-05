@@ -14,8 +14,16 @@ import (
 // RegisterScaffoldRepository registers the scaffold_repository tool.
 func RegisterScaffoldRepository(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_repository",
-		Description: "Create a standalone repository for database operations. Use this when you need a repository without the full domain scaffolding.",
+		Name: "scaffold_repository",
+		Description: `Create a standalone GORM repository. Use scaffold_domain instead for complete features.
+
+Only use this tool when you need JUST a repository layer without service/controller. Common cases:
+- Adding a repository for an existing model
+- Creating a shared data access layer
+
+Generates: internal/repository/{domain}/{domain}.go with standard CRUD operations.
+
+Prefer scaffold_domain for new features - it generates all layers consistently.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldRepositoryInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldRepository(registry, input)
 		if err != nil {

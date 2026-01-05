@@ -14,8 +14,20 @@ import (
 // RegisterScaffoldModal registers the scaffold_modal tool.
 func RegisterScaffoldModal(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_modal",
-		Description: "Create modal dialogs with HTMX loading. Supports dialog, sheet, and confirm modal types.",
+		Name: "scaffold_modal",
+		Description: `Create modal dialogs with HTMX content loading.
+
+Modal types:
+- dialog: Standard centered modal
+- sheet: Slide-in panel from edge
+- confirm: Confirmation dialog with actions
+
+Features:
+- HTMX loading for dynamic content (set htmx_url in trigger_config)
+- Customizable trigger button (text, variant)
+- Content types: form, info, confirm
+
+Run 'templ generate' after creating modals.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldModalInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldModal(registry, input)
 		if err != nil {

@@ -162,7 +162,6 @@ func TestScaffoldProject(t *testing.T) {
 			"internal/web/components/common.templ",
 			"Taskfile.yml",
 			".air.toml",
-			".templui.json",
 			"assets/css/input.css",
 			"config/en/app.toml",
 			"config/en/menu.toml",

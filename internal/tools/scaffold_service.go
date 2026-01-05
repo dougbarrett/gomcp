@@ -14,8 +14,18 @@ import (
 // RegisterScaffoldService registers the scaffold_service tool.
 func RegisterScaffoldService(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_service",
-		Description: "Create a standalone service with business logic. Use this when you need a service without the full domain scaffolding.",
+		Name: "scaffold_service",
+		Description: `Create a standalone service layer. Use scaffold_domain instead for complete features.
+
+Only use this tool when you need JUST a service layer. Common cases:
+- Adding business logic for an existing repository
+- Creating cross-domain services
+
+Generates:
+- internal/services/{domain}/{domain}.go (service with repository dependency)
+- internal/services/{domain}/dto.go (Create/Update DTOs)
+
+Prefer scaffold_domain for new features - it generates all layers consistently.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldServiceInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldService(registry, input)
 		if err != nil {

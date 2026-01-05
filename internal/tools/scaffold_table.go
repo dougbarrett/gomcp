@@ -14,8 +14,20 @@ import (
 // RegisterScaffoldTable registers the scaffold_table tool.
 func RegisterScaffoldTable(server *mcp.Server, registry *Registry) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "scaffold_table",
-		Description: "Create data tables with HTMX sorting, pagination, and row actions. Uses templui table components.",
+		Name: "scaffold_table",
+		Description: `NEVER write table HTML manually. Use this tool instead.
+
+Generates data tables with Tailwind CSS styling featuring:
+- HTMX-powered sorting (click column headers)
+- Pagination with page size controls
+- Search functionality
+- Row actions (view, edit, delete, custom)
+- Bulk actions for batch operations
+- Column formatting: text, currency, date, datetime, badge, link
+
+Columns support sortable: true and custom badge_config for status fields.
+
+Run 'templ generate' after creating tables.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldTableInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldTable(registry, input)
 		if err != nil {

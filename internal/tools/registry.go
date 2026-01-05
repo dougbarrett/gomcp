@@ -51,7 +51,6 @@ func (r *Registry) RegisterAll(server *mcp.Server) {
 	RegisterScaffoldForm(server, r)
 	RegisterScaffoldTable(server, r)
 	RegisterScaffoldModal(server, r)
-	RegisterAddTempluiComponent(server, r)
 
 	// Phase 5: Configuration and utility tools
 	RegisterScaffoldPage(server, r)
@@ -59,4 +58,7 @@ func (r *Registry) RegisterAll(server *mcp.Server) {
 	RegisterScaffoldSeed(server, r)
 	RegisterListDomains(server, r)
 	RegisterUpdateDIWiring(server, r)
+
+	// Utility tools
+	RegisterReportBug(server, r)
 }
