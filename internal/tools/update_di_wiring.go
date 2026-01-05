@@ -111,19 +111,22 @@ func updateDIWiring(registry *Registry, input types.UpdateDIWiringInput) (types.
 			continue
 		}
 
-		// Inject imports
+		// Inject imports with aliases to avoid package name conflicts
 		repoImport := fmt.Sprintf("%s/internal/repository/%s", modulePath, pkgName)
-		if err := injector.InjectImport(repoImport); err != nil {
+		repoAlias := utils.ToRepoImportAlias(domain)
+		if err := injector.InjectImportWithAlias(repoImport, repoAlias); err != nil {
 			return types.NewErrorResult(fmt.Sprintf("failed to inject repo import for '%s': %v", domain, err)), nil
 		}
 
 		serviceImport := fmt.Sprintf("%s/internal/services/%s", modulePath, pkgName)
-		if err := injector.InjectImport(serviceImport); err != nil {
+		serviceAlias := utils.ToServiceImportAlias(domain)
+		if err := injector.InjectImportWithAlias(serviceImport, serviceAlias); err != nil {
 			return types.NewErrorResult(fmt.Sprintf("failed to inject service import for '%s': %v", domain, err)), nil
 		}
 
 		controllerImport := fmt.Sprintf("%s/internal/web/%s", modulePath, pkgName)
-		if err := injector.InjectImport(controllerImport); err != nil {
+		controllerAlias := utils.ToControllerImportAlias(domain)
+		if err := injector.InjectImportWithAlias(controllerImport, controllerAlias); err != nil {
 			return types.NewErrorResult(fmt.Sprintf("failed to inject controller import for '%s': %v", domain, err)), nil
 		}
 

@@ -269,6 +269,24 @@ func ToImportAlias(pkgPath, suffix string) string {
 	return ToCamelCase(base) + suffix
 }
 
+// ToRepoImportAlias returns the import alias for a repository package.
+// Examples: "user" -> "userrepo", "userProfile" -> "userprofilerepo"
+func ToRepoImportAlias(domain string) string {
+	return ToPackageName(domain) + "repo"
+}
+
+// ToServiceImportAlias returns the import alias for a service package.
+// Examples: "user" -> "usersvc", "userProfile" -> "userprofilesvc"
+func ToServiceImportAlias(domain string) string {
+	return ToPackageName(domain) + "svc"
+}
+
+// ToControllerImportAlias returns the import alias for a controller package.
+// Examples: "user" -> "userctrl", "userProfile" -> "userprofilectrl"
+func ToControllerImportAlias(domain string) string {
+	return ToPackageName(domain) + "ctrl"
+}
+
 // SanitizeIdentifier removes invalid characters from an identifier.
 func SanitizeIdentifier(s string) string {
 	if s == "" {

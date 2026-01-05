@@ -72,12 +72,22 @@ func (c *Controller) List(w http.ResponseWriter, r *http.Request) {
 	[[- if .WithCrudViews]]
 	// For HTMX partial requests, render just the list content
 	if res.IsHTMX() {
-		c.render(w, r, views.[[.ModelName]]ListPartial(result.Items, result.Page, result.TotalPages))
+		c.render(w, r, views.[[.ModelName]]ListPartial(views.[[.ModelName]]ListProps{
+			Items:      result.Items,
+			Page:       result.Page,
+			TotalPages: result.TotalPages,
+			TotalItems: result.TotalItems,
+		}))
 		return
 	}
 
 	// For full page requests, render the complete list view
-	c.render(w, r, views.[[.ModelName]]List(result.Items, result.Page, result.TotalPages))
+	c.render(w, r, views.[[.ModelName]]List(views.[[.ModelName]]ListProps{
+		Items:      result.Items,
+		Page:       result.Page,
+		TotalPages: result.TotalPages,
+		TotalItems: result.TotalItems,
+	}))
 	[[- else]]
 	// Return JSON response
 	res.JSON(http.StatusOK, result)
@@ -101,7 +111,9 @@ func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
 	}
 
 	[[- if .WithCrudViews]]
-	c.render(w, r, views.[[.ModelName]]Show([[.VariableName]]))
+	c.render(w, r, views.[[.ModelName]]Show(views.[[.ModelName]]ShowProps{
+		Item: [[.VariableName]],
+	}))
 	[[- else]]
 	res.JSON(http.StatusOK, To[[.ModelName]]Response([[.VariableName]]))
 	[[- end]]
@@ -110,7 +122,11 @@ func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
 // New handles GET [[.URLPath]]/new
 func (c *Controller) New(w http.ResponseWriter, r *http.Request) {
 	[[- if .WithCrudViews]]
-	c.render(w, r, views.[[.ModelName]]Form(nil, "create"))
+	c.render(w, r, views.[[.ModelName]]Form(views.[[.ModelName]]FormProps{
+		Item:   nil,
+		Errors: nil,
+		IsEdit: false,
+	}))
 	[[- else]]
 	res := web.NewResponse(w, r)
 	res.JSON(http.StatusOK, map[string]string{"action": "new"})
@@ -160,7 +176,11 @@ func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	[[- if .WithCrudViews]]
-	c.render(w, r, views.[[.ModelName]]Form([[.VariableName]], "edit"))
+	c.render(w, r, views.[[.ModelName]]Form(views.[[.ModelName]]FormProps{
+		Item:   [[.VariableName]],
+		Errors: nil,
+		IsEdit: true,
+	}))
 	[[- else]]
 	res.JSON(http.StatusOK, To[[.ModelName]]Response([[.VariableName]]))
 	[[- end]]

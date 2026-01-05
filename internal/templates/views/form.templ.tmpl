@@ -156,21 +156,20 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 						@components.FormError(props.Errors["[[.JSONName]]"])
 					</div>
 					[[- end]]
-				}
-			}
-			@components.CardFooter("flex justify-end gap-3") {
-				@components.Button(components.ButtonProps{Variant: "outline", Attributes: templ.Attributes{"_": "on click remove closest .fixed"}}) {
-					Cancel
-				}
-				@components.Button(components.ButtonProps{Type: "submit", Variant: "default"}) {
-					if props.IsEdit {
-						Save Changes
-					} else {
-						Create [[.ModelName]]
-					}
-				}
-			}
+					<div class="flex justify-end gap-3 pt-4">
+						@components.Button(components.ButtonProps{Variant: "outline", Attributes: templ.Attributes{"_": "on click remove closest .fixed"}}) {
+							Cancel
+						}
+						@components.Button(components.ButtonProps{Type: "submit", Variant: "default"}) {
+							if props.IsEdit {
+								Save Changes
+							} else {
+								Create [[.ModelName]]
+							}
+						}
+					</div>
 				</form>
+			}
 		}
 	</div>
 }

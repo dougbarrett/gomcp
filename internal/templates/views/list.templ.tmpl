@@ -174,6 +174,28 @@ templ [[.ModelName]]Card(item models.[[.ModelName]]) {
 	}
 }
 
+// [[.ModelName]]ListPartial renders just the list content for HTMX updates.
+templ [[.ModelName]]ListPartial(props [[.ModelName]]ListProps) {
+	if len(props.Items) == 0 {
+		@[[.ModelName]]EmptyState()
+	} else {
+		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			for _, item := range props.Items {
+				@[[.ModelName]]Card(item)
+			}
+		</div>
+		[[- if .WithPagination]]
+		if props.TotalPages > 1 {
+			@components.Pagination(components.PaginationProps{
+				CurrentPage: props.Page,
+				TotalPages:  props.TotalPages,
+				BaseURL:     "[[.URLPath]]",
+			})
+		}
+		[[- end]]
+	}
+}
+
 // [[.ModelName]]EmptyState renders the empty state for the list.
 templ [[.ModelName]]EmptyState() {
 	<div class="text-center py-12">

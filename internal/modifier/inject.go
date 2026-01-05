@@ -219,15 +219,26 @@ func indentCode(code, indent string) string {
 
 // InjectImport adds an import statement to the imports section.
 func (i *Injector) InjectImport(importPath string) error {
+	return i.InjectImportWithAlias(importPath, "")
+}
+
+// InjectImportWithAlias adds an import statement with an optional alias to the imports section.
+func (i *Injector) InjectImportWithAlias(importPath, alias string) error {
 	// Check if import already exists
 	importPattern := regexp.MustCompile(`"` + regexp.QuoteMeta(importPath) + `"`)
 	if importPattern.MatchString(i.content) {
 		return nil // Import already exists
 	}
 
+	// Format the import statement
+	importStmt := `"` + importPath + `"`
+	if alias != "" {
+		importStmt = alias + ` "` + importPath + `"`
+	}
+
 	// Try to inject using markers first
 	if i.HasMarker(MarkerImportsStart) && i.HasMarker(MarkerImportsEnd) {
-		return i.InjectBetweenMarkers(MarkerImportsStart, MarkerImportsEnd, `"`+importPath+`"`)
+		return i.InjectBetweenMarkers(MarkerImportsStart, MarkerImportsEnd, importStmt)
 	}
 
 	// Fall back to finding import block
@@ -239,7 +250,7 @@ func (i *Injector) InjectImport(importPath string) error {
 
 	// Insert before the closing paren
 	insertPos := match[1] - 1
-	i.content = i.content[:insertPos] + "\t\"" + importPath + "\"\n" + i.content[insertPos:]
+	i.content = i.content[:insertPos] + "\t" + importStmt + "\n" + i.content[insertPos:]
 
 	return nil
 }
@@ -253,8 +264,8 @@ func (i *Injector) InjectModel(modelName string) error {
 // InjectRepo adds a repository instantiation.
 func (i *Injector) InjectRepo(domainName, modulePath string) error {
 	varName := utils.ToRepoVariableName(domainName)
-	pkgName := utils.ToPackageName(domainName)
-	code := fmt.Sprintf(`%s := %s.NewRepository(db)`, varName, pkgName)
+	pkgAlias := utils.ToRepoImportAlias(domainName)
+	code := fmt.Sprintf(`%s := %s.NewRepository(db)`, varName, pkgAlias)
 	return i.InjectBetweenMarkers(MarkerReposStart, MarkerReposEnd, code)
 }
 
@@ -262,8 +273,8 @@ func (i *Injector) InjectRepo(domainName, modulePath string) error {
 func (i *Injector) InjectService(domainName string) error {
 	varName := utils.ToServiceVariableName(domainName)
 	repoVarName := utils.ToRepoVariableName(domainName)
-	pkgName := utils.ToPackageName(domainName)
-	code := fmt.Sprintf(`%s := %s.NewService(%s)`, varName, pkgName, repoVarName)
+	pkgAlias := utils.ToServiceImportAlias(domainName)
+	code := fmt.Sprintf(`%s := %s.NewService(%s)`, varName, pkgAlias, repoVarName)
 	return i.InjectBetweenMarkers(MarkerServicesStart, MarkerServicesEnd, code)
 }
 
@@ -271,8 +282,8 @@ func (i *Injector) InjectService(domainName string) error {
 func (i *Injector) InjectController(domainName string) error {
 	varName := utils.ToControllerVariableName(domainName)
 	serviceVarName := utils.ToServiceVariableName(domainName)
-	pkgName := utils.ToPackageName(domainName)
-	code := fmt.Sprintf(`%s := %s.NewController(%s)`, varName, pkgName, serviceVarName)
+	pkgAlias := utils.ToControllerImportAlias(domainName)
+	code := fmt.Sprintf(`%s := %s.NewController(%s)`, varName, pkgAlias, serviceVarName)
 	return i.InjectBetweenMarkers(MarkerControllersStart, MarkerControllersEnd, code)
 }
 
