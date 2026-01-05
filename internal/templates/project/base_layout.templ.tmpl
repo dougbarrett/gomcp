@@ -20,7 +20,8 @@ templ Base(title string) {
 		</head>
 		// Removed hx-boost="true" to avoid layout issues when navigating between pages
 		// Add hx-boost selectively to specific elements if needed
-		<body class="h-full bg-background text-foreground">
+		// hx-headers ensures CSRF token is included in all HTMX requests
+		<body class="h-full bg-background text-foreground" hx-headers={ csrfHeader(ctx) }>
 			<div id="app" class="min-h-full">
 				{ children... }
 			</div>
@@ -185,4 +186,11 @@ func flashDataFromContext(ctx context.Context) components.FlashData {
 		Error:   data.Error,
 		Info:    data.Info,
 	}
+}
+
+// csrfHeader returns the CSRF token as a JSON header for HTMX requests.
+// This is used with hx-headers to automatically include the token in all requests.
+func csrfHeader(ctx context.Context) string {
+	token := middleware.GetCSRFToken(ctx)
+	return `{"X-CSRF-Token": "` + token + `"}`
 }
