@@ -25,8 +25,13 @@ Generates a complete, production-ready project with:
 - Taskfile for development commands
 - Hot reload with Air
 
+Directory behavior:
+- Auto-detects if current directory name matches project_name and scaffolds in place
+- Otherwise creates a new subdirectory with the project name
+- Use in_current_dir: true to force scaffolding in current directory regardless of name
+
 Options:
-- in_current_dir: true to scaffold in current directory (useful when directory already exists)
+- in_current_dir: true to force scaffold in current directory
 - with_auth: true to include full authentication system (login, register, sessions, middleware)
 - dry_run: true to preview files without writing
 
@@ -58,9 +63,14 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 		dbType = "sqlite"
 	}
 
+	// Auto-detect if we should scaffold in current directory:
+	// If the current directory name matches the project name, use current dir
+	currentDirName := filepath.Base(registry.WorkingDir)
+	useCurrentDir := input.InCurrentDir || currentDirName == input.ProjectName
+
 	// Create project path
 	var projectPath string
-	if input.InCurrentDir {
+	if useCurrentDir {
 		projectPath = registry.WorkingDir
 	} else {
 		projectPath = filepath.Join(registry.WorkingDir, input.ProjectName)
@@ -175,7 +185,7 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 	// Prepare result
 	result := gen.Result()
 	var nextSteps []string
-	if input.InCurrentDir {
+	if useCurrentDir {
 		nextSteps = []string{
 			"go mod tidy",
 			"task dev  # Start development server",
