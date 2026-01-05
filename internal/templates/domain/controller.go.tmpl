@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	[[.PackageName]]svc "[[.ModulePath]]/internal/services/[[.PackageName]]"
 	"[[.ModulePath]]/internal/web"
 	[[- if .WithCrudViews]]
 	"[[.ModulePath]]/internal/web/[[.PackageName]]/views"
@@ -15,27 +16,26 @@ import (
 
 // Controller handles HTTP requests for [[pluralize .ModelName]].
 type Controller struct {
-	service Service
+	service [[.PackageName]]svc.Service
 }
 
 // NewController creates a new [[.ModelName]] controller.
-func NewController(service Service) *Controller {
+func NewController(service [[.PackageName]]svc.Service) *Controller {
 	return &Controller{service: service}
 }
 
-// RegisterRoutes registers the [[.ModelName]] routes.
+// RegisterRoutes registers the [[.ModelName]] routes on the given router.
+// Mount this under any path: router.Route("/admin/[[.URLPathSegment]]", ctrl.RegisterRoutes)
 func (c *Controller) RegisterRoutes(r chi.Router) {
-	r.Route("[[.URLPath]]", func(r chi.Router) {
-		r.Get("/", c.List)
-		r.Post("/", c.Create)
-		r.Get("/new", c.New)
-		r.Get("/{id}", c.Show)
-		r.Get("/{id}/edit", c.Edit)
-		r.Put("/{id}", c.Update)
-		r.Delete("/{id}", c.Delete)
-		// MCP:ROUTES:START
-		// MCP:ROUTES:END
-	})
+	r.Get("/", c.List)
+	r.Post("/", c.Create)
+	r.Get("/new", c.New)
+	r.Get("/{id}", c.Show)
+	r.Get("/{id}/edit", c.Edit)
+	r.Put("/{id}", c.Update)
+	r.Delete("/{id}", c.Delete)
+	// MCP:ROUTES:START
+	// MCP:ROUTES:END
 }
 
 // render renders a templ component to the response.
@@ -55,7 +55,7 @@ func (c *Controller) List(w http.ResponseWriter, r *http.Request) {
 	sortBy := r.URL.Query().Get("sort_by")
 	sortDesc := r.URL.Query().Get("sort_desc") == "true"
 
-	filter := List[[.ModelName]]Filter{
+	filter := [[.PackageName]]svc.List[[.ModelName]]Filter{
 		Page:     page,
 		PageSize: pageSize,
 		Search:   search,
@@ -115,7 +115,7 @@ func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
 		Item: [[.VariableName]],
 	}))
 	[[- else]]
-	res.JSON(http.StatusOK, To[[.ModelName]]Response([[.VariableName]]))
+	res.JSON(http.StatusOK, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
 	[[- end]]
 }
 
@@ -137,7 +137,7 @@ func (c *Controller) New(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) Create(w http.ResponseWriter, r *http.Request) {
 	res := web.NewResponse(w, r)
 
-	var input Create[[.ModelName]]Input
+	var input [[.PackageName]]svc.Create[[.ModelName]]Input
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		res.Error(http.StatusBadRequest, "Invalid request body")
 		return
@@ -156,7 +156,7 @@ func (c *Controller) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	res.JSON(http.StatusCreated, To[[.ModelName]]Response([[.VariableName]]))
+	res.JSON(http.StatusCreated, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
 }
 
 // Edit handles GET [[.URLPath]]/{id}/edit
@@ -182,7 +182,7 @@ func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
 		IsEdit: true,
 	}))
 	[[- else]]
-	res.JSON(http.StatusOK, To[[.ModelName]]Response([[.VariableName]]))
+	res.JSON(http.StatusOK, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
 	[[- end]]
 }
 
@@ -196,7 +196,7 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input Update[[.ModelName]]Input
+	var input [[.PackageName]]svc.Update[[.ModelName]]Input
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		res.Error(http.StatusBadRequest, "Invalid request body")
 		return
@@ -204,7 +204,7 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 
 	[[.VariableName]], err := c.service.Update(r.Context(), uint(id), input)
 	if err != nil {
-		if err == Err[[.ModelName]]NotFound {
+		if err == [[.PackageName]]svc.Err[[.ModelName]]NotFound {
 			res.Error(http.StatusNotFound, err.Error())
 			return
 		}
@@ -216,7 +216,7 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 		res.Success("[[.ModelName]] updated successfully")
 	}
 
-	res.JSON(http.StatusOK, To[[.ModelName]]Response([[.VariableName]]))
+	res.JSON(http.StatusOK, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
 }
 
 // Delete handles DELETE [[.URLPath]]/{id}
@@ -230,7 +230,7 @@ func (c *Controller) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := c.service.Delete(r.Context(), uint(id)); err != nil {
-		if err == Err[[.ModelName]]NotFound {
+		if err == [[.PackageName]]svc.Err[[.ModelName]]NotFound {
 			res.Error(http.StatusNotFound, err.Error())
 			return
 		}

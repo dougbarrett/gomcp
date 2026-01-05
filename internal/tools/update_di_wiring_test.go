@@ -321,7 +321,7 @@ func TestUpdateDIWiring(t *testing.T) {
 		content := readFile(t, mainGoPath)
 
 		// Check for full route registration with correct router variable name
-		if !containsString(content, "productController.RegisterRoutes(router)") {
+		if !containsString(content, `router.Route("/products", productController.RegisterRoutes)`) {
 			t.Errorf("expected route registration with router variable, got:\n%s", content)
 		}
 	})

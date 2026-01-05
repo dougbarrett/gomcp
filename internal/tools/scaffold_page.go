@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/dbb1dev/go-mcp/internal/generator"
 	"github.com/dbb1dev/go-mcp/internal/types"
@@ -147,6 +148,7 @@ func buildPageData(input types.ScaffoldPageInput, modulePath string) generator.P
 	pkgName := utils.ToPackageName(input.PageName)
 	varName := utils.ToVariableName(input.PageName)
 
+	urlPathSegment := strings.TrimPrefix(input.Route, "/")
 	return generator.PageData{
 		ModulePath:        modulePath,
 		PageName:          input.PageName,
@@ -154,6 +156,7 @@ func buildPageData(input types.ScaffoldPageInput, modulePath string) generator.P
 		PackageName:       pkgName,
 		VariableName:      varName,
 		URLPath:           input.Route,
+		URLPathSegment:    urlPathSegment,
 		Route:             input.Route,
 		Layout:            layout,
 		Sections:          sections,

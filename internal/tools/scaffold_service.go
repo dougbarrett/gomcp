@@ -53,15 +53,17 @@ func scaffoldService(registry *Registry, input types.ScaffoldServiceInput) (type
 
 	// Prepare template data
 	pkgName := utils.ToPackageName(input.DomainName)
+	urlPath := utils.ToURLPath(input.DomainName)
 
 	data := generator.DomainData{
-		ModulePath:   modulePath,
-		DomainName:   input.DomainName,
-		ModelName:    utils.ToModelName(input.DomainName),
-		PackageName:  pkgName,
-		VariableName: utils.ToVariableName(input.DomainName),
-		TableName:    utils.ToTableName(input.DomainName),
-		URLPath:      utils.ToURLPath(input.DomainName),
+		ModulePath:     modulePath,
+		DomainName:     input.DomainName,
+		ModelName:      utils.ToModelName(input.DomainName),
+		PackageName:    pkgName,
+		VariableName:   utils.ToVariableName(input.DomainName),
+		TableName:      utils.ToTableName(input.DomainName),
+		URLPath:        urlPath,
+		URLPathSegment: urlPath[1:], // Remove leading slash
 	}
 
 	// Create directory

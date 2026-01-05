@@ -288,8 +288,11 @@ func (i *Injector) InjectController(domainName string) error {
 }
 
 // InjectRoute adds a route registration.
+// Routes are mounted at the default URL path (e.g., /products for "product" domain).
+// Users can later modify the path in main.go to mount under custom prefixes like /admin/products.
 func (i *Injector) InjectRoute(domainName string) error {
 	varName := utils.ToControllerVariableName(domainName)
-	code := fmt.Sprintf(`%s.RegisterRoutes(router)`, varName)
+	urlPath := utils.ToURLPath(domainName)
+	code := fmt.Sprintf(`router.Route("%s", %s.RegisterRoutes)`, urlPath, varName)
 	return i.InjectBetweenMarkers(MarkerRoutesStart, MarkerRoutesEnd, code)
 }

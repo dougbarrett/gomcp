@@ -133,6 +133,7 @@ func TestDomainTemplatesExecute(t *testing.T) {
 		VariableName         string
 		TableName            string
 		URLPath              string
+		URLPathSegment       string
 		Fields               []generator.FieldData
 		Relationships        []generator.RelationshipData
 		HasRelationships     bool
@@ -140,13 +141,14 @@ func TestDomainTemplatesExecute(t *testing.T) {
 		WithSoftDelete       bool
 		WithCrudViews        bool
 	}{
-		ModulePath:   "github.com/test/testproject",
-		DomainName:   "product",
-		ModelName:    "Product",
-		PackageName:  "product",
-		VariableName: "product",
-		TableName:    "products",
-		URLPath:      "/products",
+		ModulePath:     "github.com/test/testproject",
+		DomainName:     "product",
+		ModelName:      "Product",
+		PackageName:    "product",
+		VariableName:   "product",
+		TableName:      "products",
+		URLPath:        "/products",
+		URLPathSegment: "products",
 		Fields: []generator.FieldData{
 			{Name: "Name", Type: "string", GORMTags: "size:255", JSONName: "name", Required: true, Label: "Name", FormType: "input"},
 			{Name: "Price", Type: "float64", JSONName: "price", Required: true, Label: "Price", FormType: "number"},
@@ -202,6 +204,7 @@ func TestViewTemplatesExecute(t *testing.T) {
 		PackageName       string
 		VariableName      string
 		URLPath           string
+		URLPathSegment    string
 		ViewType          string
 		ViewName          string
 		Fields            []generator.FieldData
@@ -218,14 +221,15 @@ func TestViewTemplatesExecute(t *testing.T) {
 		Method            string
 		SuccessRedirect   string
 	}{
-		ModulePath:   "github.com/test/testproject",
-		DomainName:   "product",
-		ModelName:    "Product",
-		PackageName:  "product",
-		VariableName: "product",
-		URLPath:      "/products",
-		ViewType:     "list",
-		ViewName:     "ProductList",
+		ModulePath:     "github.com/test/testproject",
+		DomainName:     "product",
+		ModelName:      "Product",
+		PackageName:    "product",
+		VariableName:   "product",
+		URLPath:        "/products",
+		URLPathSegment: "products",
+		ViewType:       "list",
+		ViewName:       "ProductList",
 		Fields: []generator.FieldData{
 			{Name: "Name", Type: "string", JSONName: "name", Required: true, Label: "Name", FormType: "input"},
 			{Name: "Price", Type: "float64", JSONName: "price", Required: true, Label: "Price", FormType: "number"},
@@ -630,6 +634,7 @@ func TestDomainTemplatesWithRelationships(t *testing.T) {
 		VariableName         string
 		TableName            string
 		URLPath              string
+		URLPathSegment       string
 		Fields               []generator.FieldData
 		Relationships        []generator.RelationshipData
 		HasRelationships     bool
@@ -637,13 +642,14 @@ func TestDomainTemplatesWithRelationships(t *testing.T) {
 		WithSoftDelete       bool
 		WithCrudViews        bool
 	}{
-		ModulePath:   "github.com/test/testproject",
-		DomainName:   "order",
-		ModelName:    "Order",
-		PackageName:  "order",
-		VariableName: "order",
-		TableName:    "orders",
-		URLPath:      "/orders",
+		ModulePath:     "github.com/test/testproject",
+		DomainName:     "order",
+		ModelName:      "Order",
+		PackageName:    "order",
+		VariableName:   "order",
+		TableName:      "orders",
+		URLPath:        "/orders",
+		URLPathSegment: "orders",
 		Fields: []generator.FieldData{
 			{Name: "Total", Type: "float64", JSONName: "total", Required: true, Label: "Total"},
 			{Name: "Status", Type: "string", JSONName: "status", Required: true, Label: "Status"},

@@ -160,6 +160,35 @@ func scaffoldDomain(registry *Registry, input types.ScaffoldDomainInput) (types.
 		return types.NewErrorResult(fmt.Sprintf("failed to generate controller: %v", err)), nil
 	}
 
+	// Generate CRUD views if requested
+	if input.GetWithCrudViews() {
+		viewsDir := filepath.Join("internal", "web", pkgName, "views")
+
+		// Generate list view
+		listPath := filepath.Join(viewsDir, "list.templ")
+		if err := gen.GenerateFile("views/list.templ.tmpl", listPath, data); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("failed to generate list view: %v", err)), nil
+		}
+
+		// Generate show view
+		showPath := filepath.Join(viewsDir, "show.templ")
+		if err := gen.GenerateFile("views/show.templ.tmpl", showPath, data); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("failed to generate show view: %v", err)), nil
+		}
+
+		// Generate form view
+		formPath := filepath.Join(viewsDir, pkgName+"_form.templ")
+		if err := gen.GenerateFile("views/form.templ.tmpl", formPath, data); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("failed to generate form view: %v", err)), nil
+		}
+
+		// Generate partials (card, empty state, etc.)
+		partialsPath := filepath.Join(viewsDir, "partials.templ")
+		if err := gen.GenerateFile("views/partials.templ.tmpl", partialsPath, data); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("failed to generate partials: %v", err)), nil
+		}
+	}
+
 	// Prepare result
 	result := gen.Result()
 
@@ -211,19 +240,28 @@ func injectDomainWiring(mainGoPath, modulePath, pkgName, domainName string) erro
 		return err
 	}
 
-	// Inject imports
+	// Inject imports with aliases to avoid naming conflicts
 	repoImport := fmt.Sprintf("%s/internal/repository/%s", modulePath, pkgName)
-	if err := injector.InjectImport(repoImport); err != nil {
+	repoAlias := utils.ToRepoImportAlias(domainName)
+	if err := injector.InjectImportWithAlias(repoImport, repoAlias); err != nil {
 		return err
 	}
 
 	serviceImport := fmt.Sprintf("%s/internal/services/%s", modulePath, pkgName)
-	if err := injector.InjectImport(serviceImport); err != nil {
+	serviceAlias := utils.ToServiceImportAlias(domainName)
+	if err := injector.InjectImportWithAlias(serviceImport, serviceAlias); err != nil {
 		return err
 	}
 
 	controllerImport := fmt.Sprintf("%s/internal/web/%s", modulePath, pkgName)
-	if err := injector.InjectImport(controllerImport); err != nil {
+	controllerAlias := utils.ToControllerImportAlias(domainName)
+	if err := injector.InjectImportWithAlias(controllerImport, controllerAlias); err != nil {
+		return err
+	}
+
+	// Inject model into AutoMigrate
+	modelName := utils.ToModelName(domainName)
+	if err := injector.InjectModel(modelName); err != nil {
 		return err
 	}
 

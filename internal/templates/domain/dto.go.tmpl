@@ -40,10 +40,12 @@ type List[[.ModelName]]Filter struct {
 
 // List[[.ModelName]]Result is the result of listing [[pluralize .ModelName]].
 type List[[.ModelName]]Result struct {
-	Items    []models.[[.ModelName]] `json:"items"`
-	Total    int64                   `json:"total"`
-	Page     int                     `json:"page"`
-	PageSize int                     `json:"page_size"`
+	Items      []models.[[.ModelName]] `json:"items"`
+	Total      int64                   `json:"total"`
+	Page       int                     `json:"page"`
+	PageSize   int                     `json:"page_size"`
+	TotalPages int                     `json:"total_pages"`
+	TotalItems int                     `json:"total_items"`
 }
 
 // [[.ModelName]]Response is the response format for a [[.ModelName]].

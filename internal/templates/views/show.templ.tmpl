@@ -9,7 +9,16 @@ import (
 
 // [[.ModelName]]ShowProps contains props for the [[.ModelName]] show view.
 type [[.ModelName]]ShowProps struct {
-	Item models.[[.ModelName]]
+	Item     *models.[[.ModelName]]
+	BasePath string // URL base path (e.g., "/admin/[[.URLPathSegment]]" or "[[.URLPath]]")
+}
+
+// getBasePath returns the base path, defaulting to "[[.URLPath]]" if not set.
+func (p [[.ModelName]]ShowProps) getBasePath() string {
+	if p.BasePath != "" {
+		return p.BasePath
+	}
+	return "[[.URLPath]]"
 }
 
 // [[.ModelName]]Show renders the detail view for a [[.ModelName]].
@@ -22,7 +31,7 @@ templ [[.ModelName]]Show(props [[.ModelName]]ShowProps) {
 					Variant: "ghost",
 					Size:    "sm",
 					Attributes: templ.Attributes{
-						"hx-get":      "[[.URLPath]]",
+						"hx-get":      props.getBasePath(),
 						"hx-target":   "#main-content",
 						"hx-push-url": "true",
 					},
@@ -35,7 +44,7 @@ templ [[.ModelName]]Show(props [[.ModelName]]ShowProps) {
 				@components.Button(components.ButtonProps{
 					Variant: "outline",
 					Attributes: templ.Attributes{
-						"hx-get":    fmt.Sprintf("[[.URLPath]]/%d/edit", props.Item.ID),
+						"hx-get":    fmt.Sprintf("%s/%d/edit", props.getBasePath(), props.Item.ID),
 						"hx-target": "#modal-container",
 						"hx-swap":   "innerHTML",
 					},
@@ -46,7 +55,7 @@ templ [[.ModelName]]Show(props [[.ModelName]]ShowProps) {
 				@components.Button(components.ButtonProps{
 					Variant: "destructive",
 					Attributes: templ.Attributes{
-						"hx-delete":  fmt.Sprintf("[[.URLPath]]/%d", props.Item.ID),
+						"hx-delete":  fmt.Sprintf("%s/%d", props.getBasePath(), props.Item.ID),
 						"hx-confirm": "Are you sure you want to delete this [[.ModelName | toLower]]?",
 						"hx-target":  "#main-content",
 						"hx-swap":    "innerHTML",

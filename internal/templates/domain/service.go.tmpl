@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"[[.ModulePath]]/internal/models"
+	[[.PackageName]]repo "[[.ModulePath]]/internal/repository/[[.PackageName]]"
 )
 
 var (
@@ -28,11 +29,11 @@ type Service interface {
 
 // service implements Service.
 type service struct {
-	repo Repository
+	repo [[.PackageName]]repo.Repository
 }
 
 // NewService creates a new [[.ModelName]] service.
-func NewService(repo Repository) Service {
+func NewService(repo [[.PackageName]]repo.Repository) Service {
 	return &service{repo: repo}
 }
 
@@ -79,7 +80,7 @@ func (s *service) GetByIDWithRelations(ctx context.Context, id uint, preloads ..
 
 // List lists [[pluralize .ModelName]] with filtering and pagination.
 func (s *service) List(ctx context.Context, filter List[[.ModelName]]Filter) (*List[[.ModelName]]Result, error) {
-	var opts []QueryOption
+	var opts [][[.PackageName]]repo.QueryOption
 
 	// Apply pagination
 	if filter.Page > 0 || filter.PageSize > 0 {
@@ -91,25 +92,25 @@ func (s *service) List(ctx context.Context, filter List[[.ModelName]]Filter) (*L
 		if pageSize < 1 {
 			pageSize = 10
 		}
-		opts = append(opts, WithPagination(page, pageSize))
+		opts = append(opts, [[.PackageName]]repo.WithPagination(page, pageSize))
 	}
 
 	// Apply search if provided
 	if filter.Search != "" {
-		opts = append(opts, WithSearch("name", filter.Search))
+		opts = append(opts, [[.PackageName]]repo.WithSearch("name", filter.Search))
 	}
 
 	// Apply ordering
 	if filter.SortBy != "" {
-		opts = append(opts, WithOrder(filter.SortBy, filter.SortDesc))
+		opts = append(opts, [[.PackageName]]repo.WithOrder(filter.SortBy, filter.SortDesc))
 	} else {
-		opts = append(opts, WithOrder("created_at", true))
+		opts = append(opts, [[.PackageName]]repo.WithOrder("created_at", true))
 	}
 [[- if .HasRelationships]]
 
 	// Apply preloads if specified
 	if len(filter.Preloads) > 0 {
-		opts = append(opts, WithPreloads(filter.Preloads...))
+		opts = append(opts, [[.PackageName]]repo.WithPreloads(filter.Preloads...))
 	}
 [[- end]]
 
@@ -118,11 +119,27 @@ func (s *service) List(ctx context.Context, filter List[[.ModelName]]Filter) (*L
 		return nil, err
 	}
 
+	// Calculate pagination values
+	page := filter.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := filter.PageSize
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	totalPages := int(total) / pageSize
+	if int(total)%pageSize > 0 {
+		totalPages++
+	}
+
 	return &List[[.ModelName]]Result{
-		Items: [[pluralize .VariableName]],
-		Total: total,
-		Page:  filter.Page,
-		PageSize: filter.PageSize,
+		Items:      [[pluralize .VariableName]],
+		Total:      total,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPages: totalPages,
+		TotalItems: int(total),
 	}, nil
 }
 

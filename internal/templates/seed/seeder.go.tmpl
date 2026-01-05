@@ -71,16 +71,16 @@ func (s *[[.ModelName]]Seeder) Seed(ctx context.Context) error {
 	[[- if .HasDistributions]]
 
 	// Build distribution pools for fields with specific value distributions
-	[[- range .Distributions]]
-	[[.Field | toLower]]Pool := [][[fieldGoType .Field $.Fields]]{}
-	[[- range .Values]]
+	[[- range $dist := .Distributions]]
+	[[$dist.Field | toLower]]Pool := [][[fieldGoType $dist.Field $.Fields]]{}
+	[[- range $dist.Values]]
 	for i := 0; i < [[.Count]]; i++ {
-		[[$.Field | toLower]]Pool = append([[$.Field | toLower]]Pool, [[.Value]])
+		[[$dist.Field | toLower]]Pool = append([[$dist.Field | toLower]]Pool, [[.Value]])
 	}
 	[[- end]]
 	// Shuffle the pool for random distribution
-	rand.Shuffle(len([[.Field | toLower]]Pool), func(i, j int) {
-		[[.Field | toLower]]Pool[i], [[.Field | toLower]]Pool[j] = [[.Field | toLower]]Pool[j], [[.Field | toLower]]Pool[i]
+	rand.Shuffle(len([[$dist.Field | toLower]]Pool), func(i, j int) {
+		[[$dist.Field | toLower]]Pool[i], [[$dist.Field | toLower]]Pool[j] = [[$dist.Field | toLower]]Pool[j], [[$dist.Field | toLower]]Pool[i]
 	})
 	[[- end]]
 	[[- end]]

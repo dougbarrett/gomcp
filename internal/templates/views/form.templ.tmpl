@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"[[.ModulePath]]/internal/models"
-	"[[.ModulePath]]/internal/services/[[.PackageName]]"
 	"[[.ModulePath]]/internal/web/components"
 )
 
@@ -13,6 +12,16 @@ type [[.ModelName]]FormProps struct {
 	Item       *models.[[.ModelName]] // nil for create, populated for edit
 	Errors     map[string]string
 	IsEdit     bool
+	CSRFToken  string
+	BasePath   string // URL base path (e.g., "/admin/[[.URLPathSegment]]" or "[[.URLPath]]")
+}
+
+// getBasePath returns the base path, defaulting to "[[.URLPath]]" if not set.
+func (p [[.ModelName]]FormProps) getBasePath() string {
+	if p.BasePath != "" {
+		return p.BasePath
+	}
+	return "[[.URLPath]]"
 }
 
 // [[.ModelName]]Form renders the create/edit form for a [[.ModelName]].
@@ -41,14 +50,16 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 			@components.CardContent("") {
 				<form
 					if props.IsEdit {
-						hx-put={ fmt.Sprintf("[[.URLPath]]/%d", props.Item.ID) }
+						hx-put={ fmt.Sprintf("%s/%d", props.getBasePath(), props.Item.ID) }
 					} else {
-						hx-post="[[.URLPath]]"
+						hx-post={ props.getBasePath() }
 					}
 					hx-target="#main-content"
 					hx-swap="innerHTML"
 					class="space-y-4"
 				>
+					<!-- CSRF Token -->
+					<input type="hidden" name="csrf_token" value={ props.CSRFToken }/>
 					[[- range .Fields]]
 					<!-- [[.Label]] Field -->
 					<div class="space-y-2">
@@ -69,6 +80,8 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 						})
 						[[- else if eq .FormType "checkbox"]]
 						<div class="flex items-center gap-2">
+							<!-- Hidden field for unchecked state -->
+							<input type="hidden" name="[[.JSONName]]" value="false"/>
 							@components.Checkbox("[[.JSONName]]", "[[.JSONName]]", "true", props.Item != nil && props.Item.[[.Name]], false, nil)
 						</div>
 						[[- else if eq .FormType "select"]]
@@ -175,19 +188,21 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 }
 
 // [[.ModelName]]FormCreate renders the create form.
-templ [[.ModelName]]FormCreate(errors map[string]string) {
+templ [[.ModelName]]FormCreate(csrfToken string, errors map[string]string) {
 	@[[.ModelName]]Form([[.ModelName]]FormProps{
-		Item:   nil,
-		Errors: errors,
-		IsEdit: false,
+		Item:      nil,
+		Errors:    errors,
+		IsEdit:    false,
+		CSRFToken: csrfToken,
 	})
 }
 
 // [[.ModelName]]FormEdit renders the edit form.
-templ [[.ModelName]]FormEdit(item models.[[.ModelName]], errors map[string]string) {
+templ [[.ModelName]]FormEdit(item models.[[.ModelName]], csrfToken string, errors map[string]string) {
 	@[[.ModelName]]Form([[.ModelName]]FormProps{
-		Item:   &item,
-		Errors: errors,
-		IsEdit: true,
+		Item:      &item,
+		Errors:    errors,
+		IsEdit:    true,
+		CSRFToken: csrfToken,
 	})
 }

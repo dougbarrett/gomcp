@@ -128,6 +128,8 @@ type DomainData struct {
 	TableName string
 	// URLPath is the URL path (e.g., "/products").
 	URLPath string
+	// URLPathSegment is the URL path without leading slash (e.g., "products").
+	URLPathSegment string
 	// Fields is the list of fields.
 	Fields []FieldData
 	// Relationships is the list of model relationships.
@@ -140,6 +142,10 @@ type DomainData struct {
 	WithSoftDelete bool
 	// WithCrudViews generates CRUD views.
 	WithCrudViews bool
+	// WithPagination enables pagination in views.
+	WithPagination bool
+	// WithSearch enables search in views.
+	WithSearch bool
 }
 
 // NewDomainData creates DomainData from ScaffoldDomainInput and module path.
@@ -154,6 +160,9 @@ func NewDomainData(input types.ScaffoldDomainInput, modulePath string) DomainDat
 		}
 	}
 
+	withCrudViews := input.GetWithCrudViews()
+
+	urlPath := utils.ToURLPath(input.DomainName)
 	return DomainData{
 		ModulePath:           modulePath,
 		DomainName:           input.DomainName,
@@ -161,13 +170,16 @@ func NewDomainData(input types.ScaffoldDomainInput, modulePath string) DomainDat
 		PackageName:          utils.ToPackageName(input.DomainName),
 		VariableName:         utils.ToVariableName(input.DomainName),
 		TableName:            utils.ToTableName(input.DomainName),
-		URLPath:              utils.ToURLPath(input.DomainName),
+		URLPath:              urlPath,
+		URLPathSegment:       strings.TrimPrefix(urlPath, "/"),
 		Fields:               NewFieldDataList(input.Fields),
 		Relationships:        relationships,
 		HasRelationships:     len(relationships) > 0,
 		PreloadRelationships: preloadRels,
 		WithSoftDelete:       input.GetWithSoftDelete(),
-		WithCrudViews:        input.GetWithCrudViews(),
+		WithCrudViews:        withCrudViews,
+		WithPagination:       withCrudViews, // Enable pagination when CRUD views are generated
+		WithSearch:           withCrudViews, // Enable search when CRUD views are generated
 	}
 }
 
@@ -223,6 +235,8 @@ type ViewData struct {
 	VariableName string
 	// URLPath is the URL path.
 	URLPath string
+	// URLPathSegment is the URL path without leading slash.
+	URLPathSegment string
 	// ViewType is list, show, form, card, table, or custom.
 	ViewType string
 	// ViewName is the view file name.
@@ -269,6 +283,8 @@ type FormData struct {
 	VariableName string
 	// URLPath is the URL path.
 	URLPath string
+	// URLPathSegment is the URL path without leading slash.
+	URLPathSegment string
 	// FormName is the form component name.
 	FormName string
 	// Action is create or edit.
@@ -291,13 +307,15 @@ func NewFormData(input types.ScaffoldFormInput, modulePath string) FormData {
 	if input.Action == "edit" {
 		method = "PUT"
 	}
+	urlPath := utils.ToURLPath(input.Domain)
 	return FormData{
 		ModulePath:     modulePath,
 		DomainName:     input.Domain,
 		ModelName:      utils.ToModelName(input.Domain),
 		PackageName:    utils.ToPackageName(input.Domain),
 		VariableName:   utils.ToVariableName(input.Domain),
-		URLPath:        utils.ToURLPath(input.Domain),
+		URLPath:        urlPath,
+		URLPathSegment: strings.TrimPrefix(urlPath, "/"),
 		FormName:       input.FormName,
 		Action:         input.Action,
 		Fields:         NewFieldDataList(input.Fields),
@@ -467,6 +485,8 @@ type PageData struct {
 	VariableName string
 	// URLPath is the URL path (alias for Route).
 	URLPath string
+	// URLPathSegment is the URL path without leading slash.
+	URLPathSegment string
 	// Route is the URL route.
 	Route string
 	// Layout is the layout type.

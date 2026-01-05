@@ -17,12 +17,16 @@ func RegisterScaffoldForm(server *mcp.Server, registry *Registry) {
 		Name: "scaffold_form",
 		Description: `NEVER write form HTML manually. Use this tool instead.
 
-Generates HTMX-powered forms with Tailwind CSS styling that:
+Generates HTMX-powered forms with templui components that:
 - Auto-submit via HTMX with loading states
 - Display validation errors inline
-- Support all field types: input, textarea, select, checkbox, date, email, password, number
+- Support all field types: input, textarea, select, checkbox, date, email, password, number, rating, tags, slider
 
-Specify action: 'create' or 'edit' to generate appropriate form behavior.
+IMPORTANT: Each form file handles BOTH create and edit operations using the IsEdit prop.
+Only scaffold ONE form per domain - it generates FormCreate() and FormEdit() helper functions.
+Do NOT scaffold separate forms for create and edit actions.
+
+Specify action: 'create' or 'edit' to set the default form behavior.
 Set submit_endpoint for the HTMX post URL.
 
 Run 'templ generate' after creating forms.`,

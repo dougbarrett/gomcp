@@ -6,6 +6,7 @@ import (
 
 	"[[.ModulePath]]/internal/config"
 	"[[.ModulePath]]/internal/database"
+	"[[.ModulePath]]/internal/models"
 	"[[.ModulePath]]/internal/web"
 	// MCP:IMPORTS:START
 	// MCP:IMPORTS:END
@@ -17,7 +18,17 @@ func main() {
 
 	// Initialize database
 	db := database.Connect(cfg)
-	_ = db // Use db when wiring repositories
+
+	// Auto-migrate database models
+	if err := db.AutoMigrate(
+		// MCP:MODELS:START
+[[- if .WithAuth]]
+		&models.User{},
+[[- end]]
+		// MCP:MODELS:END
+	); err != nil {
+		log.Fatalf("Failed to migrate database: %v", err)
+	}
 
 	// Wire dependencies: Repos -> Services -> Controllers
 	// MCP:REPOS:START

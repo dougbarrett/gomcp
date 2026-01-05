@@ -404,8 +404,8 @@ func TestScaffoldProject(t *testing.T) {
 			}
 		}
 
-		// Should have base files (17) + auth files (9) = 26 files
-		expectedFileCount := 26
+		// Should have base files (19) + auth files (9) = 28 files
+		expectedFileCount := 28
 		if len(result.FilesCreated) != expectedFileCount {
 			t.Errorf("expected %d files with auth, got %d", expectedFileCount, len(result.FilesCreated))
 		}
@@ -455,8 +455,8 @@ func TestScaffoldProject(t *testing.T) {
 			t.Fatalf("expected success, got: %s", result.Message)
 		}
 
-		// Should have 17 files based on the template list
-		expectedFileCount := 17
+		// Should have 19 files based on the template list (including tailwind.config.js and output.css)
+		expectedFileCount := 19
 		if len(result.FilesCreated) != expectedFileCount {
 			t.Errorf("expected %d files, got %d: %v", expectedFileCount, len(result.FilesCreated), result.FilesCreated)
 		}

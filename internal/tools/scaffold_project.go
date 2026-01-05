@@ -146,6 +146,8 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 		{"project/taskfile.yml.tmpl", "Taskfile.yml"},
 		{"project/air.toml.tmpl", ".air.toml"},
 		{"project/tailwind_input.css.tmpl", "assets/css/input.css"},
+		{"project/tailwind_output.css.tmpl", "assets/css/output.css"},
+		{"project/tailwind.config.js.tmpl", "tailwind.config.js"},
 		{"project/app.toml.tmpl", "config/en/app.toml"},
 		{"project/menu.toml.tmpl", "config/en/menu.toml"},
 		{"project/gitignore.tmpl", ".gitignore"},
