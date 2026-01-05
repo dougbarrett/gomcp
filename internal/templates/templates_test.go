@@ -733,6 +733,194 @@ func TestDomainTemplatesWithRelationships(t *testing.T) {
 	}
 }
 
+// TestReadTemplate tests the ReadTemplate helper function.
+func TestReadTemplate(t *testing.T) {
+	t.Run("reads existing template", func(t *testing.T) {
+		content, err := ReadTemplate("project/main.go.tmpl")
+		if err != nil {
+			t.Fatalf("ReadTemplate failed: %v", err)
+		}
+		if len(content) == 0 {
+			t.Error("ReadTemplate returned empty content")
+		}
+		if !strings.Contains(string(content), "package main") {
+			t.Error("Expected main.go.tmpl to contain 'package main'")
+		}
+	})
+
+	t.Run("returns error for non-existent template", func(t *testing.T) {
+		_, err := ReadTemplate("nonexistent/template.tmpl")
+		if err == nil {
+			t.Error("ReadTemplate should return error for non-existent template")
+		}
+	})
+}
+
+// TestTemplateExists tests the TemplateExists helper function.
+func TestTemplateExists(t *testing.T) {
+	t.Run("returns true for existing template", func(t *testing.T) {
+		if !TemplateExists("project/main.go.tmpl") {
+			t.Error("TemplateExists should return true for existing template")
+		}
+	})
+
+	t.Run("returns false for non-existent template", func(t *testing.T) {
+		if TemplateExists("nonexistent/template.tmpl") {
+			t.Error("TemplateExists should return false for non-existent template")
+		}
+	})
+
+	t.Run("checks various categories", func(t *testing.T) {
+		templates := []string{
+			"domain/model.go.tmpl",
+			"views/list.templ.tmpl",
+			"auth/login.templ.tmpl",
+			"components/card.templ.tmpl",
+		}
+		for _, tmpl := range templates {
+			if !TemplateExists(tmpl) {
+				t.Errorf("TemplateExists should return true for %s", tmpl)
+			}
+		}
+	})
+}
+
+// TestListTemplates tests the ListTemplates helper function.
+func TestListTemplates(t *testing.T) {
+	templates, err := ListTemplates()
+	if err != nil {
+		t.Fatalf("ListTemplates failed: %v", err)
+	}
+
+	if len(templates) == 0 {
+		t.Error("ListTemplates should return at least one template")
+	}
+
+	// Verify all returned paths end with .tmpl
+	for _, tmpl := range templates {
+		if !strings.HasSuffix(tmpl, ".tmpl") {
+			t.Errorf("Template path %s should end with .tmpl", tmpl)
+		}
+	}
+
+	// Verify some known templates are in the list
+	expectedTemplates := []string{
+		"project/main.go.tmpl",
+		"domain/model.go.tmpl",
+		"views/list.templ.tmpl",
+	}
+	for _, expected := range expectedTemplates {
+		found := false
+		for _, tmpl := range templates {
+			if tmpl == expected {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Expected template %s not found in list", expected)
+		}
+	}
+}
+
+// TestListTemplatesInCategory tests the ListTemplatesInCategory helper function.
+func TestListTemplatesInCategory(t *testing.T) {
+	t.Run("lists project templates", func(t *testing.T) {
+		templates, err := ListTemplatesInCategory("project")
+		if err != nil {
+			t.Fatalf("ListTemplatesInCategory failed: %v", err)
+		}
+		if len(templates) == 0 {
+			t.Error("project category should have templates")
+		}
+		// Check that all templates are in the project directory
+		for _, tmpl := range templates {
+			if !strings.HasPrefix(tmpl, "project/") {
+				t.Errorf("Template %s should be in project/ directory", tmpl)
+			}
+		}
+	})
+
+	t.Run("lists domain templates", func(t *testing.T) {
+		templates, err := ListTemplatesInCategory("domain")
+		if err != nil {
+			t.Fatalf("ListTemplatesInCategory failed: %v", err)
+		}
+		expectedCount := 5 // model, repository, service, controller, dto
+		if len(templates) != expectedCount {
+			t.Errorf("domain category should have %d templates, got %d", expectedCount, len(templates))
+		}
+	})
+
+	t.Run("returns error for invalid category", func(t *testing.T) {
+		_, err := ListTemplatesInCategory("nonexistent")
+		if err == nil {
+			t.Error("ListTemplatesInCategory should return error for invalid category")
+		}
+	})
+
+	t.Run("lists all categories", func(t *testing.T) {
+		for _, category := range Categories {
+			templates, err := ListTemplatesInCategory(category)
+			if err != nil {
+				t.Errorf("ListTemplatesInCategory(%s) failed: %v", category, err)
+			}
+			if len(templates) == 0 {
+				t.Errorf("Category %s should have at least one template", category)
+			}
+		}
+	})
+}
+
+// TestCountTemplates tests the CountTemplates helper function.
+func TestCountTemplates(t *testing.T) {
+	count, err := CountTemplates()
+	if err != nil {
+		t.Fatalf("CountTemplates failed: %v", err)
+	}
+
+	if count == 0 {
+		t.Error("CountTemplates should return at least one template")
+	}
+
+	// Verify count matches ListTemplates
+	templates, err := ListTemplates()
+	if err != nil {
+		t.Fatalf("ListTemplates failed: %v", err)
+	}
+	if count != len(templates) {
+		t.Errorf("CountTemplates (%d) should match len(ListTemplates()) (%d)", count, len(templates))
+	}
+
+	// We expect at least 40 templates based on our categories
+	if count < 40 {
+		t.Errorf("Expected at least 40 templates, got %d", count)
+	}
+}
+
+// TestCategories tests the Categories variable.
+func TestCategories(t *testing.T) {
+	expectedCategories := []string{
+		"project",
+		"domain",
+		"views",
+		"components",
+		"config",
+		"seed",
+		"auth",
+	}
+
+	if len(Categories) != len(expectedCategories) {
+		t.Errorf("Expected %d categories, got %d", len(expectedCategories), len(Categories))
+	}
+
+	for i, expected := range expectedCategories {
+		if Categories[i] != expected {
+			t.Errorf("Category %d: expected %s, got %s", i, expected, Categories[i])
+		}
+	}
+}
+
 // TestTemplateDelimiters verifies templates use correct delimiters.
 func TestTemplateDelimiters(t *testing.T) {
 	dirs := []string{
