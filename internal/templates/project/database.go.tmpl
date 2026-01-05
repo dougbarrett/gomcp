@@ -58,3 +58,16 @@ func Connect(cfg *config.Config) *gorm.DB {
 
 	return db
 }
+
+// RunMigrations runs all database migrations.
+// Call this from both cmd/web and cmd/seed to ensure tables exist.
+func RunMigrations(db *gorm.DB) error {
+	return db.AutoMigrate(
+[[- if .WithAuth]]
+		&models.Role{},
+		&models.User{},
+[[- end]]
+		// MCP:MODELS:START
+		// MCP:MODELS:END
+	)
+}
