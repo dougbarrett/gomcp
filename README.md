@@ -13,16 +13,72 @@ A Model Context Protocol (MCP) server that provides scaffolding tools for Go web
 ## Installation
 
 ```bash
-go install github.com/dbb1dev/go-mcp/cmd/mcp@latest
+go install github.com/dbb1dev/go-mcp/cmd/gomcp@latest
 ```
 
 ## Usage
 
-The tool runs as an MCP server and is designed to be used with MCP-compatible clients (like Claude).
+The tool runs as an MCP server and is designed to be used with MCP-compatible clients.
+
+### Claude Code
+
+Add the MCP server using the Claude Code CLI:
 
 ```bash
-# Run the MCP server
-mcp
+claude mcp add gomcp -- gomcp
+```
+
+Or for a specific project directory:
+
+```bash
+claude mcp add gomcp -e MCP_SCAFFOLD_WORKDIR=/path/to/your/project -- gomcp
+```
+
+### VS Code (GitHub Copilot)
+
+Add to your VS Code settings (`.vscode/settings.json`):
+
+```json
+{
+  "github.copilot.chat.mcpServers": {
+    "gomcp": {
+      "command": "gomcp",
+      "env": {
+        "MCP_SCAFFOLD_WORKDIR": "${workspaceFolder}"
+      }
+    }
+  }
+}
+```
+
+### VS Code (Continue)
+
+Add to your Continue config (`~/.continue/config.json`):
+
+```json
+{
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "transport": {
+          "type": "stdio",
+          "command": "gomcp",
+          "env": {
+            "MCP_SCAFFOLD_WORKDIR": "/path/to/your/project"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+### Manual
+
+Run the MCP server directly:
+
+```bash
+gomcp
 ```
 
 ## Current Capabilities
@@ -299,7 +355,7 @@ go test ./internal/tools/... -v
 
 ```
 go-mcp/
-├── cmd/mcp/              # MCP server entry point
+├── cmd/gomcp/            # MCP server entry point
 ├── internal/
 │   ├── generator/        # Template generation engine
 │   ├── modifier/         # Code injection system
