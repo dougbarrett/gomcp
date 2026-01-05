@@ -10,9 +10,12 @@ templ AuthLayout(title string) {
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title } - [[.ProjectName]]</title>
-			<link href="/static/css/output.css" rel="stylesheet"/>
 			<script src="https://unpkg.com/htmx.org@2.0.0"></script>
 			<script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
+			// Tailwind CDN for development (remove in production and use compiled CSS only)
+			<script src="https://cdn.tailwindcss.com"></script>
+			// Compiled CSS (production)
+			<link href="/assets/css/output.css" rel="stylesheet"/>
 		</head>
 		<body class="h-full bg-gray-50 dark:bg-gray-950">
 			<div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">

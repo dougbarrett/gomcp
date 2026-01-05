@@ -19,6 +19,11 @@ func NewResponse(w http.ResponseWriter, r *http.Request) *Response {
 	return &Response{w: w, r: r}
 }
 
+// Request returns the underlying HTTP request.
+func (res *Response) Request() *http.Request {
+	return res.r
+}
+
 // JSON writes a JSON response.
 func (res *Response) JSON(status int, data interface{}) error {
 	res.w.Header().Set("Content-Type", "application/json")

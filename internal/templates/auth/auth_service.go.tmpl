@@ -185,6 +185,11 @@ func (s *Service) GetUserFromSession(r *http.Request) (*models.User, error) {
 	return s.userRepo.FindByID(r.Context(), userID)
 }
 
+// UpdateUser updates a user's profile information.
+func (s *Service) UpdateUser(ctx context.Context, user *models.User) error {
+	return s.userRepo.Update(ctx, user)
+}
+
 // ChangePassword updates a user's password.
 func (s *Service) ChangePassword(ctx context.Context, userID uint, currentPassword, newPassword string) error {
 	user, err := s.userRepo.FindByID(ctx, userID)
@@ -207,4 +212,68 @@ func (s *Service) ChangePassword(ctx context.Context, userID uint, currentPasswo
 func (s *Service) ValidateSession(r *http.Request) bool {
 	user, err := s.GetUserFromSession(r)
 	return err == nil && user != nil && user.Active
+}
+
+// AddFlashSuccess adds a success flash message to the session.
+func (s *Service) AddFlashSuccess(w http.ResponseWriter, r *http.Request, message string) error {
+	session, err := s.store.Get(r, SessionName)
+	if err != nil {
+		return err
+	}
+	session.AddFlash(message, "success")
+	return session.Save(r, w)
+}
+
+// AddFlashError adds an error flash message to the session.
+func (s *Service) AddFlashError(w http.ResponseWriter, r *http.Request, message string) error {
+	session, err := s.store.Get(r, SessionName)
+	if err != nil {
+		return err
+	}
+	session.AddFlash(message, "error")
+	return session.Save(r, w)
+}
+
+// AddFlashInfo adds an info flash message to the session.
+func (s *Service) AddFlashInfo(w http.ResponseWriter, r *http.Request, message string) error {
+	session, err := s.store.Get(r, SessionName)
+	if err != nil {
+		return err
+	}
+	session.AddFlash(message, "info")
+	return session.Save(r, w)
+}
+
+// GetFlashSuccess retrieves and clears success flash messages.
+func (s *Service) GetFlashSuccess(w http.ResponseWriter, r *http.Request) []string {
+	return s.getFlashes(w, r, "success")
+}
+
+// GetFlashErrors retrieves and clears error flash messages.
+func (s *Service) GetFlashErrors(w http.ResponseWriter, r *http.Request) []string {
+	return s.getFlashes(w, r, "error")
+}
+
+// GetFlashInfo retrieves and clears info flash messages.
+func (s *Service) GetFlashInfo(w http.ResponseWriter, r *http.Request) []string {
+	return s.getFlashes(w, r, "info")
+}
+
+// getFlashes retrieves and clears flash messages of a specific type.
+func (s *Service) getFlashes(w http.ResponseWriter, r *http.Request, key string) []string {
+	session, err := s.store.Get(r, SessionName)
+	if err != nil {
+		return nil
+	}
+
+	flashes := session.Flashes(key)
+	session.Save(r, w)
+
+	var messages []string
+	for _, flash := range flashes {
+		if msg, ok := flash.(string); ok {
+			messages = append(messages, msg)
+		}
+	}
+	return messages
 }

@@ -1,0 +1,230 @@
+package profile
+
+import (
+	"net/http"
+
+	"[[.ModulePath]]/internal/services/auth"
+	"[[.ModulePath]]/internal/web"
+	"[[.ModulePath]]/internal/web/layouts"
+	authmiddleware "[[.ModulePath]]/internal/web/middleware"
+	"[[.ModulePath]]/internal/web/profile/views"
+	"github.com/go-chi/chi/v5"
+)
+
+// Controller handles profile HTTP requests.
+type Controller struct {
+	authService *auth.Service
+}
+
+// NewController creates a new profile Controller.
+func NewController(authService *auth.Service) *Controller {
+	return &Controller{authService: authService}
+}
+
+// RegisterRoutes registers profile routes on the given router.
+// Routes should be protected by RequireAuth middleware.
+func (c *Controller) RegisterRoutes(r chi.Router) {
+	r.Get("/", c.Show)
+	r.Post("/", c.Update)
+	r.Get("/password", c.ShowPassword)
+	r.Post("/password", c.UpdatePassword)
+}
+
+// Show renders the profile page.
+func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	user := authmiddleware.GetUserFromContext(r.Context())
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	props := views.ProfileProps{
+		User:      user,
+		CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
+	}
+
+	if res.IsHTMX() {
+		res.Render(views.ProfileForm(props))
+		return
+	}
+
+	res.Render(layouts.DashboardPage("Profile", views.ProfilePage(props)))
+}
+
+// Update handles the profile update form submission.
+func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	user := authmiddleware.GetUserFromContext(r.Context())
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		c.renderProfileWithError(res, user, "Invalid form data")
+		return
+	}
+
+	name := r.FormValue("name")
+	email := r.FormValue("email")
+
+	// Validate
+	errors := make(map[string]string)
+	if name == "" {
+		errors["name"] = "Name is required"
+	}
+	if email == "" {
+		errors["email"] = "Email is required"
+	}
+
+	if len(errors) > 0 {
+		props := views.ProfileProps{
+			User:      user,
+			Name:      name,
+			Email:     email,
+			Errors:    errors,
+			CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
+		}
+		res.Render(views.ProfileForm(props))
+		return
+	}
+
+	// Update user
+	user.Name = name
+	if user.Email != email {
+		// Check if email is already taken
+		// Note: You may want to add email validation here
+		user.Email = email
+	}
+
+	if err := c.authService.UpdateUser(r.Context(), user); err != nil {
+		c.renderProfileWithError(res, user, "Failed to update profile")
+		return
+	}
+
+	// Success
+	c.authService.AddFlashSuccess(w, r, "Profile updated successfully")
+
+	if res.IsHTMX() {
+		res.Success("Profile updated successfully")
+		res.Render(views.ProfileForm(views.ProfileProps{
+			User:      user,
+			CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
+		}))
+		return
+	}
+
+	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+}
+
+// ShowPassword renders the password change page.
+func (c *Controller) ShowPassword(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	user := authmiddleware.GetUserFromContext(r.Context())
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	props := views.PasswordProps{
+		CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
+	}
+
+	if res.IsHTMX() {
+		res.Render(views.PasswordForm(props))
+		return
+	}
+
+	res.Render(layouts.DashboardPage("Change Password", views.PasswordPage(props)))
+}
+
+// UpdatePassword handles the password change form submission.
+func (c *Controller) UpdatePassword(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	user := authmiddleware.GetUserFromContext(r.Context())
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		c.renderPasswordWithError(res, "Invalid form data")
+		return
+	}
+
+	currentPassword := r.FormValue("current_password")
+	newPassword := r.FormValue("new_password")
+	confirmPassword := r.FormValue("confirm_password")
+
+	// Validate
+	errors := make(map[string]string)
+	if currentPassword == "" {
+		errors["current_password"] = "Current password is required"
+	}
+	if newPassword == "" {
+		errors["new_password"] = "New password is required"
+	} else if len(newPassword) < 8 {
+		errors["new_password"] = "Password must be at least 8 characters"
+	}
+	if newPassword != confirmPassword {
+		errors["confirm_password"] = "Passwords do not match"
+	}
+
+	if len(errors) > 0 {
+		props := views.PasswordProps{
+			Errors:    errors,
+			CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
+		}
+		res.Render(views.PasswordForm(props))
+		return
+	}
+
+	// Change password
+	if err := c.authService.ChangePassword(r.Context(), user.ID, currentPassword, newPassword); err != nil {
+		if err == auth.ErrInvalidCredentials {
+			errors["current_password"] = "Current password is incorrect"
+			props := views.PasswordProps{
+				Errors:    errors,
+				CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
+			}
+			res.Render(views.PasswordForm(props))
+			return
+		}
+		c.renderPasswordWithError(res, "Failed to change password")
+		return
+	}
+
+	// Success
+	c.authService.AddFlashSuccess(w, r, "Password changed successfully")
+
+	if res.IsHTMX() {
+		res.Success("Password changed successfully")
+		res.Render(views.PasswordForm(views.PasswordProps{
+			CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
+		}))
+		return
+	}
+
+	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+}
+
+func (c *Controller) renderProfileWithError(res *web.Response, user interface{}, message string) {
+	props := views.ProfileProps{
+		Error:     message,
+		CSRFToken: authmiddleware.GetCSRFToken(res.Request().Context()),
+	}
+	res.Render(views.ProfileForm(props))
+}
+
+func (c *Controller) renderPasswordWithError(res *web.Response, message string) {
+	props := views.PasswordProps{
+		Error:     message,
+		CSRFToken: authmiddleware.GetCSRFToken(res.Request().Context()),
+	}
+	res.Render(views.PasswordForm(props))
+}

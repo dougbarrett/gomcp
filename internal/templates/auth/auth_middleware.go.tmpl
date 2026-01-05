@@ -97,3 +97,25 @@ func IsAdmin(ctx context.Context) bool {
 	user := GetUserFromContext(ctx)
 	return user != nil && user.IsAdmin()
 }
+
+// FlashMiddleware reads flash messages from the session and injects them into context.
+// Flash messages are automatically cleared after being read.
+// Note: FlashData and FlashContextKey types are defined in middleware.go
+func (m *AuthMiddleware) FlashMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		flash := FlashData{
+			Success: m.authService.GetFlashSuccess(w, r),
+			Error:   m.authService.GetFlashErrors(w, r),
+			Info:    m.authService.GetFlashInfo(w, r),
+		}
+
+		ctx := context.WithValue(r.Context(), FlashContextKey{}, flash)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// HasFlash checks if there are any flash messages in context.
+func HasFlash(ctx context.Context) bool {
+	data := GetFlashData(ctx)
+	return len(data.Success) > 0 || len(data.Error) > 0 || len(data.Info) > 0
+}

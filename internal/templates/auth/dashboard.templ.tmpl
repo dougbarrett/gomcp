@@ -14,11 +14,7 @@ type DashboardProps struct {
 templ DashboardContent(props DashboardProps) {
 	<div class="space-y-6">
 		// Welcome header
-		@components.PageHeader("Dashboard") {
-			<p class="text-muted-foreground">
-				Welcome back, { props.User.Name }!
-			</p>
-		}
+		@components.PageHeader("Dashboard", "Welcome back, " + props.User.Name + "!")
 
 		// Quick stats cards
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

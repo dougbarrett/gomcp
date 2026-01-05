@@ -143,3 +143,22 @@ func HTMXRefresh(w http.ResponseWriter) {
 func HTMXTrigger(w http.ResponseWriter, event string) {
 	w.Header().Set("HX-Trigger", event)
 }
+
+// FlashData contains flash messages to display.
+type FlashData struct {
+	Success []string
+	Error   []string
+	Info    []string
+}
+
+// FlashContextKey is the context key for flash messages.
+type FlashContextKey struct{}
+
+// GetFlashData retrieves flash messages from context.
+func GetFlashData(ctx context.Context) FlashData {
+	data, ok := ctx.Value(FlashContextKey{}).(FlashData)
+	if !ok {
+		return FlashData{}
+	}
+	return data
+}

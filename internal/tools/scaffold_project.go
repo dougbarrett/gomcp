@@ -120,6 +120,8 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 			"internal/web/auth/views",
 			"internal/web/dashboard",
 			"internal/web/dashboard/views",
+			"internal/web/profile",
+			"internal/web/profile/views",
 		)
 	}
 
@@ -186,6 +188,9 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 			// Dashboard
 			{"auth/dashboard_controller.go.tmpl", "internal/web/dashboard/dashboard.go"},
 			{"auth/dashboard.templ.tmpl", "internal/web/dashboard/views/dashboard.templ"},
+			// Profile
+			{"auth/profile_controller.go.tmpl", "internal/web/profile/profile.go"},
+			{"auth/profile.templ.tmpl", "internal/web/profile/views/profile.templ"},
 		}
 
 		for _, f := range authFiles {

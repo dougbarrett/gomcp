@@ -1,5 +1,9 @@
 package layouts
 
+import "context"
+import "[[.ModulePath]]/internal/web/components"
+import "[[.ModulePath]]/internal/web/middleware"
+
 templ Base(title string) {
 	<!DOCTYPE html>
 	<html lang="en" class="h-full">
@@ -20,7 +24,9 @@ templ Base(title string) {
 			<div id="app" class="min-h-full">
 				{ children... }
 			</div>
-			<!-- Toast container -->
+			<!-- Flash messages from session -->
+			@components.FlashMessages(flashDataFromContext(ctx))
+			<!-- Toast container for HTMX-triggered toasts -->
 			<div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
 			<!-- Modal container -->
 			<div id="modal-container"></div>
@@ -167,5 +173,16 @@ templ BasePage(title string, content templ.Component) {
 		<div id="main-content">
 			@content
 		</div>
+	}
+}
+
+// flashDataFromContext converts middleware.FlashData to components.FlashData.
+// This helper bridges the middleware and component types for flash messages.
+func flashDataFromContext(ctx context.Context) components.FlashData {
+	data := middleware.GetFlashData(ctx)
+	return components.FlashData{
+		Success: data.Success,
+		Error:   data.Error,
+		Info:    data.Info,
 	}
 }

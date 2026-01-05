@@ -404,8 +404,11 @@ func TestScaffoldProject(t *testing.T) {
 			}
 		}
 
-		// Should have base files (19) + auth files (9) = 28 files
-		expectedFileCount := 28
+		// Should have base files (19) + auth files (14) = 33 files
+		// Auth files: role_model, user_model, user_repository, auth_service, session,
+		// auth_middleware, auth_controller, auth_layout, login, register,
+		// dashboard_controller, dashboard, profile_controller, profile
+		expectedFileCount := 33
 		if len(result.FilesCreated) != expectedFileCount {
 			t.Errorf("expected %d files with auth, got %d", expectedFileCount, len(result.FilesCreated))
 		}

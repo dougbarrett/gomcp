@@ -744,6 +744,78 @@ templ ModalFooter() {
 }
 
 // =============================================================================
+// FLASH MESSAGE COMPONENTS
+// =============================================================================
+
+// FlashData contains flash messages to display.
+type FlashData struct {
+	Success []string
+	Error   []string
+	Info    []string
+}
+
+// FlashMessages renders flash messages from the context.
+// These are displayed as toast-style notifications that auto-dismiss.
+templ FlashMessages(data FlashData) {
+	<div id="flash-messages" class="fixed top-4 right-4 z-50 space-y-2">
+		for _, msg := range data.Success {
+			@flashToast(msg, "success")
+		}
+		for _, msg := range data.Error {
+			@flashToast(msg, "error")
+		}
+		for _, msg := range data.Info {
+			@flashToast(msg, "info")
+		}
+	</div>
+}
+
+// flashToast renders a single flash toast notification.
+templ flashToast(message, variant string) {
+	<div
+		class={ flashToastClasses(variant) }
+		_="on load wait 5s then transition opacity to 0 over 300ms then remove me"
+	>
+		<div class="flex items-center gap-3">
+			@flashIcon(variant)
+			<p class="text-sm font-medium">{ message }</p>
+			<button
+				type="button"
+				class="ml-auto -mx-1.5 -my-1.5 rounded-lg p-1.5 inline-flex h-8 w-8 hover:bg-white/20"
+				_="on click remove closest div"
+			>
+				<span class="sr-only">Close</span>
+				@Icon("x", "h-5 w-5")
+			</button>
+		</div>
+	</div>
+}
+
+// flashIcon renders the appropriate icon for the flash type.
+templ flashIcon(variant string) {
+	switch variant {
+		case "success":
+			@Icon("check-circle", "h-5 w-5")
+		case "error":
+			@Icon("x-circle", "h-5 w-5")
+		default:
+			@Icon("alert-triangle", "h-5 w-5")
+	}
+}
+
+func flashToastClasses(variant string) string {
+	base := "flex items-center w-full max-w-xs p-4 rounded-lg shadow-lg text-white"
+	switch variant {
+	case "success":
+		return base + " bg-green-500"
+	case "error":
+		return base + " bg-red-500"
+	default:
+		return base + " bg-blue-500"
+	}
+}
+
+// =============================================================================
 // SKELETON LOADING COMPONENTS
 // =============================================================================
 

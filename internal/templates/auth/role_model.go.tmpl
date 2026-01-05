@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 // Role represents a user role for RBAC.
 type Role struct {
@@ -33,4 +37,16 @@ func (r *Role) IsAdmin() bool {
 // TableName returns the table name for the Role model.
 func (Role) TableName() string {
 	return "roles"
+}
+
+// SeedRoles ensures default roles exist in the database.
+// This is idempotent - it only creates roles that don't exist.
+func SeedRoles(db *gorm.DB) {
+	for _, role := range DefaultRoles() {
+		var existing Role
+		if err := db.First(&existing, role.ID).Error; err != nil {
+			// Role doesn't exist, create it
+			db.Create(&role)
+		}
+	}
 }

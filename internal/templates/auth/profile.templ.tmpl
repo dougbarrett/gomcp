@@ -1,0 +1,195 @@
+package views
+
+import (
+	"[[.ModulePath]]/internal/models"
+	"[[.ModulePath]]/internal/web/components"
+)
+
+// ProfileProps contains props for the profile page.
+type ProfileProps struct {
+	User      *models.User
+	Name      string
+	Email     string
+	Error     string
+	Errors    map[string]string
+	CSRFToken string
+}
+
+// ProfilePage renders the full profile page.
+templ ProfilePage(props ProfileProps) {
+	<div class="max-w-2xl mx-auto space-y-6">
+		@components.PageHeader("Profile", "Manage your account settings")
+		@ProfileForm(props)
+		<div class="mt-6">
+			<a href="/profile/password" class="text-sm text-blue-600 hover:underline">
+				Change password
+			</a>
+		</div>
+	</div>
+}
+
+// ProfileForm renders the profile edit form.
+templ ProfileForm(props ProfileProps) {
+	@components.Card(components.CardProps{}) {
+		@components.CardHeader("") {
+			<h3 class="text-lg font-semibold">Personal Information</h3>
+			<p class="text-sm text-gray-500 mt-1">Update your name and email address</p>
+		}
+		@components.CardContent("") {
+			if props.Error != "" {
+				@components.ErrorAlert(props.Error)
+			}
+			<form method="POST" action="/profile" class="space-y-4">
+				<input type="hidden" name="csrf_token" value={ props.CSRFToken }/>
+
+				<div class="space-y-2">
+					@components.Label("name", true) {
+						Name
+					}
+					@components.Input(components.InputProps{
+						ID:          "name",
+						Name:        "name",
+						Type:        "text",
+						Value:       profileName(props),
+						Placeholder: "Your name",
+						Required:    true,
+						Error:       props.Errors["name"],
+					})
+					@components.FormError(props.Errors["name"])
+				</div>
+
+				<div class="space-y-2">
+					@components.Label("email", true) {
+						Email
+					}
+					@components.Input(components.InputProps{
+						ID:          "email",
+						Name:        "email",
+						Type:        "email",
+						Value:       profileEmail(props),
+						Placeholder: "you@example.com",
+						Required:    true,
+						Error:       props.Errors["email"],
+					})
+					@components.FormError(props.Errors["email"])
+				</div>
+
+				<div class="pt-4">
+					@components.Button(components.ButtonProps{Type: "submit"}) {
+						Save Changes
+					}
+				</div>
+			</form>
+		}
+	}
+}
+
+// PasswordProps contains props for the password change page.
+type PasswordProps struct {
+	Error     string
+	Errors    map[string]string
+	CSRFToken string
+}
+
+// PasswordPage renders the full password change page.
+templ PasswordPage(props PasswordProps) {
+	<div class="max-w-2xl mx-auto space-y-6">
+		@components.PageHeader("Change Password", "Update your account password")
+		@PasswordForm(props)
+		<div class="mt-6">
+			<a href="/profile" class="text-sm text-gray-600 hover:underline">
+				&larr; Back to profile
+			</a>
+		</div>
+	</div>
+}
+
+// PasswordForm renders the password change form.
+templ PasswordForm(props PasswordProps) {
+	@components.Card(components.CardProps{}) {
+		@components.CardHeader("") {
+			<h3 class="text-lg font-semibold">Change Password</h3>
+			<p class="text-sm text-gray-500 mt-1">Choose a strong password with at least 8 characters</p>
+		}
+		@components.CardContent("") {
+			if props.Error != "" {
+				@components.ErrorAlert(props.Error)
+			}
+			<form method="POST" action="/profile/password" class="space-y-4">
+				<input type="hidden" name="csrf_token" value={ props.CSRFToken }/>
+
+				<div class="space-y-2">
+					@components.Label("current_password", true) {
+						Current Password
+					}
+					@components.Input(components.InputProps{
+						ID:          "current_password",
+						Name:        "current_password",
+						Type:        "password",
+						Placeholder: "Enter current password",
+						Required:    true,
+						Error:       props.Errors["current_password"],
+					})
+					@components.FormError(props.Errors["current_password"])
+				</div>
+
+				<div class="space-y-2">
+					@components.Label("new_password", true) {
+						New Password
+					}
+					@components.Input(components.InputProps{
+						ID:          "new_password",
+						Name:        "new_password",
+						Type:        "password",
+						Placeholder: "Enter new password",
+						Required:    true,
+						Error:       props.Errors["new_password"],
+					})
+					@components.FormError(props.Errors["new_password"])
+				</div>
+
+				<div class="space-y-2">
+					@components.Label("confirm_password", true) {
+						Confirm New Password
+					}
+					@components.Input(components.InputProps{
+						ID:          "confirm_password",
+						Name:        "confirm_password",
+						Type:        "password",
+						Placeholder: "Confirm new password",
+						Required:    true,
+						Error:       props.Errors["confirm_password"],
+					})
+					@components.FormError(props.Errors["confirm_password"])
+				</div>
+
+				<div class="pt-4">
+					@components.Button(components.ButtonProps{Type: "submit"}) {
+						Update Password
+					}
+				</div>
+			</form>
+		}
+	}
+}
+
+// Helper functions to get values from props or user
+func profileName(props ProfileProps) string {
+	if props.Name != "" {
+		return props.Name
+	}
+	if props.User != nil {
+		return props.User.Name
+	}
+	return ""
+}
+
+func profileEmail(props ProfileProps) string {
+	if props.Email != "" {
+		return props.Email
+	}
+	if props.User != nil {
+		return props.User.Email
+	}
+	return ""
+}

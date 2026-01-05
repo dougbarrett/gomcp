@@ -11,6 +11,8 @@ import (
 	"github.com/gorilla/sessions"
 )
 
+// Note: models import is needed for SetUser which takes *models.User
+
 func init() {
 	// Register types for session encoding
 	gob.Register(uint(0))
@@ -68,7 +70,7 @@ func NewSessionManager(config SessionConfig) *SessionManager {
 type SessionData struct {
 	UserID      uint
 	Email       string
-	Role        models.UserRole
+	RoleID      uint
 	CreatedAt   time.Time
 	LastAccess  time.Time
 	FlashErrors []string
@@ -94,8 +96,8 @@ func (m *SessionManager) GetSessionData(r *http.Request) (*SessionData, error) {
 	if email, ok := session.Values["email"].(string); ok {
 		data.Email = email
 	}
-	if role, ok := session.Values["role"].(models.UserRole); ok {
-		data.Role = role
+	if roleID, ok := session.Values["role_id"].(uint); ok {
+		data.RoleID = roleID
 	}
 	if createdAt, ok := session.Values["created_at"].(time.Time); ok {
 		data.CreatedAt = createdAt
@@ -116,7 +118,7 @@ func (m *SessionManager) SetUser(w http.ResponseWriter, r *http.Request, user *m
 
 	session.Values["user_id"] = user.ID
 	session.Values["email"] = user.Email
-	session.Values["role"] = user.Role
+	session.Values["role_id"] = user.RoleID
 	session.Values["created_at"] = time.Now()
 	session.Values["last_access"] = time.Now()
 
