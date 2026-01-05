@@ -148,15 +148,15 @@ func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
 
 // New handles GET [[.URLPath]]/new
 func (c *Controller) New(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
 	[[- if .WithCrudViews]]
 	[[- if hasBelongsTo .Relationships]]
-	res := web.NewResponse(w, r)
 
 	// TODO: Fetch related records for select dropdowns
 	// Example:
 	[[- range .Relationships]]
 	[[- if .IsBelongsTo]]
-	// [[.VariableName | pluralize]], err := c.service.Get[[.Model | pluralize]](r.Context())
+	// [[.Model | toVariableName | pluralize]], err := c.service.Get[[.Model | pluralize]](r.Context())
 	// if err != nil {
 	//     res.Error(http.StatusInternalServerError, "Failed to load [[.Model | pluralize | toLower]]")
 	//     return
@@ -172,22 +172,49 @@ func (c *Controller) New(w http.ResponseWriter, r *http.Request) {
 		// TODO: Pass related records to form
 		[[- range .Relationships]]
 		[[- if .IsBelongsTo]]
-		// [[.Model]]Options: [[.VariableName | pluralize]],
+		// [[.Model]]Options: [[.Model | toVariableName | pluralize]],
 		[[- end]]
 		[[- end]]
 	}
-	_ = res // unused if no HTMX check below
+
+	// For HTMX requests, render just the modal form
+	if res.IsHTMX() {
+		c.render(w, r, views.[[.ModelName]]Form(props))
+		return
+	}
+
+	// For direct navigation, wrap in layout
+	[[- if eq .Layout "none"]]
 	c.render(w, r, views.[[.ModelName]]Form(props))
+	[[- else if eq .Layout "base"]]
+	c.render(w, r, layouts.BasePage("New [[.ModelName]]", views.[[.ModelName]]Form(props)))
 	[[- else]]
-	c.render(w, r, views.[[.ModelName]]Form(views.[[.ModelName]]FormProps{
+	c.render(w, r, layouts.DashboardPage("New [[.ModelName]]", views.[[.ModelName]]Form(props)))
+	[[- end]]
+	[[- else]]
+	props := views.[[.ModelName]]FormProps{
 		Item:      nil,
 		Errors:    nil,
 		IsEdit:    false,
 		CSRFToken: middleware.GetCSRFToken(r.Context()),
-	}))
+	}
+
+	// For HTMX requests, render just the modal form
+	if res.IsHTMX() {
+		c.render(w, r, views.[[.ModelName]]Form(props))
+		return
+	}
+
+	// For direct navigation, wrap in layout
+	[[- if eq .Layout "none"]]
+	c.render(w, r, views.[[.ModelName]]Form(props))
+	[[- else if eq .Layout "base"]]
+	c.render(w, r, layouts.BasePage("New [[.ModelName]]", views.[[.ModelName]]Form(props)))
+	[[- else]]
+	c.render(w, r, layouts.DashboardPage("New [[.ModelName]]", views.[[.ModelName]]Form(props)))
+	[[- end]]
 	[[- end]]
 	[[- else]]
-	res := web.NewResponse(w, r)
 	res.JSON(http.StatusOK, map[string]string{"action": "new"})
 	[[- end]]
 }
@@ -248,14 +275,25 @@ func (c *Controller) Create(w http.ResponseWriter, r *http.Request) {
 		[[- end]]
 	}
 
+	// Handle response based on request type
+	redirectURL := "[[.URLPath]]/" + strconv.FormatUint(uint64([[.VariableName]].ID), 10)
+
 	if res.IsHTMX() {
 		res.Success("[[.ModelName]] created successfully")
-		res.Redirect("[[.URLPath]]/" + strconv.FormatUint(uint64([[.VariableName]].ID), 10))
+		res.Redirect(redirectURL)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	res.JSON(http.StatusCreated, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
+	// For API requests (Accept: application/json), return JSON
+	// For browser form submissions, redirect to the new resource
+	if r.Header.Get("Accept") == "application/json" {
+		w.WriteHeader(http.StatusCreated)
+		res.JSON(http.StatusCreated, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
+		return
+	}
+
+	// Browser form submission - redirect
+	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }
 
 // Edit handles GET [[.URLPath]]/{id}/edit
@@ -279,7 +317,7 @@ func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
 	// TODO: Fetch related records for select dropdowns
 	[[- range .Relationships]]
 	[[- if .IsBelongsTo]]
-	// [[.VariableName | pluralize]], err := c.service.Get[[.Model | pluralize]](r.Context())
+	// [[.Model | toVariableName | pluralize]], err := c.service.Get[[.Model | pluralize]](r.Context())
 	// if err != nil {
 	//     res.Error(http.StatusInternalServerError, "Failed to load [[.Model | pluralize | toLower]]")
 	//     return
@@ -295,18 +333,47 @@ func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
 		// TODO: Pass related records to form
 		[[- range .Relationships]]
 		[[- if .IsBelongsTo]]
-		// [[.Model]]Options: [[.VariableName | pluralize]],
+		// [[.Model]]Options: [[.Model | toVariableName | pluralize]],
 		[[- end]]
 		[[- end]]
 	}
+
+	// For HTMX requests, render just the modal form
+	if res.IsHTMX() {
+		c.render(w, r, views.[[.ModelName]]Form(props))
+		return
+	}
+
+	// For direct navigation, wrap in layout
+	[[- if eq .Layout "none"]]
 	c.render(w, r, views.[[.ModelName]]Form(props))
+	[[- else if eq .Layout "base"]]
+	c.render(w, r, layouts.BasePage("Edit [[.ModelName]]", views.[[.ModelName]]Form(props)))
 	[[- else]]
-	c.render(w, r, views.[[.ModelName]]Form(views.[[.ModelName]]FormProps{
-		Item:      [[.VariableName]],
+	c.render(w, r, layouts.DashboardPage("Edit [[.ModelName]]", views.[[.ModelName]]Form(props)))
+	[[- end]]
+	[[- else]]
+	props := views.[[.ModelName]]FormProps{
+		Item:      [[$.VariableName]],
 		Errors:    nil,
 		IsEdit:    true,
 		CSRFToken: middleware.GetCSRFToken(r.Context()),
-	}))
+	}
+
+	// For HTMX requests, render just the modal form
+	if res.IsHTMX() {
+		c.render(w, r, views.[[.ModelName]]Form(props))
+		return
+	}
+
+	// For direct navigation, wrap in layout
+	[[- if eq .Layout "none"]]
+	c.render(w, r, views.[[.ModelName]]Form(props))
+	[[- else if eq .Layout "base"]]
+	c.render(w, r, layouts.BasePage("Edit [[.ModelName]]", views.[[.ModelName]]Form(props)))
+	[[- else]]
+	c.render(w, r, layouts.DashboardPage("Edit [[.ModelName]]", views.[[.ModelName]]Form(props)))
+	[[- end]]
 	[[- end]]
 	[[- else]]
 	res.JSON(http.StatusOK, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
@@ -418,13 +485,24 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 		[[- end]]
 	}
 
+	// Handle response based on request type
+	redirectURL := "[[.URLPath]]/" + strconv.FormatUint(uint64([[.VariableName]].ID), 10)
+
 	if res.IsHTMX() {
 		res.Success("[[.ModelName]] updated successfully")
-		res.Redirect("[[.URLPath]]/" + strconv.FormatUint(uint64([[.VariableName]].ID), 10))
+		res.Redirect(redirectURL)
 		return
 	}
 
-	res.JSON(http.StatusOK, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
+	// For API requests (Accept: application/json), return JSON
+	// For browser form submissions, redirect to the updated resource
+	if r.Header.Get("Accept") == "application/json" {
+		res.JSON(http.StatusOK, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
+		return
+	}
+
+	// Browser form submission - redirect
+	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }
 
 // Delete handles DELETE [[.URLPath]]/{id}
@@ -452,7 +530,15 @@ func (c *Controller) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	// For API requests, return 204 No Content
+	// For browser requests, redirect to the list page
+	if r.Header.Get("Accept") == "application/json" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	// Browser request - redirect to list
+	http.Redirect(w, r, "[[.URLPath]]", http.StatusSeeOther)
 }
 
 // MCP:HANDLERS:START

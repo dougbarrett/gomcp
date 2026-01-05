@@ -219,6 +219,7 @@ func TestViewTemplatesExecute(t *testing.T) {
 		ViewName          string
 		Fields            []generator.FieldData
 		Columns           []generator.ColumnData
+		Relationships     []generator.RelationshipData
 		WithPagination    bool
 		WithSearch        bool
 		WithFilters       bool
@@ -248,6 +249,7 @@ func TestViewTemplatesExecute(t *testing.T) {
 			{Key: "name", Label: "Name", Sortable: true},
 			{Key: "price", Label: "Price", Sortable: true, Format: "currency"},
 		},
+		Relationships:   []generator.RelationshipData{},
 		WithPagination:  true,
 		WithSearch:      true,
 		WithFilters:     false,

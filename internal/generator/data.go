@@ -265,6 +265,8 @@ type ViewData struct {
 	Fields []FieldData
 	// Columns is the list of columns (for table views).
 	Columns []ColumnData
+	// Relationships is the list of model relationships.
+	Relationships []RelationshipData
 	// WithPagination enables pagination.
 	WithPagination bool
 	// WithSearch enables search.
@@ -313,6 +315,8 @@ type FormData struct {
 	Action string
 	// Fields is the list of form fields.
 	Fields []FieldData
+	// Relationships is the list of model relationships.
+	Relationships []RelationshipData
 	// SubmitEndpoint is the submission URL.
 	SubmitEndpoint string
 	// Method is POST or PUT.
