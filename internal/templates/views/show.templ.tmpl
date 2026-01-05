@@ -9,8 +9,9 @@ import (
 
 // [[.ModelName]]ShowProps contains props for the [[.ModelName]] show view.
 type [[.ModelName]]ShowProps struct {
-	Item     *models.[[.ModelName]]
-	BasePath string // URL base path (e.g., "/admin/[[.URLPathSegment]]" or "[[.URLPath]]")
+	Item      *models.[[.ModelName]]
+	BasePath  string // URL base path (e.g., "/admin/[[.URLPathSegment]]" or "[[.URLPath]]")
+	CSRFToken string
 }
 
 // getBasePath returns the base path, defaulting to "[[.URLPath]]" if not set.

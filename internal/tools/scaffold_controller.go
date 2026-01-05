@@ -34,8 +34,8 @@ Prefer scaffold_domain for new features - it generates all layers consistently.`
 }
 
 func scaffoldController(registry *Registry, input types.ScaffoldControllerInput) (types.ScaffoldResult, error) {
-	// Validate input
-	if err := utils.ValidateDomainName(input.DomainName); err != nil {
+	// Validate input - support nested paths like "admin/users"
+	if err := utils.ValidateDomainPath(input.DomainName); err != nil {
 		return types.NewErrorResult(err.Error()), nil
 	}
 
@@ -71,23 +71,26 @@ func scaffoldController(registry *Registry, input types.ScaffoldControllerInput)
 	gen.SetDryRun(input.DryRun)
 
 	// Prepare template data
-	pkgName := utils.ToPackageName(input.DomainName)
+	// For nested paths like "admin/users", use base name for package/model
+	baseDomain := utils.ParseDomainPath(input.DomainName)
+	domainDir := utils.DomainPathToDir(input.DomainName)
+	pkgName := utils.ToPackageName(baseDomain)
 	urlPath := input.BasePath
 	if urlPath == "" {
-		urlPath = utils.ToURLPath(input.DomainName)
+		urlPath = utils.ToURLPath(input.DomainName) // Keep full path for URL
 	}
 
 	data := generator.DomainData{
 		ModulePath:   modulePath,
 		DomainName:   input.DomainName,
-		ModelName:    utils.ToModelName(input.DomainName),
+		ModelName:    utils.ToModelName(baseDomain),
 		PackageName:  pkgName,
-		VariableName: utils.ToVariableName(input.DomainName),
+		VariableName: utils.ToVariableName(baseDomain),
 		URLPath:      urlPath,
 	}
 
-	// Create directory
-	controllerDir := filepath.Join("internal", "web", pkgName)
+	// Create directory - use full path for nested domains
+	controllerDir := filepath.Join("internal", "web", domainDir)
 	if err := gen.EnsureDir(controllerDir); err != nil {
 		return types.NewErrorResult(fmt.Sprintf("failed to create directory: %v", err)), nil
 	}

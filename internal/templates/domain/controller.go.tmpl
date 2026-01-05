@@ -75,11 +75,12 @@ func (c *Controller) List(w http.ResponseWriter, r *http.Request) {
 
 	[[- if .WithCrudViews]]
 	props := views.[[.ModelName]]ListProps{
-		Items:      result.Items,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-		TotalItems: result.TotalItems,
-		CSRFToken:  middleware.GetCSRFToken(r.Context()),
+		Items:       result.Items,
+		Page:        result.Page,
+		TotalPages:  result.TotalPages,
+		TotalItems:  result.TotalItems,
+		CSRFToken:   middleware.GetCSRFToken(r.Context()),
+		SearchQuery: search,
 	}
 
 	// For HTMX partial requests, render just the list content

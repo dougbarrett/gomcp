@@ -43,7 +43,8 @@ func scaffoldTable(registry *Registry, input types.ScaffoldTableInput) (types.Sc
 		return types.NewErrorResult("table name is required"), nil
 	}
 
-	if err := utils.ValidateDomainName(input.Domain); err != nil {
+	// Support nested paths like "admin/users"
+	if err := utils.ValidateDomainPath(input.Domain); err != nil {
 		return types.NewErrorResult(err.Error()), nil
 	}
 
@@ -76,12 +77,16 @@ func scaffoldTable(registry *Registry, input types.ScaffoldTableInput) (types.Sc
 	gen := registry.NewGenerator("")
 	gen.SetDryRun(input.DryRun)
 
-	// Prepare template data
-	data := buildTableData(input, modulePath)
+	// For nested paths like "admin/users", use base name for package/model
+	baseDomain := utils.ParseDomainPath(input.Domain)
+	domainDir := utils.DomainPathToDir(input.Domain)
+	basePkgName := utils.ToPackageName(baseDomain)
 
-	// Determine output path
-	pkgName := utils.ToPackageName(input.Domain)
-	viewDir := filepath.Join("internal", "web", pkgName, "views")
+	// Prepare template data
+	data := buildTableData(input, modulePath, baseDomain)
+
+	// Determine output path - use full path for directory structure
+	viewDir := filepath.Join("internal", "web", domainDir, "views")
 	outputPath := filepath.Join(viewDir, input.TableName+".templ")
 
 	// Ensure directory exists
@@ -104,8 +109,8 @@ func scaffoldTable(registry *Registry, input types.ScaffoldTableInput) (types.Sc
 
 	nextSteps := []string{
 		"templ generate",
-		fmt.Sprintf("Import the table in internal/web/%s/%s.go", pkgName, pkgName),
-		fmt.Sprintf("Add list handler that uses the table in the %s controller", pkgName),
+		fmt.Sprintf("Import the table in internal/web/%s/%s.go", domainDir, basePkgName),
+		fmt.Sprintf("Add list handler that uses the table in the %s controller", basePkgName),
 	}
 
 	suggestedTools := []types.ToolHint{
@@ -142,11 +147,12 @@ func scaffoldTable(registry *Registry, input types.ScaffoldTableInput) (types.Sc
 }
 
 // buildTableData creates TableData from ScaffoldTableInput.
-func buildTableData(input types.ScaffoldTableInput, modulePath string) generator.TableData {
-	modelName := utils.ToModelName(input.Domain)
-	pkgName := utils.ToPackageName(input.Domain)
-	varName := utils.ToVariableName(input.Domain)
-	urlPath := utils.ToURLPath(input.Domain)
+// baseDomain is the base name extracted from nested paths (e.g., "users" from "admin/users").
+func buildTableData(input types.ScaffoldTableInput, modulePath, baseDomain string) generator.TableData {
+	modelName := utils.ToModelName(baseDomain)
+	pkgName := utils.ToPackageName(baseDomain)
+	varName := utils.ToVariableName(baseDomain)
+	urlPath := utils.ToURLPath(input.Domain) // Keep full path for URL
 
 	// Build columns
 	columns := generator.NewColumnDataList(input.Columns)

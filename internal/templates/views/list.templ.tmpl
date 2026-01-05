@@ -9,14 +9,13 @@ import (
 
 // [[.ModelName]]ListProps contains props for the [[.ModelName]] list view.
 type [[.ModelName]]ListProps struct {
-	Items      []models.[[.ModelName]]
-	Page       int
-	TotalPages int
-	TotalItems int
-	BasePath   string // URL base path (e.g., "/admin/[[.URLPathSegment]]" or "[[.URLPath]]")
-	[[- if .WithSearch]]
+	Items       []models.[[.ModelName]]
+	Page        int
+	TotalPages  int
+	TotalItems  int
+	BasePath    string // URL base path (e.g., "/admin/[[.URLPathSegment]]" or "[[.URLPath]]")
+	CSRFToken   string
 	SearchQuery string
-	[[- end]]
 }
 
 // getBasePath returns the base path, defaulting to "[[.URLPath]]" if not set.
