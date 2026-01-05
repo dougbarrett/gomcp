@@ -44,11 +44,15 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 	}
 
 	// Create project path
-	projectPath := filepath.Join(registry.WorkingDir, input.ProjectName)
-
-	// Check if project already exists
-	if utils.DirExists(projectPath) && !input.DryRun {
-		return types.NewErrorResult(fmt.Sprintf("project directory already exists: %s", projectPath)), nil
+	var projectPath string
+	if input.InCurrentDir {
+		projectPath = registry.WorkingDir
+	} else {
+		projectPath = filepath.Join(registry.WorkingDir, input.ProjectName)
+		// Check if project already exists (only when creating subdirectory)
+		if utils.DirExists(projectPath) && !input.DryRun {
+			return types.NewErrorResult(fmt.Sprintf("project directory already exists: %s", projectPath)), nil
+		}
 	}
 
 	// Create generator
@@ -156,10 +160,18 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 
 	// Prepare result
 	result := gen.Result()
-	nextSteps := []string{
-		fmt.Sprintf("cd %s", input.ProjectName),
-		"go mod tidy",
-		"task dev  # Start development server",
+	var nextSteps []string
+	if input.InCurrentDir {
+		nextSteps = []string{
+			"go mod tidy",
+			"task dev  # Start development server",
+		}
+	} else {
+		nextSteps = []string{
+			fmt.Sprintf("cd %s", input.ProjectName),
+			"go mod tidy",
+			"task dev  # Start development server",
+		}
 	}
 
 	if input.DryRun {

@@ -3,7 +3,7 @@ package types
 
 // ScaffoldProjectInput is the input for the scaffold_project tool.
 type ScaffoldProjectInput struct {
-	// ProjectName is the name of the project directory.
+	// ProjectName is the name of the project (used for display and defaults).
 	ProjectName string `json:"project_name"`
 	// ModulePath is the Go module path (e.g., github.com/user/project).
 	ModulePath string `json:"module_path"`
@@ -11,6 +11,8 @@ type ScaffoldProjectInput struct {
 	DatabaseType string `json:"database_type,omitempty"`
 	// WithAuth enables authentication scaffolding.
 	WithAuth bool `json:"with_auth,omitempty"`
+	// InCurrentDir generates files in the current directory instead of a subdirectory.
+	InCurrentDir bool `json:"in_current_dir,omitempty"`
 	// DryRun previews changes without writing files.
 	DryRun bool `json:"dry_run,omitempty"`
 }
