@@ -149,12 +149,43 @@ func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
 // New handles GET [[.URLPath]]/new
 func (c *Controller) New(w http.ResponseWriter, r *http.Request) {
 	[[- if .WithCrudViews]]
+	[[- if hasBelongsTo .Relationships]]
+	res := web.NewResponse(w, r)
+
+	// TODO: Fetch related records for select dropdowns
+	// Example:
+	[[- range .Relationships]]
+	[[- if .IsBelongsTo]]
+	// [[.VariableName | pluralize]], err := c.service.Get[[.Model | pluralize]](r.Context())
+	// if err != nil {
+	//     res.Error(http.StatusInternalServerError, "Failed to load [[.Model | pluralize | toLower]]")
+	//     return
+	// }
+	[[- end]]
+	[[- end]]
+
+	props := views.[[.ModelName]]FormProps{
+		Item:      nil,
+		Errors:    nil,
+		IsEdit:    false,
+		CSRFToken: middleware.GetCSRFToken(r.Context()),
+		// TODO: Pass related records to form
+		[[- range .Relationships]]
+		[[- if .IsBelongsTo]]
+		// [[.Model]]Options: [[.VariableName | pluralize]],
+		[[- end]]
+		[[- end]]
+	}
+	_ = res // unused if no HTMX check below
+	c.render(w, r, views.[[.ModelName]]Form(props))
+	[[- else]]
 	c.render(w, r, views.[[.ModelName]]Form(views.[[.ModelName]]FormProps{
 		Item:      nil,
 		Errors:    nil,
 		IsEdit:    false,
 		CSRFToken: middleware.GetCSRFToken(r.Context()),
 	}))
+	[[- end]]
 	[[- else]]
 	res := web.NewResponse(w, r)
 	res.JSON(http.StatusOK, map[string]string{"action": "new"})
@@ -244,12 +275,39 @@ func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	[[- if .WithCrudViews]]
+	[[- if hasBelongsTo .Relationships]]
+	// TODO: Fetch related records for select dropdowns
+	[[- range .Relationships]]
+	[[- if .IsBelongsTo]]
+	// [[.VariableName | pluralize]], err := c.service.Get[[.Model | pluralize]](r.Context())
+	// if err != nil {
+	//     res.Error(http.StatusInternalServerError, "Failed to load [[.Model | pluralize | toLower]]")
+	//     return
+	// }
+	[[- end]]
+	[[- end]]
+
+	props := views.[[.ModelName]]FormProps{
+		Item:      [[$.VariableName]],
+		Errors:    nil,
+		IsEdit:    true,
+		CSRFToken: middleware.GetCSRFToken(r.Context()),
+		// TODO: Pass related records to form
+		[[- range .Relationships]]
+		[[- if .IsBelongsTo]]
+		// [[.Model]]Options: [[.VariableName | pluralize]],
+		[[- end]]
+		[[- end]]
+	}
+	c.render(w, r, views.[[.ModelName]]Form(props))
+	[[- else]]
 	c.render(w, r, views.[[.ModelName]]Form(views.[[.ModelName]]FormProps{
 		Item:      [[.VariableName]],
 		Errors:    nil,
 		IsEdit:    true,
 		CSRFToken: middleware.GetCSRFToken(r.Context()),
 	}))
+	[[- end]]
 	[[- else]]
 	res.JSON(http.StatusOK, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
 	[[- end]]
@@ -304,8 +362,10 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	[[- else if eq .Type "bool"]]
 	// For checkboxes, explicit handling: form sends "true"/"on" when checked
-	boolVal := r.FormValue("[[.JSONName]]") == "true" || r.FormValue("[[.JSONName]]") == "on"
-	input.[[.Name]] = &boolVal
+	{
+		boolVal := r.FormValue("[[.JSONName]]") == "true" || r.FormValue("[[.JSONName]]") == "on"
+		input.[[.Name]] = &boolVal
+	}
 	[[- else if eq .Type "time.Time"]]
 	if v := r.FormValue("[[.JSONName]]"); v != "" {
 		if t, err := time.Parse("2006-01-02T15:04", v); err == nil {

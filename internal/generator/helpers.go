@@ -364,5 +364,26 @@ func TemplateFuncMap() template.FuncMap {
 			}
 			return false
 		},
+
+		// Check if there are any belongs_to relationships
+		"hasBelongsTo": func(relationships []RelationshipData) bool {
+			for _, r := range relationships {
+				if r.IsBelongsTo {
+					return true
+				}
+			}
+			return false
+		},
+
+		// Filter belongs_to relationships
+		"belongsToRelationships": func(relationships []RelationshipData) []RelationshipData {
+			var result []RelationshipData
+			for _, r := range relationships {
+				if r.IsBelongsTo {
+					result = append(result, r)
+				}
+			}
+			return result
+		},
 	}
 }

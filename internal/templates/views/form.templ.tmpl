@@ -14,6 +14,11 @@ type [[.ModelName]]FormProps struct {
 	IsEdit     bool
 	CSRFToken  string
 	BasePath   string // URL base path (e.g., "/admin/[[.URLPathSegment]]" or "[[.URLPath]]")
+[[- range .Relationships]]
+[[- if .IsBelongsTo]]
+	[[.Model]]Options []models.[[.Model]] // Options for [[.Model]] select dropdown
+[[- end]]
+[[- end]]
 }
 
 // getBasePath returns the base path, defaulting to "[[.URLPath]]" if not set.
@@ -177,6 +182,35 @@ templ [[.ModelName]]Form(props [[.ModelName]]FormProps) {
 						[[- end]]
 						@components.FormError(props.Errors["[[.JSONName]]"])
 					</div>
+					[[- end]]
+					[[- range .Relationships]]
+					[[- if .IsBelongsTo]]
+					<!-- [[.Model]] Select -->
+					<div class="space-y-2">
+						@components.Label("[[.ForeignKey | toJSONTag]]", true) {
+							[[.Model | toLabel]]
+						}
+						@components.Select(components.SelectProps{
+							ID:       "[[.ForeignKey | toJSONTag]]",
+							Name:     "[[.ForeignKey | toJSONTag]]",
+							Required: true,
+							Error:    props.Errors["[[.ForeignKey | toJSONTag]]"],
+						}) {
+							<option value="">Select [[.Model | toLabel | toLower]]</option>
+							for _, opt := range props.[[.Model]]Options {
+								<option
+									value={ fmt.Sprintf("%d", opt.ID) }
+									if props.Item != nil && props.Item.[[.ForeignKey]] == opt.ID {
+										selected
+									}
+								>
+									{ opt.Name }
+								</option>
+							}
+						}
+						@components.FormError(props.Errors["[[.ForeignKey | toJSONTag]]"])
+					</div>
+					[[- end]]
 					[[- end]]
 					<div class="flex justify-end gap-3 pt-4">
 						@components.Button(components.ButtonProps{Variant: "outline", Attributes: templ.Attributes{"_": "on click remove closest .fixed"}}) {

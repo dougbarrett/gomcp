@@ -243,15 +243,19 @@ func scaffoldDomain(registry *Registry, input types.ScaffoldDomainInput) (types.
 		return *conflictResult, nil
 	}
 
-	// Inject into main.go if not dry run
+	// Inject into main.go and database.go if not dry run
 	if !input.DryRun {
 		mainGoPath := filepath.Join(registry.WorkingDir, "cmd", "web", "main.go")
+		databaseGoPath := filepath.Join(registry.WorkingDir, "internal", "database", "database.go")
 		if utils.FileExists(mainGoPath) {
-			if err := injectDomainWiring(mainGoPath, modulePath, pkgName, input.DomainName, data.RouteGroup); err != nil {
+			if err := injectDomainWiring(mainGoPath, databaseGoPath, modulePath, pkgName, input.DomainName, data.RouteGroup); err != nil {
 				// Log warning but don't fail
 				fmt.Printf("Warning: could not inject DI wiring: %v\n", err)
 			} else {
 				result.FilesUpdated = append(result.FilesUpdated, "cmd/web/main.go")
+				if utils.FileExists(databaseGoPath) {
+					result.FilesUpdated = append(result.FilesUpdated, "internal/database/database.go")
+				}
 			}
 		}
 
@@ -339,8 +343,10 @@ func injectInverseRelationships(workingDir string, domainName string, relationsh
 		switch rel.Type {
 		case "belongs_to":
 			// belongs_to -> has_many (e.g., Order belongs_to User -> User has_many Orders)
+			// The foreignKey is the FK column on the child model (Order.UserID), not the child model's name
 			fieldName := utils.Pluralize(modelName)
-			foreignKey := modelName + "ID"
+			relatedModelName := utils.ToModelName(rel.Model)
+			foreignKey := relatedModelName + "ID"
 			inverseFieldCode = fmt.Sprintf(`%s []%s `+"`"+`gorm:"foreignKey:%s" json:"%s,omitempty"`+"`",
 				fieldName, modelName, foreignKey, utils.ToSnakeCase(fieldName))
 
@@ -392,9 +398,10 @@ func injectInverseRelationships(workingDir string, domainName string, relationsh
 	}
 }
 
-// injectDomainWiring injects the domain wiring into main.go.
-func injectDomainWiring(mainGoPath, modulePath, pkgName, domainName, routeGroup string) error {
-	injector, err := modifier.NewInjector(mainGoPath)
+// injectDomainWiring injects the domain wiring into main.go and database.go.
+func injectDomainWiring(mainGoPath, databaseGoPath, modulePath, pkgName, domainName, routeGroup string) error {
+	// Inject into main.go
+	mainInjector, err := modifier.NewInjector(mainGoPath)
 	if err != nil {
 		return err
 	}
@@ -402,47 +409,62 @@ func injectDomainWiring(mainGoPath, modulePath, pkgName, domainName, routeGroup 
 	// Inject imports with aliases to avoid naming conflicts
 	repoImport := fmt.Sprintf("%s/internal/repository/%s", modulePath, pkgName)
 	repoAlias := utils.ToRepoImportAlias(domainName)
-	if err := injector.InjectImportWithAlias(repoImport, repoAlias); err != nil {
+	if err := mainInjector.InjectImportWithAlias(repoImport, repoAlias); err != nil {
 		return err
 	}
 
 	serviceImport := fmt.Sprintf("%s/internal/services/%s", modulePath, pkgName)
 	serviceAlias := utils.ToServiceImportAlias(domainName)
-	if err := injector.InjectImportWithAlias(serviceImport, serviceAlias); err != nil {
+	if err := mainInjector.InjectImportWithAlias(serviceImport, serviceAlias); err != nil {
 		return err
 	}
 
 	controllerImport := fmt.Sprintf("%s/internal/web/%s", modulePath, pkgName)
 	controllerAlias := utils.ToControllerImportAlias(domainName)
-	if err := injector.InjectImportWithAlias(controllerImport, controllerAlias); err != nil {
-		return err
-	}
-
-	// Inject model into AutoMigrate
-	modelName := utils.ToModelName(domainName)
-	if err := injector.InjectModel(modelName); err != nil {
+	if err := mainInjector.InjectImportWithAlias(controllerImport, controllerAlias); err != nil {
 		return err
 	}
 
 	// Inject repository
-	if err := injector.InjectRepo(domainName, modulePath); err != nil {
+	if err := mainInjector.InjectRepo(domainName, modulePath); err != nil {
 		return err
 	}
 
 	// Inject service
-	if err := injector.InjectService(domainName); err != nil {
+	if err := mainInjector.InjectService(domainName); err != nil {
 		return err
 	}
 
 	// Inject controller
-	if err := injector.InjectController(domainName); err != nil {
+	if err := mainInjector.InjectController(domainName); err != nil {
 		return err
 	}
 
 	// Inject route with route group
-	if err := injector.InjectRouteWithGroup(domainName, routeGroup); err != nil {
+	if err := mainInjector.InjectRouteWithGroup(domainName, routeGroup); err != nil {
 		return err
 	}
 
-	return injector.Save()
+	if err := mainInjector.Save(); err != nil {
+		return err
+	}
+
+	// Inject model into database.go AutoMigrate
+	if databaseGoPath != "" && utils.FileExists(databaseGoPath) {
+		dbInjector, err := modifier.NewInjector(databaseGoPath)
+		if err != nil {
+			return err
+		}
+
+		modelName := utils.ToModelName(domainName)
+		if err := dbInjector.InjectModel(modelName); err != nil {
+			return err
+		}
+
+		if err := dbInjector.Save(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

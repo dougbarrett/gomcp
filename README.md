@@ -109,11 +109,14 @@ When enabled, generates a complete authentication system:
 | ----------------------------------- | -------------------------------------------------- |
 | `internal/models/user.go`           | User model with password hashing (bcrypt)          |
 | `internal/repository/user/user.go`  | User data access layer                             |
+| `internal/models/role.go`           | Role model with admin/user roles                   |
 | `internal/services/auth/auth.go`    | Login, register, logout, password change           |
 | `internal/services/auth/session.go` | Session management with gorilla/sessions           |
 | `internal/web/middleware/auth.go`   | RequireAuth, RequireAdmin, OptionalAuth middleware |
 | `internal/web/auth/auth.go`         | Auth HTTP handlers                                 |
 | `internal/web/auth/views/*.templ`   | Login and registration pages                       |
+| `internal/web/dashboard/`           | Dashboard controller and views                     |
+| `internal/web/profile/`             | Profile/settings controller and views              |
 
 Features:
 
@@ -124,6 +127,35 @@ Features:
 - HTMX-compatible redirects
 - Flash messages for errors/success
 - Last login tracking
+- Dashboard page with welcome message
+- Profile/settings page for users to update their info
+
+**User Management** (with `with_user_management: true`):
+
+When enabled alongside `with_auth`, generates a complete admin user management system:
+
+| Component                              | Description                              |
+| -------------------------------------- | ---------------------------------------- |
+| `internal/services/user/user.go`       | User CRUD service                        |
+| `internal/web/users/users.go`          | Admin user management controller         |
+| `internal/web/users/views/*.templ`     | List, form, show, password change views  |
+
+Features:
+
+- User list with search and pagination
+- Create/edit users with role assignment
+- Activate/deactivate users
+- Change user passwords
+- Self-action prevention (can't delete/deactivate yourself)
+- Admin-only routes protected by middleware
+- Admin sidebar navigation (role-based visibility)
+
+**Database Seeding**:
+
+When `with_auth` is enabled, the seed command (`go run ./cmd/seed`) will:
+
+- Create default roles (admin, user)
+- Create an initial admin user: `admin@example.com` / `admin123`
 
 ### Domain Scaffolding (`scaffold_domain`)
 
@@ -206,26 +238,43 @@ Relationship options:
 | `scaffold_seed`    | Generate database seeder with optional faker support   |
 | `list_domains`     | List all scaffolded domains in the project             |
 | `update_di_wiring` | Update main.go with DI wiring for domains              |
+| `report_bug`       | Report issues with the scaffolding tools               |
+
+### Extension Tools
+
+Add custom methods to existing layers without overwriting:
+
+| Tool                       | Description                                      |
+| -------------------------- | ------------------------------------------------ |
+| `extend_repository`        | Add custom methods to an existing repository     |
+| `extend_service`           | Add custom methods to an existing service        |
+| `extend_controller`        | Add custom endpoints to an existing controller   |
+| `scaffold_service_for_repo`| Create a service for an existing repository      |
+
+These tools use marker comments (`MCP:METHODS:START/END`) to inject code into existing files.
 
 ### Code Injection
 
 The tool uses marker comments to inject code into existing files:
 
+**In `cmd/web/main.go`:**
 ```go
-// MCP:IMPORTS:START
-// MCP:IMPORTS:END
+// MCP:IMPORTS:START / MCP:IMPORTS:END     - Import statements
+// MCP:REPOS:START / MCP:REPOS:END         - Repository instantiation
+// MCP:SERVICES:START / MCP:SERVICES:END   - Service instantiation
+// MCP:CONTROLLERS:START / MCP:CONTROLLERS:END - Controller instantiation
+// MCP:ROUTES:START / MCP:ROUTES:END       - Route registration
+```
 
-// MCP:REPOS:START
-// MCP:REPOS:END
+**In `internal/database/database.go`:**
+```go
+// MCP:MODELS:START / MCP:MODELS:END       - AutoMigrate model list
+```
 
-// MCP:SERVICES:START
-// MCP:SERVICES:END
-
-// MCP:CONTROLLERS:START
-// MCP:CONTROLLERS:END
-
-// MCP:ROUTES:START
-// MCP:ROUTES:END
+**In repository/service/controller files:**
+```go
+// MCP:INTERFACE:START / MCP:INTERFACE:END - Interface method signatures
+// MCP:METHODS:START / MCP:METHODS:END     - Method implementations
 ```
 
 ## Technology Stack
@@ -319,7 +368,7 @@ Auto-generated admin interface:
 
 - CRUD for all domains
 - Dashboard with statistics
-- User management
+- ~~User management~~ ✅ Implemented via `with_user_management`
 - Activity logs
 
 ---
@@ -364,7 +413,9 @@ go-mcp/
 │   │   ├── views/        # View templates
 │   │   ├── components/   # Component templates
 │   │   ├── config/       # Config templates
-│   │   └── seed/         # Seeder templates
+│   │   ├── seed/         # Seeder templates
+│   │   ├── auth/         # Authentication templates
+│   │   └── usermgmt/     # User management templates
 │   ├── tools/            # MCP tool implementations
 │   ├── types/            # Input/output types
 │   └── utils/            # Validation and naming utilities

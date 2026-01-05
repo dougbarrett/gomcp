@@ -53,8 +53,9 @@ func updateDIWiring(registry *Registry, input types.UpdateDIWiringInput) (types.
 		return types.NewErrorResult(fmt.Sprintf("failed to get module path: %v", err)), nil
 	}
 
-	// Find main.go
+	// Find main.go and database.go
 	mainGoPath := filepath.Join(registry.WorkingDir, "cmd", "web", "main.go")
+	databaseGoPath := filepath.Join(registry.WorkingDir, "internal", "database", "database.go")
 	if !utils.FileExists(mainGoPath) {
 		return types.NewErrorResult("main.go not found at cmd/web/main.go"), nil
 	}
@@ -86,10 +87,15 @@ func updateDIWiring(registry *Registry, input types.UpdateDIWiringInput) (types.
 			return types.NewErrorResult(fmt.Sprintf("main.go is missing required markers: %v", missingMarkers)), nil
 		}
 
+		filesUpdated := []string{"cmd/web/main.go"}
+		if utils.FileExists(databaseGoPath) {
+			filesUpdated = append(filesUpdated, "internal/database/database.go")
+		}
+
 		return types.ScaffoldResult{
 			Success:      true,
-			Message:      fmt.Sprintf("Dry run: Would update main.go with wiring for %d domain(s)", len(input.Domains)),
-			FilesUpdated: []string{"cmd/web/main.go"},
+			Message:      fmt.Sprintf("Dry run: Would update main.go and database.go with wiring for %d domain(s)", len(input.Domains)),
+			FilesUpdated: filesUpdated,
 		}, nil
 	}
 
@@ -151,9 +157,38 @@ func updateDIWiring(registry *Registry, input types.UpdateDIWiringInput) (types.
 		}
 	}
 
-	// Save changes
+	// Save main.go changes
 	if err := injector.Save(); err != nil {
 		return types.NewErrorResult(fmt.Sprintf("failed to save main.go: %v", err)), nil
+	}
+
+	filesUpdated := []string{"cmd/web/main.go"}
+
+	// Inject models into database.go if it exists
+	if utils.FileExists(databaseGoPath) {
+		dbInjector, err := modifier.NewInjector(databaseGoPath)
+		if err != nil {
+			return types.NewErrorResult(fmt.Sprintf("failed to read database.go: %v", err)), nil
+		}
+
+		for _, domain := range input.Domains {
+			pkgName := utils.ToPackageName(domain)
+			// Skip auth domain as it's handled by scaffold_project
+			if pkgName == "auth" {
+				continue
+			}
+
+			modelName := utils.ToModelName(domain)
+			if err := dbInjector.InjectModel(modelName); err != nil {
+				// Log warning but don't fail - model injection is optional
+				fmt.Printf("Warning: could not inject model '%s' into database.go: %v\n", modelName, err)
+			}
+		}
+
+		if err := dbInjector.Save(); err != nil {
+			return types.NewErrorResult(fmt.Sprintf("failed to save database.go: %v", err)), nil
+		}
+		filesUpdated = append(filesUpdated, "internal/database/database.go")
 	}
 
 	suggestedTools := []types.ToolHint{
@@ -163,8 +198,8 @@ func updateDIWiring(registry *Registry, input types.UpdateDIWiringInput) (types.
 
 	return types.ScaffoldResult{
 		Success:        true,
-		Message:        fmt.Sprintf("Successfully updated main.go with wiring for %d domain(s)", len(input.Domains)),
-		FilesUpdated:   []string{"cmd/web/main.go"},
+		Message:        fmt.Sprintf("Successfully updated main.go and database.go with wiring for %d domain(s)", len(input.Domains)),
+		FilesUpdated:   filesUpdated,
 		SuggestedTools: suggestedTools,
 	}, nil
 }
