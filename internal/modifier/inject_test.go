@@ -481,7 +481,7 @@ func main() {}
 	}
 
 	result := injector.Content()
-	if !strings.Contains(result, "productRepo := product.NewRepository(db)") {
+	if !strings.Contains(result, "productRepo := productrepo.NewRepository(db)") {
 		t.Error("Repo should be injected")
 	}
 }
@@ -503,7 +503,7 @@ func main() {}
 	}
 
 	result := injector.Content()
-	if !strings.Contains(result, "productService := product.NewService(productRepo)") {
+	if !strings.Contains(result, "productService := productsvc.NewService(productRepo)") {
 		t.Error("Service should be injected")
 	}
 }
@@ -525,7 +525,7 @@ func main() {}
 	}
 
 	result := injector.Content()
-	if !strings.Contains(result, "productController := product.NewController(productService)") {
+	if !strings.Contains(result, "productController := productctrl.NewController(productService)") {
 		t.Error("Controller should be injected")
 	}
 }
@@ -753,9 +753,9 @@ func main() {
 		`"github.com/example/app/internal/services/product"`,
 		`"github.com/example/app/internal/web/product"`,
 		"&models.Product{},",
-		"productRepo := product.NewRepository(db)",
-		"productService := product.NewService(productRepo)",
-		"productController := product.NewController(productService)",
+		"productRepo := productrepo.NewRepository(db)",
+		"productService := productsvc.NewService(productRepo)",
+		"productController := productctrl.NewController(productService)",
 		"productController.RegisterRoutes(router)",
 	}
 

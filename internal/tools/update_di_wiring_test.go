@@ -236,8 +236,8 @@ func TestUpdateDIWiring(t *testing.T) {
 		if !containsString(content, "productRepo") {
 			t.Errorf("expected productRepo variable")
 		}
-		if !containsString(content, "product.NewRepository") {
-			t.Errorf("expected product.NewRepository call")
+		if !containsString(content, "productrepo.NewRepository") {
+			t.Errorf("expected productrepo.NewRepository call")
 		}
 	})
 
@@ -265,8 +265,8 @@ func TestUpdateDIWiring(t *testing.T) {
 		if !containsString(content, "productService") {
 			t.Errorf("expected productService variable")
 		}
-		if !containsString(content, "product.NewService") {
-			t.Errorf("expected product.NewService call")
+		if !containsString(content, "productsvc.NewService") {
+			t.Errorf("expected productsvc.NewService call")
 		}
 	})
 
@@ -294,8 +294,8 @@ func TestUpdateDIWiring(t *testing.T) {
 		if !containsString(content, "productController") {
 			t.Errorf("expected productController variable")
 		}
-		if !containsString(content, "product.NewController") {
-			t.Errorf("expected product.NewController call")
+		if !containsString(content, "productctrl.NewController") {
+			t.Errorf("expected productctrl.NewController call")
 		}
 	})
 
@@ -382,9 +382,9 @@ func TestUpdateDIWiring(t *testing.T) {
 		mainGoPath := filepath.Join(tmpDir, "cmd", "web", "main.go")
 		content := readFile(t, mainGoPath)
 
-		// Check package name is lowercase without underscore
-		if !containsString(content, "orderitem.NewRepository") {
-			t.Errorf("expected orderitem package name")
+		// Check package name is lowercase without underscore, with repo alias
+		if !containsString(content, "orderitemrepo.NewRepository") {
+			t.Errorf("expected orderitemrepo package alias")
 		}
 	})
 }
