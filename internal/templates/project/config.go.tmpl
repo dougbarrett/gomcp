@@ -50,7 +50,7 @@ type DatabaseConfig struct {
 func Load() *Config {
 	cfg := &Config{
 		Server: ServerConfig{
-			Address: getEnv("SERVER_ADDRESS", ":8080"),
+			Address: getServerAddress(),
 			Debug:   getEnv("DEBUG", "false") == "true",
 		},
 		Database: DatabaseConfig{
@@ -104,6 +104,15 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// getServerAddress returns the server address from environment variables.
+// Checks PORT first (common convention), then SERVER_ADDRESS, defaults to :8089.
+func getServerAddress() string {
+	if port := os.Getenv("PORT"); port != "" {
+		return ":" + port
+	}
+	return getEnv("SERVER_ADDRESS", ":8089")
 }
 
 func getDefaultDSN() string {
