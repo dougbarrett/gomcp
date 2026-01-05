@@ -26,7 +26,13 @@ Generates ALL layers at once following clean architecture:
 - Optional CRUD views (with_crud_views: true, default)
 
 Supports relationships: belongs_to, has_one, has_many, many_to_many
-Supports field types: string, int, int64, uint, float32, float64, bool, time.Time, pointers
+
+Supported field types:
+- Scalars: string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool
+- Time: time.Time, *time.Time (nullable)
+- Pointers (nullable): *string, *int, *int64, *uint, *float64, *bool
+- Slices: []byte, []string, []int, []uint
+- Custom types: any valid Go identifier (e.g., Status, models.Role)
 
 Automatically wires into main.go DI container. Run 'go mod tidy' and 'templ generate' after.
 

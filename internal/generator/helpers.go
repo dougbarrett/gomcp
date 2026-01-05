@@ -220,14 +220,38 @@ func TemplateFuncMap() template.FuncMap {
 		// Faker function for seeding
 		"fakerFunc": func(goType string) string {
 			fakerMap := map[string]string{
-				"string":     "gofakeit.Word()",
-				"int":        "gofakeit.Number(1, 1000)",
-				"int64":      "int64(gofakeit.Number(1, 1000))",
-				"uint":       "uint(gofakeit.Number(1, 1000))",
-				"float64":    "gofakeit.Float64Range(0, 1000)",
-				"bool":       "gofakeit.Bool()",
+				// Scalar types
+				"string":  "gofakeit.Word()",
+				"int":     "gofakeit.Number(1, 1000)",
+				"int8":    "int8(gofakeit.Number(1, 100))",
+				"int16":   "int16(gofakeit.Number(1, 1000))",
+				"int32":   "int32(gofakeit.Number(1, 1000))",
+				"int64":   "int64(gofakeit.Number(1, 1000))",
+				"uint":    "uint(gofakeit.Number(1, 1000))",
+				"uint8":   "uint8(gofakeit.Number(1, 100))",
+				"uint16":  "uint16(gofakeit.Number(1, 1000))",
+				"uint32":  "uint32(gofakeit.Number(1, 1000))",
+				"uint64":  "uint64(gofakeit.Number(1, 1000))",
+				"float32": "float32(gofakeit.Float64Range(0, 1000))",
+				"float64": "gofakeit.Float64Range(0, 1000)",
+				"bool":    "gofakeit.Bool()",
+
+				// Time types
 				"time.Time":  "gofakeit.Date()",
 				"*time.Time": "func() *time.Time { t := gofakeit.Date(); return &t }()",
+
+				// Pointer types (for nullable fields)
+				"*string":  "func() *string { s := gofakeit.Word(); return &s }()",
+				"*int":     "func() *int { i := gofakeit.Number(1, 1000); return &i }()",
+				"*int64":   "func() *int64 { i := int64(gofakeit.Number(1, 1000)); return &i }()",
+				"*uint":    "func() *uint { u := uint(gofakeit.Number(1, 1000)); return &u }()",
+				"*float64": "func() *float64 { f := gofakeit.Float64Range(0, 1000); return &f }()",
+				"*bool":    "func() *bool { b := gofakeit.Bool(); return &b }()",
+
+				// Slice types
+				"[]byte":   "[]byte(gofakeit.Word())",
+				"[]string": "[]string{gofakeit.Word(), gofakeit.Word()}",
+				"[]int":    "[]int{gofakeit.Number(1, 100), gofakeit.Number(1, 100)}",
 			}
 			if fn, ok := fakerMap[goType]; ok {
 				return fn

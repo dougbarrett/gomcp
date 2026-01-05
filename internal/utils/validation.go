@@ -55,25 +55,42 @@ var validFormTypes = map[string]bool{
 }
 
 // validGoTypes are commonly valid Go types for model fields.
+// Note: Pointer types (*Type) and slice types ([]Type) are also supported
+// via dynamic validation in ValidateFieldType(), not just this map.
 var validGoTypes = map[string]bool{
-	"string":     true,
-	"int":        true,
-	"int8":       true,
-	"int16":      true,
-	"int32":      true,
-	"int64":      true,
-	"uint":       true,
-	"uint8":      true,
-	"uint16":     true,
-	"uint32":     true,
-	"uint64":     true,
-	"float32":    true,
-	"float64":    true,
-	"bool":       true,
+	// Scalar types
+	"string":  true,
+	"int":     true,
+	"int8":    true,
+	"int16":   true,
+	"int32":   true,
+	"int64":   true,
+	"uint":    true,
+	"uint8":   true,
+	"uint16":  true,
+	"uint32":  true,
+	"uint64":  true,
+	"float32": true,
+	"float64": true,
+	"bool":    true,
+
+	// Time types
 	"time.Time":  true,
 	"*time.Time": true,
-	"[]byte":     true,
-	"[]string":   true,
+
+	// Pointer types (for nullable fields)
+	"*string":  true,
+	"*int":     true,
+	"*int64":   true,
+	"*uint":    true,
+	"*float64": true,
+	"*bool":    true,
+
+	// Slice types
+	"[]byte":   true,
+	"[]string": true,
+	"[]int":    true,
+	"[]uint":   true,
 }
 
 // validModalTypes are the supported modal types.

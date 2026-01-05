@@ -93,7 +93,10 @@ func NewFieldDataList(fields []types.FieldDef) []FieldData {
 
 // inferFormType infers the form type from a Go type.
 func inferFormType(goType string) string {
-	switch goType {
+	// Handle pointer types by stripping the * prefix
+	baseType := strings.TrimPrefix(goType, "*")
+
+	switch baseType {
 	case "string":
 		return "input"
 	case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64":
@@ -102,7 +105,7 @@ func inferFormType(goType string) string {
 		return "number"
 	case "bool":
 		return "checkbox"
-	case "time.Time", "*time.Time":
+	case "time.Time":
 		return "datetime"
 	default:
 		return "input"

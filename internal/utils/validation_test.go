@@ -214,14 +214,34 @@ func TestValidateFieldType(t *testing.T) {
 		// Valid built-in types
 		{"string", "string", false},
 		{"int", "int", false},
+		{"int8", "int8", false},
+		{"int16", "int16", false},
+		{"int32", "int32", false},
 		{"int64", "int64", false},
 		{"uint", "uint", false},
+		{"uint8", "uint8", false},
+		{"uint16", "uint16", false},
+		{"uint32", "uint32", false},
+		{"uint64", "uint64", false},
+		{"float32", "float32", false},
 		{"float64", "float64", false},
 		{"bool", "bool", false},
 		{"time.Time", "time.Time", false},
 		{"*time.Time", "*time.Time", false},
 		{"[]byte", "[]byte", false},
 		{"[]string", "[]string", false},
+
+		// Pointer types (nullable fields)
+		{"*string", "*string", false},
+		{"*int", "*int", false},
+		{"*int64", "*int64", false},
+		{"*uint", "*uint", false},
+		{"*float64", "*float64", false},
+		{"*bool", "*bool", false},
+
+		// Slice types
+		{"[]int", "[]int", false},
+		{"[]uint", "[]uint", false},
 
 		// Valid custom types
 		{"custom type", "CustomType", false},
