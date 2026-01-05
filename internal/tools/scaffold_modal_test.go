@@ -49,7 +49,7 @@ func TestScaffoldModal(t *testing.T) {
 
 	t.Run("accepts valid modal types", func(t *testing.T) {
 		registry, tmpDir := testRegistry(t)
-		// Modal doesn't require go.mod since it goes to components directory
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		validTypes := []string{"dialog", "sheet", "confirm"}
 
@@ -78,6 +78,7 @@ func TestScaffoldModal(t *testing.T) {
 
 	t.Run("generates dialog modal", func(t *testing.T) {
 		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldModalInput{
 			ModalName:   "product_dialog",
@@ -106,6 +107,7 @@ func TestScaffoldModal(t *testing.T) {
 
 	t.Run("generates sheet modal", func(t *testing.T) {
 		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldModalInput{
 			ModalName:   "filter_sheet",
@@ -129,6 +131,7 @@ func TestScaffoldModal(t *testing.T) {
 
 	t.Run("generates confirm modal", func(t *testing.T) {
 		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldModalInput{
 			ModalName:   "delete_confirm",
@@ -151,7 +154,8 @@ func TestScaffoldModal(t *testing.T) {
 	})
 
 	t.Run("includes HTMX URL in next steps", func(t *testing.T) {
-		registry, _ := testRegistry(t)
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldModalInput{
 			ModalName: "dynamic_modal",
@@ -182,6 +186,7 @@ func TestScaffoldModal(t *testing.T) {
 
 	t.Run("dry run does not create files", func(t *testing.T) {
 		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldModalInput{
 			ModalName: "test_modal",
@@ -207,7 +212,8 @@ func TestScaffoldModal(t *testing.T) {
 	})
 
 	t.Run("returns next steps", func(t *testing.T) {
-		registry, _ := testRegistry(t)
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldModalInput{
 			ModalName: "test_modal",

@@ -41,12 +41,18 @@ func scaffoldComponent(registry *Registry, input types.ScaffoldComponentInput) (
 		return types.NewErrorResult(err.Error()), nil
 	}
 
+	// Get module path from go.mod
+	modulePath, err := utils.GetModulePath(registry.WorkingDir)
+	if err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to get module path: %v", err)), nil
+	}
+
 	// Create generator
 	gen := registry.NewGenerator("")
 	gen.SetDryRun(input.DryRun)
 
 	// Prepare template data
-	data := buildComponentData(input)
+	data := buildComponentData(modulePath, input)
 
 	// Determine output path
 	outputDir := filepath.Join("internal", "web", "components")
@@ -106,7 +112,7 @@ func getComponentTemplatePath(componentType string) string {
 }
 
 // buildComponentData creates ComponentData from ScaffoldComponentInput.
-func buildComponentData(input types.ScaffoldComponentInput) generator.ComponentData {
+func buildComponentData(modulePath string, input types.ScaffoldComponentInput) generator.ComponentData {
 	// Build props
 	props := make([]generator.PropData, len(input.Props))
 	for i, prop := range input.Props {
@@ -119,6 +125,7 @@ func buildComponentData(input types.ScaffoldComponentInput) generator.ComponentD
 	}
 
 	return generator.ComponentData{
+		ModulePath:    modulePath,
 		ComponentName: input.ComponentName,
 		ComponentType: componentType,
 		Props:         props,

@@ -594,24 +594,6 @@ func TestSectionDef_JSONUnmarshal(t *testing.T) {
 	}
 }
 
-// TestAddTempluiComponentInput_JSONUnmarshal tests AddTempluiComponentInput JSON unmarshaling.
-func TestAddTempluiComponentInput_JSONUnmarshal(t *testing.T) {
-	jsonInput := `{"components":["button","input","card"],"force":true}`
-
-	var input AddTempluiComponentInput
-	err := json.Unmarshal([]byte(jsonInput), &input)
-	if err != nil {
-		t.Fatalf("Unmarshal error: %v", err)
-	}
-
-	if len(input.Components) != 3 {
-		t.Errorf("len(Components) = %d, want 3", len(input.Components))
-	}
-	if !input.Force {
-		t.Error("Force should be true")
-	}
-}
-
 // TestUpdateDIWiringInput_JSONUnmarshal tests UpdateDIWiringInput JSON unmarshaling.
 func TestUpdateDIWiringInput_JSONUnmarshal(t *testing.T) {
 	jsonInput := `{"domains":["user","product","order"],"dry_run":true}`

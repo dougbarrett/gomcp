@@ -10,7 +10,8 @@ import (
 
 func TestScaffoldComponent(t *testing.T) {
 	t.Run("validates component name", func(t *testing.T) {
-		registry, _ := testRegistry(t)
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		tests := []struct {
 			name          string
@@ -41,6 +42,7 @@ func TestScaffoldComponent(t *testing.T) {
 
 	t.Run("generates card component", func(t *testing.T) {
 		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldComponentInput{
 			ComponentName: "ProductCard",
@@ -71,6 +73,7 @@ func TestScaffoldComponent(t *testing.T) {
 
 	t.Run("generates modal component", func(t *testing.T) {
 		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldComponentInput{
 			ComponentName: "ConfirmModal",
@@ -92,6 +95,7 @@ func TestScaffoldComponent(t *testing.T) {
 
 	t.Run("generates form_field component", func(t *testing.T) {
 		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldComponentInput{
 			ComponentName: "CustomField",
@@ -113,6 +117,7 @@ func TestScaffoldComponent(t *testing.T) {
 
 	t.Run("generates custom component defaults to card", func(t *testing.T) {
 		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldComponentInput{
 			ComponentName: "CustomWidget",
@@ -134,6 +139,7 @@ func TestScaffoldComponent(t *testing.T) {
 
 	t.Run("with HTMX enabled", func(t *testing.T) {
 		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldComponentInput{
 			ComponentName: "DynamicCard",
@@ -156,6 +162,7 @@ func TestScaffoldComponent(t *testing.T) {
 
 	t.Run("dry run does not create files", func(t *testing.T) {
 		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldComponentInput{
 			ComponentName: "TestComponent",
@@ -181,7 +188,8 @@ func TestScaffoldComponent(t *testing.T) {
 	})
 
 	t.Run("returns next steps", func(t *testing.T) {
-		registry, _ := testRegistry(t)
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
 
 		input := types.ScaffoldComponentInput{
 			ComponentName: "TestComponent",
@@ -245,7 +253,7 @@ func TestBuildComponentData(t *testing.T) {
 		},
 	}
 
-	data := buildComponentData(input)
+	data := buildComponentData("github.com/test/myapp", input)
 
 	if data.ComponentName != "UserCard" {
 		t.Errorf("expected ComponentName to be UserCard, got %s", data.ComponentName)

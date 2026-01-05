@@ -47,12 +47,18 @@ func scaffoldModal(registry *Registry, input types.ScaffoldModalInput) (types.Sc
 		return types.NewErrorResult(err.Error()), nil
 	}
 
+	// Get module path from go.mod
+	modulePath, err := utils.GetModulePath(registry.WorkingDir)
+	if err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to get module path: %v", err)), nil
+	}
+
 	// Create generator
 	gen := registry.NewGenerator("")
 	gen.SetDryRun(input.DryRun)
 
 	// Prepare template data
-	data := generator.NewModalData(input)
+	data := generator.NewModalData(modulePath, input)
 
 	// Determine output path - modals go to shared components directory
 	outputDir := filepath.Join("internal", "web", "components")

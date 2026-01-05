@@ -332,20 +332,16 @@ func TestHelperFunctions_FormComponent(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"input", "input.Input"},
-		{"textarea", "textarea.Textarea"},
-		{"select", "select_box.SelectBox"},
-		{"checkbox", "checkbox.Checkbox"},
-		{"switch", "switch_comp.Switch"},
-		{"date", "date_picker.DatePicker"},
-		{"time", "time_picker.TimePicker"},
-		{"email", "input.Input"},
-		{"password", "input.Input"},
-		{"number", "input.Input"},
-		{"rating", "rating.Rating"},
-		{"tags", "tags_input.TagsInput"},
-		{"slider", "slider.Slider"},
-		{"unknown", "input.Input"}, // default
+		{"input", "components.Input"},
+		{"textarea", "components.Textarea"},
+		{"select", "components.Select"},
+		{"checkbox", "components.Checkbox"},
+		{"date", "components.Input"},
+		{"time", "components.Input"},
+		{"email", "components.Input"},
+		{"password", "components.Input"},
+		{"number", "components.Input"},
+		{"unknown", "components.Input"}, // default
 	}
 
 	for _, tt := range tests {

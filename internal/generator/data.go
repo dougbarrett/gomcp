@@ -374,6 +374,8 @@ func NewRowActionData(action types.RowActionDef) RowActionData {
 
 // ModalData is the template data for modal scaffolding.
 type ModalData struct {
+	// ModulePath is the Go module path.
+	ModulePath string
 	// ModalName is the modal component name.
 	ModalName string
 	// ModalType is dialog, sheet, or confirm.
@@ -397,8 +399,9 @@ type ModalData struct {
 }
 
 // NewModalData creates ModalData from ScaffoldModalInput.
-func NewModalData(input types.ScaffoldModalInput) ModalData {
+func NewModalData(modulePath string, input types.ScaffoldModalInput) ModalData {
 	return ModalData{
+		ModulePath:     modulePath,
 		ModalName:      input.ModalName,
 		ModalType:      input.ModalType,
 		Title:          input.Title,
@@ -414,6 +417,8 @@ func NewModalData(input types.ScaffoldModalInput) ModalData {
 
 // ComponentData is the template data for component scaffolding.
 type ComponentData struct {
+	// ModulePath is the Go module path.
+	ModulePath string
 	// ComponentName is the component name.
 	ComponentName string
 	// ComponentType is the component type.

@@ -6,7 +6,7 @@ A Model Context Protocol (MCP) server that provides scaffolding tools for Go web
 
 - **Project Scaffolding**: Initialize complete Go web application projects
 - **Domain-Driven Design**: Generate models, repositories, services, and controllers
-- **View Generation**: Create templ-based views with templui components
+- **View Generation**: Create templ-based views with reusable components
 - **Configuration Management**: Multi-locale TOML configuration files
 - **Dependency Injection**: Automatic DI wiring with marker-based code injection
 
@@ -113,7 +113,7 @@ When enabled, generates a complete authentication system:
 | `internal/services/auth/session.go` | Session management with gorilla/sessions           |
 | `internal/web/middleware/auth.go`   | RequireAuth, RequireAdmin, OptionalAuth middleware |
 | `internal/web/auth/auth.go`         | Auth HTTP handlers                                 |
-| `internal/web/auth/views/*.templ`   | Login and registration pages with templui          |
+| `internal/web/auth/views/*.templ`   | Login and registration pages                       |
 
 Features:
 
@@ -189,15 +189,14 @@ Relationship options:
 
 ### View Tools
 
-| Tool                    | Description                                          |
-| ----------------------- | ---------------------------------------------------- |
-| `scaffold_view`         | Generate templ views (list, show, form, table, card) |
-| `scaffold_form`         | Generate HTMX-powered forms with templui             |
-| `scaffold_table`        | Generate data tables with pagination/sorting         |
-| `scaffold_modal`        | Generate modal dialogs                               |
-| `scaffold_component`    | Generate reusable templ components                   |
-| `scaffold_page`         | Generate page templates with TOML config             |
-| `add_templui_component` | Install templui components                           |
+| Tool                 | Description                                          |
+| -------------------- | ---------------------------------------------------- |
+| `scaffold_view`      | Generate templ views (list, show, form, table, card) |
+| `scaffold_form`      | Generate HTMX-powered forms                          |
+| `scaffold_table`     | Generate data tables with pagination/sorting         |
+| `scaffold_modal`     | Generate modal dialogs                               |
+| `scaffold_component` | Generate reusable templ components                   |
+| `scaffold_page`      | Generate page templates with TOML config             |
 
 ### Configuration Tools
 
@@ -236,7 +235,6 @@ Generated projects use:
 - **[Go](https://go.dev/)** - Programming language
 - **[GORM](https://gorm.io/)** - ORM
 - **[templ](https://templ.guide/)** - Type-safe HTML templating
-- **[templui](https://templui.io/)** - UI component library
 - **[HTMX](https://htmx.org/)** - Frontend interactivity
 - **[Tailwind CSS](https://tailwindcss.com/)** - Styling
 - **[Task](https://taskfile.dev/)** - Task runner

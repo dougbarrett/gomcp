@@ -629,7 +629,7 @@ func TestNewModalData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data := NewModalData(tt.input)
+			data := NewModalData("github.com/test/myapp", tt.input)
 
 			if data.ModalName != tt.input.ModalName {
 				t.Errorf("ModalName = %q, want %q", data.ModalName, tt.input.ModalName)
