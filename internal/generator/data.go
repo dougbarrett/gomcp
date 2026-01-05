@@ -17,6 +17,8 @@ type ProjectData struct {
 	DatabaseType string
 	// WithAuth enables authentication scaffolding.
 	WithAuth bool
+	// WithUserManagement enables admin user management.
+	WithUserManagement bool
 }
 
 // NewProjectData creates ProjectData from ScaffoldProjectInput.

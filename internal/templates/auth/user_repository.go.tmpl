@@ -160,3 +160,12 @@ func WithOrder(field string, desc bool) QueryOption {
 		return db.Order(order)
 	}
 }
+
+// FindAllRoles retrieves all roles.
+func (r *Repository) FindAllRoles(ctx context.Context) ([]models.Role, error) {
+	var roles []models.Role
+	if err := r.db.WithContext(ctx).Order("id").Find(&roles).Error; err != nil {
+		return nil, err
+	}
+	return roles, nil
+}

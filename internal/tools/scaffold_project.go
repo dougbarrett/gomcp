@@ -33,6 +33,7 @@ Directory behavior:
 Options:
 - in_current_dir: true to force scaffold in current directory
 - with_auth: true to include full authentication system (login, register, sessions, middleware)
+- with_user_management: true to include admin user management (requires with_auth)
 - dry_run: true to preview files without writing
 
 After running: Execute 'go mod tidy' then 'task dev' to start.`,
@@ -55,6 +56,11 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 	}
 	if err := utils.ValidateDatabaseType(input.DatabaseType); err != nil {
 		return types.NewErrorResult(err.Error()), nil
+	}
+
+	// Validate that with_user_management requires with_auth
+	if input.WithUserManagement && !input.WithAuth {
+		return types.NewErrorResult("with_user_management requires with_auth to be enabled"), nil
 	}
 
 	// Set defaults
@@ -86,10 +92,11 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 
 	// Prepare template data
 	data := generator.ProjectData{
-		ProjectName:  input.ProjectName,
-		ModulePath:   input.ModulePath,
-		DatabaseType: dbType,
-		WithAuth:     input.WithAuth,
+		ProjectName:        input.ProjectName,
+		ModulePath:         input.ModulePath,
+		DatabaseType:       dbType,
+		WithAuth:           input.WithAuth,
+		WithUserManagement: input.WithUserManagement,
 	}
 
 	// Create directory structure
@@ -123,6 +130,15 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 			"internal/web/profile",
 			"internal/web/profile/views",
 		)
+
+		// Add user management directories if enabled
+		if input.WithUserManagement {
+			directories = append(directories,
+				"internal/services/user",
+				"internal/web/users",
+				"internal/web/users/views",
+			)
+		}
 	}
 
 	for _, dir := range directories {
@@ -196,6 +212,29 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 		for _, f := range authFiles {
 			if err := gen.GenerateFile(f.template, f.output, authData); err != nil {
 				return types.NewErrorResult(fmt.Sprintf("failed to generate auth file %s: %v", f.output, err)), nil
+			}
+		}
+
+		// Generate user management files if enabled
+		if input.WithUserManagement {
+			userMgmtFiles := []struct {
+				template string
+				output   string
+			}{
+				// User service
+				{"usermgmt/user_service.go.tmpl", "internal/services/user/user.go"},
+				// User controller
+				{"usermgmt/users_controller.go.tmpl", "internal/web/users/users.go"},
+				// User views
+				{"usermgmt/views/list.templ.tmpl", "internal/web/users/views/list.templ"},
+				{"usermgmt/views/form.templ.tmpl", "internal/web/users/views/form.templ"},
+				{"usermgmt/views/show.templ.tmpl", "internal/web/users/views/show.templ"},
+			}
+
+			for _, f := range userMgmtFiles {
+				if err := gen.GenerateFile(f.template, f.output, authData); err != nil {
+					return types.NewErrorResult(fmt.Sprintf("failed to generate user management file %s: %v", f.output, err)), nil
+				}
 			}
 		}
 	}

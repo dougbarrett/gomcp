@@ -12,10 +12,16 @@ import (
 	"github.com/go-chi/chi/v5"
 	userrepo "[[.ModulePath]]/internal/repository/user"
 	"[[.ModulePath]]/internal/services/auth"
+[[- if .WithUserManagement]]
+	usersvc "[[.ModulePath]]/internal/services/user"
+[[- end]]
 	authweb "[[.ModulePath]]/internal/web/auth"
 	"[[.ModulePath]]/internal/web/dashboard"
 	"[[.ModulePath]]/internal/web/middleware"
 	"[[.ModulePath]]/internal/web/profile"
+[[- if .WithUserManagement]]
+	"[[.ModulePath]]/internal/web/users"
+[[- end]]
 [[- end]]
 	// MCP:IMPORTS:START
 	// MCP:IMPORTS:END
@@ -55,6 +61,9 @@ func main() {
 	// MCP:SERVICES:START
 [[- if .WithAuth]]
 	authService := auth.NewService(userRepo, cfg)
+[[- if .WithUserManagement]]
+	userService := usersvc.NewService(userRepo)
+[[- end]]
 [[- end]]
 	// MCP:SERVICES:END
 
@@ -64,6 +73,9 @@ func main() {
 	dashboardController := dashboard.NewController()
 	profileController := profile.NewController(authService)
 	authMiddleware := middleware.NewAuthMiddleware(authService)
+[[- if .WithUserManagement]]
+	usersController := users.NewController(userService, authService)
+[[- end]]
 [[- end]]
 	// MCP:CONTROLLERS:END
 
@@ -99,6 +111,15 @@ func main() {
 		r.Route("/profile", profileController.RegisterRoutes)
 		r.Route("/settings", profileController.RegisterRoutes) // Settings alias for profile
 	})
+[[- if .WithUserManagement]]
+
+	// Admin routes (require admin role)
+	router.Group(func(r chi.Router) {
+		r.Use(authMiddleware.RequireAuth)
+		r.Use(authMiddleware.RequireAdmin)
+		r.Route("/admin/users", usersController.RegisterRoutes)
+	})
+[[- end]]
 [[- else]]
 	// Home page
 	web.RegisterHomeRoute(router)

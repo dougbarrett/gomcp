@@ -1,0 +1,295 @@
+package views
+
+import (
+	"fmt"
+	"strconv"
+
+	"[[.ModulePath]]/internal/models"
+	"[[.ModulePath]]/internal/web/components"
+)
+
+// ListProps contains props for the users list page.
+type ListProps struct {
+	Users      []models.User
+	Total      int64
+	Page       int
+	TotalPages int
+	Search     string
+	OrderBy    string
+	OrderDir   string
+	CSRFToken  string
+}
+
+// ListPage renders the full users list page.
+templ ListPage(props ListProps) {
+	<div class="space-y-6">
+		@components.PageHeader("User Management", "Manage user accounts and permissions")
+		<div class="flex justify-between items-center">
+			<div class="flex gap-2">
+				@searchForm(props)
+			</div>
+			<a
+				href="/admin/users/new"
+				class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+			>
+				@components.Icon("plus", "h-4 w-4")
+				Add User
+			</a>
+		</div>
+		<div id="users-table">
+			@UsersTable(props)
+		</div>
+	</div>
+}
+
+// searchForm renders the search form.
+templ searchForm(props ListProps) {
+	<form
+		hx-get="/admin/users"
+		hx-target="#users-table"
+		hx-trigger="submit, keyup changed delay:300ms from:#search-input"
+		class="flex gap-2"
+	>
+		<input type="hidden" name="sort" value={ props.OrderBy }/>
+		<input type="hidden" name="dir" value={ props.OrderDir }/>
+		@components.Input(components.InputProps{
+			ID:          "search-input",
+			Name:        "search",
+			Type:        "text",
+			Value:       props.Search,
+			Placeholder: "Search users...",
+			Class:       "w-64",
+		})
+		@components.Button(components.ButtonProps{Type: "submit", Variant: "outline"}) {
+			@components.Icon("magnifying-glass", "h-4 w-4")
+		}
+	</form>
+}
+
+// UsersTable renders the users table with pagination.
+templ UsersTable(props ListProps) {
+	@components.Card(components.CardProps{}) {
+		@components.CardContent("p-0") {
+			<div class="overflow-x-auto">
+				<table class="w-full">
+					<thead class="bg-muted/50">
+						<tr>
+							@sortableHeader("Name", "name", props)
+							@sortableHeader("Email", "email", props)
+							<th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Role</th>
+							@sortableHeader("Status", "active", props)
+							@sortableHeader("Created", "created_at", props)
+							<th class="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y">
+						if len(props.Users) == 0 {
+							<tr>
+								<td colspan="6" class="px-4 py-8 text-center text-muted-foreground">
+									No users found
+								</td>
+							</tr>
+						}
+						for _, user := range props.Users {
+							@userRow(user, props.CSRFToken)
+						}
+					</tbody>
+				</table>
+			</div>
+			if props.TotalPages > 1 {
+				@pagination(props)
+			}
+		}
+	}
+}
+
+// sortableHeader renders a sortable table header.
+templ sortableHeader(label, field string, props ListProps) {
+	<th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+		<button
+			hx-get={ fmt.Sprintf("/admin/users?sort=%s&dir=%s&search=%s", field, nextDir(field, props), props.Search) }
+			hx-target="#users-table"
+			class="flex items-center gap-1 hover:text-foreground"
+		>
+			{ label }
+			if props.OrderBy == field {
+				if props.OrderDir == "asc" {
+					@components.Icon("chevron-up", "h-4 w-4")
+				} else {
+					@components.Icon("chevron-down", "h-4 w-4")
+				}
+			}
+		</button>
+	</th>
+}
+
+// nextDir returns the next sort direction.
+func nextDir(field string, props ListProps) string {
+	if props.OrderBy == field && props.OrderDir == "asc" {
+		return "desc"
+	}
+	return "asc"
+}
+
+// userRow renders a single user row.
+templ userRow(user models.User, csrfToken string) {
+	<tr class="hover:bg-muted/50">
+		<td class="px-4 py-3">
+			<div class="flex items-center gap-3">
+				<div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+					<span class="text-sm font-medium text-primary">
+						{ string([]rune(user.Name)[0:1]) }
+					</span>
+				</div>
+				<span class="font-medium">{ user.Name }</span>
+			</div>
+		</td>
+		<td class="px-4 py-3 text-muted-foreground">{ user.Email }</td>
+		<td class="px-4 py-3">
+			if user.Role != nil {
+				@roleBadge(user.Role.Name)
+			} else {
+				<span class="text-muted-foreground">-</span>
+			}
+		</td>
+		<td class="px-4 py-3">
+			@statusBadge(user.Active)
+		</td>
+		<td class="px-4 py-3 text-muted-foreground text-sm">
+			{ user.CreatedAt.Format("Jan 2, 2006") }
+		</td>
+		<td class="px-4 py-3 text-right">
+			<div class="flex items-center justify-end gap-2">
+				<a
+					href={ templ.SafeURL(fmt.Sprintf("/admin/users/%d", user.ID)) }
+					class="p-1 hover:bg-muted rounded"
+					title="View"
+				>
+					@components.Icon("eye", "h-4 w-4")
+				</a>
+				<a
+					href={ templ.SafeURL(fmt.Sprintf("/admin/users/%d/edit", user.ID)) }
+					class="p-1 hover:bg-muted rounded"
+					title="Edit"
+				>
+					@components.Icon("pencil", "h-4 w-4")
+				</a>
+				<form
+					method="POST"
+					action={ templ.SafeURL(fmt.Sprintf("/admin/users/%d/toggle-active", user.ID)) }
+					class="inline"
+				>
+					<input type="hidden" name="csrf_token" value={ csrfToken }/>
+					<button
+						type="submit"
+						class="p-1 hover:bg-muted rounded"
+						title={ toggleTitle(user.Active) }
+					>
+						if user.Active {
+							@components.Icon("pause", "h-4 w-4 text-yellow-500")
+						} else {
+							@components.Icon("play", "h-4 w-4 text-green-500")
+						}
+					</button>
+				</form>
+				<form
+					method="POST"
+					action={ templ.SafeURL(fmt.Sprintf("/admin/users/%d", user.ID)) }
+					class="inline"
+					onsubmit="return confirm('Are you sure you want to delete this user?');"
+				>
+					<input type="hidden" name="csrf_token" value={ csrfToken }/>
+					<input type="hidden" name="_method" value="DELETE"/>
+					<button type="submit" class="p-1 hover:bg-muted rounded text-red-500" title="Delete">
+						@components.Icon("trash", "h-4 w-4")
+					</button>
+				</form>
+			</div>
+		</td>
+	</tr>
+}
+
+func toggleTitle(active bool) string {
+	if active {
+		return "Deactivate"
+	}
+	return "Activate"
+}
+
+// roleBadge renders a role badge.
+templ roleBadge(role string) {
+	if role == "admin" {
+		<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+			{ role }
+		</span>
+	} else {
+		<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
+			{ role }
+		</span>
+	}
+}
+
+// statusBadge renders a status badge.
+templ statusBadge(active bool) {
+	if active {
+		<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+			Active
+		</span>
+	} else {
+		<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+			Inactive
+		</span>
+	}
+}
+
+// pagination renders pagination controls.
+templ pagination(props ListProps) {
+	<div class="flex items-center justify-between px-4 py-3 border-t">
+		<div class="text-sm text-muted-foreground">
+			Showing { strconv.Itoa((props.Page-1)*10+1) } to { strconv.Itoa(min(props.Page*10, int(props.Total))) } of { strconv.FormatInt(props.Total, 10) } users
+		</div>
+		<div class="flex gap-1">
+			if props.Page > 1 {
+				<button
+					hx-get={ fmt.Sprintf("/admin/users?page=%d&sort=%s&dir=%s&search=%s", props.Page-1, props.OrderBy, props.OrderDir, props.Search) }
+					hx-target="#users-table"
+					class="px-3 py-1 border rounded hover:bg-muted"
+				>
+					Previous
+				</button>
+			}
+			for i := maxInt(1, props.Page-2); i <= minInt(props.TotalPages, props.Page+2); i++ {
+				<button
+					hx-get={ fmt.Sprintf("/admin/users?page=%d&sort=%s&dir=%s&search=%s", i, props.OrderBy, props.OrderDir, props.Search) }
+					hx-target="#users-table"
+					class={ "px-3 py-1 border rounded", templ.KV("bg-primary text-primary-foreground", i == props.Page), templ.KV("hover:bg-muted", i != props.Page) }
+				>
+					{ strconv.Itoa(i) }
+				</button>
+			}
+			if props.Page < props.TotalPages {
+				<button
+					hx-get={ fmt.Sprintf("/admin/users?page=%d&sort=%s&dir=%s&search=%s", props.Page+1, props.OrderBy, props.OrderDir, props.Search) }
+					hx-target="#users-table"
+					class="px-3 py-1 border rounded hover:bg-muted"
+				>
+					Next
+				</button>
+			}
+		</div>
+	</div>
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}

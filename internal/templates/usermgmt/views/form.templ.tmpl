@@ -1,0 +1,187 @@
+package views
+
+import (
+	"fmt"
+	"strconv"
+
+	"[[.ModulePath]]/internal/models"
+	"[[.ModulePath]]/internal/web/components"
+)
+
+// FormProps contains props for the user form.
+type FormProps struct {
+	User      *models.User
+	Name      string
+	Email     string
+	RoleID    uint
+	Active    bool
+	Roles     []models.Role
+	IsEdit    bool
+	Errors    map[string]string
+	CSRFToken string
+}
+
+// FormPage renders the full form page.
+templ FormPage(props FormProps) {
+	<div class="max-w-2xl mx-auto space-y-6">
+		if props.IsEdit {
+			@components.PageHeader("Edit User", "Update user information")
+		} else {
+			@components.PageHeader("Create User", "Add a new user to the system")
+		}
+		@UserForm(props)
+		<div class="mt-6">
+			<a href="/admin/users" class="text-sm text-gray-600 hover:underline">
+				&larr; Back to users
+			</a>
+		</div>
+	</div>
+}
+
+// UserForm renders the user create/edit form.
+templ UserForm(props FormProps) {
+	@components.Card(components.CardProps{}) {
+		@components.CardHeader("") {
+			<h3 class="text-lg font-semibold">User Information</h3>
+			<p class="text-sm text-gray-500 mt-1">
+				if props.IsEdit {
+					Update the user's profile and settings
+				} else {
+					Enter the details for the new user
+				}
+			</p>
+		}
+		@components.CardContent("") {
+			if props.Errors["_form"] != "" {
+				@components.ErrorAlert(props.Errors["_form"])
+			}
+			<form
+				method="POST"
+				action={ formAction(props) }
+				class="space-y-4"
+			>
+				<input type="hidden" name="csrf_token" value={ props.CSRFToken }/>
+				if props.IsEdit {
+					<input type="hidden" name="_method" value="PUT"/>
+				}
+
+				<div class="space-y-2">
+					@components.Label("name", true) {
+						Name
+					}
+					@components.Input(components.InputProps{
+						ID:          "name",
+						Name:        "name",
+						Type:        "text",
+						Value:       props.Name,
+						Placeholder: "Enter name",
+						Required:    true,
+						Error:       props.Errors["name"],
+					})
+					@components.FormError(props.Errors["name"])
+				</div>
+
+				<div class="space-y-2">
+					@components.Label("email", true) {
+						Email
+					}
+					@components.Input(components.InputProps{
+						ID:          "email",
+						Name:        "email",
+						Type:        "email",
+						Value:       props.Email,
+						Placeholder: "user@example.com",
+						Required:    true,
+						Error:       props.Errors["email"],
+					})
+					@components.FormError(props.Errors["email"])
+				</div>
+
+				<div class="space-y-2">
+					@components.Label("password", !props.IsEdit) {
+						Password
+					}
+					@components.Input(components.InputProps{
+						ID:          "password",
+						Name:        "password",
+						Type:        "password",
+						Placeholder: passwordPlaceholder(props.IsEdit),
+						Required:    !props.IsEdit,
+						Error:       props.Errors["password"],
+					})
+					@components.FormError(props.Errors["password"])
+					if props.IsEdit {
+						<p class="text-xs text-muted-foreground">Leave blank to keep current password</p>
+					}
+				</div>
+
+				<div class="space-y-2">
+					@components.Label("role_id", true) {
+						Role
+					}
+					<select
+						id="role_id"
+						name="role_id"
+						class={ "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2", templ.KV("border-red-500", props.Errors["role_id"] != "") }
+						required
+					>
+						<option value="">Select a role</option>
+						for _, role := range props.Roles {
+							<option
+								value={ strconv.FormatUint(uint64(role.ID), 10) }
+								selected?={ role.ID == props.RoleID }
+							>
+								{ role.Name } - { role.Description }
+							</option>
+						}
+					</select>
+					@components.FormError(props.Errors["role_id"])
+				</div>
+
+				<div class="flex items-center space-x-2">
+					<input
+						type="checkbox"
+						id="active"
+						name="active"
+						checked?={ props.Active || !props.IsEdit }
+						class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+					/>
+					<label for="active" class="text-sm font-medium">
+						Active
+					</label>
+					<span class="text-xs text-muted-foreground">(User can log in)</span>
+				</div>
+
+				<div class="pt-4 flex gap-2">
+					@components.Button(components.ButtonProps{Type: "submit"}) {
+						if props.IsEdit {
+							Update User
+						} else {
+							Create User
+						}
+					}
+					<a
+						href="/admin/users"
+						class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+					>
+						Cancel
+					</a>
+				</div>
+			</form>
+		}
+	}
+}
+
+func formAction(props FormProps) templ.SafeURL {
+	if props.IsEdit && props.User != nil {
+		return templ.SafeURL(fmt.Sprintf("/admin/users/%d", props.User.ID))
+	}
+	return "/admin/users"
+}
+
+func passwordPlaceholder(isEdit bool) string {
+	if isEdit {
+		return "Leave blank to keep current password"
+	}
+	return "Enter password (min. 8 characters)"
+}

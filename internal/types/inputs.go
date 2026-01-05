@@ -11,6 +11,8 @@ type ScaffoldProjectInput struct {
 	DatabaseType string `json:"database_type,omitempty"`
 	// WithAuth enables authentication scaffolding.
 	WithAuth bool `json:"with_auth,omitempty"`
+	// WithUserManagement enables admin user management (requires with_auth).
+	WithUserManagement bool `json:"with_user_management,omitempty"`
 	// InCurrentDir generates files in the current directory instead of a subdirectory.
 	InCurrentDir bool `json:"in_current_dir,omitempty"`
 	// DryRun previews changes without writing files.
