@@ -65,6 +65,12 @@ type RepoParam struct {
 	Type string
 }
 
+// ParsedRepository contains parsed repository information.
+type ParsedRepository struct {
+	Methods  []RepoMethod
+	IsStruct bool // true if repository is a concrete struct, false if interface
+}
+
 func scaffoldServiceForRepo(registry *Registry, input types.ScaffoldServiceForRepoInput) (types.ScaffoldResult, error) {
 	// Validate input
 	if input.ServiceName == "" {
@@ -95,17 +101,17 @@ func scaffoldServiceForRepo(registry *Registry, input types.ScaffoldServiceForRe
 	}
 
 	// Parse repository to extract methods
-	methods, err := parseRepositoryMethods(repoFilePath)
+	parsed, err := parseRepositoryMethods(repoFilePath)
 	if err != nil {
 		return types.NewErrorResult(fmt.Sprintf("failed to parse repository: %v", err)), nil
 	}
 
-	if len(methods) == 0 {
-		return types.NewErrorResult("no methods found in repository interface"), nil
+	if len(parsed.Methods) == 0 {
+		return types.NewErrorResult("no methods found in repository"), nil
 	}
 
 	// Filter methods
-	methods = filterMethods(methods, input.IncludeMethods, input.ExcludeMethods)
+	methods := filterMethods(parsed.Methods, input.IncludeMethods, input.ExcludeMethods)
 	if len(methods) == 0 {
 		return types.NewErrorResult("no methods remaining after filtering"), nil
 	}
@@ -134,6 +140,7 @@ func scaffoldServiceForRepo(registry *Registry, input types.ScaffoldServiceForRe
 		repoImportAlias,
 		repoModelName,
 		methods,
+		parsed.IsStruct,
 	)
 
 	// Write service file
@@ -172,17 +179,19 @@ func scaffoldServiceForRepo(registry *Registry, input types.ScaffoldServiceForRe
 	}, nil
 }
 
-// parseRepositoryMethods parses a repository file and extracts interface methods.
-func parseRepositoryMethods(filePath string) ([]RepoMethod, error) {
+// parseRepositoryMethods parses a repository file and extracts methods.
+// It supports both interface-based repositories and concrete struct repositories.
+func parseRepositoryMethods(filePath string) (*ParsedRepository, error) {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse file: %w", err)
 	}
 
-	var methods []RepoMethod
+	result := &ParsedRepository{}
+	var hasRepositoryStruct bool
 
-	// Find the Repository interface
+	// First, check for Repository interface
 	for _, decl := range node.Decls {
 		genDecl, ok := decl.(*ast.GenDecl)
 		if !ok || genDecl.Tok != token.TYPE {
@@ -195,70 +204,125 @@ func parseRepositoryMethods(filePath string) ([]RepoMethod, error) {
 				continue
 			}
 
-			// Look for Repository interface
 			if typeSpec.Name.Name != "Repository" {
 				continue
 			}
 
-			interfaceType, ok := typeSpec.Type.(*ast.InterfaceType)
-			if !ok {
-				continue
+			// Check if it's an interface
+			if interfaceType, ok := typeSpec.Type.(*ast.InterfaceType); ok {
+				methods := extractInterfaceMethods(interfaceType)
+				if len(methods) > 0 {
+					result.Methods = methods
+					result.IsStruct = false
+					return result, nil
+				}
 			}
 
-			// Extract methods from interface
-			for _, method := range interfaceType.Methods.List {
-				if len(method.Names) == 0 {
+			// Check if it's a struct (for concrete repository pattern)
+			if _, ok := typeSpec.Type.(*ast.StructType); ok {
+				hasRepositoryStruct = true
+			}
+		}
+	}
+
+	// If we found a Repository struct but no interface, extract methods from function declarations
+	if hasRepositoryStruct {
+		result.Methods = extractStructMethods(node)
+		result.IsStruct = true
+	}
+
+	return result, nil
+}
+
+// extractInterfaceMethods extracts methods from an interface type.
+func extractInterfaceMethods(interfaceType *ast.InterfaceType) []RepoMethod {
+	var methods []RepoMethod
+
+	for _, method := range interfaceType.Methods.List {
+		if len(method.Names) == 0 {
+			continue
+		}
+
+		funcType, ok := method.Type.(*ast.FuncType)
+		if !ok {
+			continue
+		}
+
+		repoMethod := extractMethodFromFuncType(method.Names[0].Name, funcType)
+		methods = append(methods, repoMethod)
+	}
+
+	return methods
+}
+
+// extractStructMethods extracts methods from function declarations with *Repository receiver.
+func extractStructMethods(node *ast.File) []RepoMethod {
+	var methods []RepoMethod
+
+	for _, decl := range node.Decls {
+		funcDecl, ok := decl.(*ast.FuncDecl)
+		if !ok || funcDecl.Recv == nil {
+			continue
+		}
+
+		// Check if this method is on *Repository
+		for _, recv := range funcDecl.Recv.List {
+			recvType := exprToString(recv.Type)
+			if recvType == "*Repository" {
+				// Skip unexported methods
+				if funcDecl.Name.Name == "" || !ast.IsExported(funcDecl.Name.Name) {
 					continue
 				}
 
-				funcType, ok := method.Type.(*ast.FuncType)
-				if !ok {
-					continue
-				}
-
-				repoMethod := RepoMethod{
-					Name: method.Names[0].Name,
-				}
-
-				// Parse parameters
-				if funcType.Params != nil {
-					for _, param := range funcType.Params.List {
-						paramType := exprToString(param.Type)
-						if paramType == "context.Context" {
-							repoMethod.HasContext = true
-							continue // Don't add context to params list
-						}
-
-						// Handle multiple names for same type
-						if len(param.Names) == 0 {
-							repoMethod.Params = append(repoMethod.Params, RepoParam{
-								Name: "",
-								Type: paramType,
-							})
-						} else {
-							for _, name := range param.Names {
-								repoMethod.Params = append(repoMethod.Params, RepoParam{
-									Name: name.Name,
-									Type: paramType,
-								})
-							}
-						}
-					}
-				}
-
-				// Parse returns
-				if funcType.Results != nil {
-					for _, result := range funcType.Results.List {
-						repoMethod.Returns = append(repoMethod.Returns, exprToString(result.Type))
-					}
-				}
-
+				repoMethod := extractMethodFromFuncType(funcDecl.Name.Name, funcDecl.Type)
 				methods = append(methods, repoMethod)
 			}
 		}
 	}
 
-	return methods, nil
+	return methods
+}
+
+// extractMethodFromFuncType extracts method details from a function type.
+func extractMethodFromFuncType(name string, funcType *ast.FuncType) RepoMethod {
+	repoMethod := RepoMethod{
+		Name: name,
+	}
+
+	// Parse parameters
+	if funcType.Params != nil {
+		for _, param := range funcType.Params.List {
+			paramType := exprToString(param.Type)
+			if paramType == "context.Context" {
+				repoMethod.HasContext = true
+				continue // Don't add context to params list
+			}
+
+			// Handle multiple names for same type
+			if len(param.Names) == 0 {
+				repoMethod.Params = append(repoMethod.Params, RepoParam{
+					Name: "",
+					Type: paramType,
+				})
+			} else {
+				for _, pname := range param.Names {
+					repoMethod.Params = append(repoMethod.Params, RepoParam{
+						Name: pname.Name,
+						Type: paramType,
+					})
+				}
+			}
+		}
+	}
+
+	// Parse returns
+	if funcType.Results != nil {
+		for _, result := range funcType.Results.List {
+			repoMethod.Returns = append(repoMethod.Returns, exprToString(result.Type))
+		}
+	}
+
+	return repoMethod
 }
 
 // exprToString converts an AST expression to a string representation.
@@ -326,7 +390,7 @@ func filterMethods(methods []RepoMethod, include, exclude []string) []RepoMethod
 }
 
 // generateServiceCode generates the service Go code.
-func generateServiceCode(svcPkgName, svcModelName, modulePath, repoPkgName, repoImportAlias, repoModelName string, methods []RepoMethod) string {
+func generateServiceCode(svcPkgName, svcModelName, modulePath, repoPkgName, repoImportAlias, repoModelName string, methods []RepoMethod, isStructRepo bool) string {
 	var sb strings.Builder
 
 	// Package declaration
@@ -346,15 +410,21 @@ func generateServiceCode(svcPkgName, svcModelName, modulePath, repoPkgName, repo
 	}
 	sb.WriteString("}\n\n")
 
+	// Determine repo type based on whether it's a struct or interface
+	repoType := fmt.Sprintf("%s.Repository", repoImportAlias)
+	if isStructRepo {
+		repoType = fmt.Sprintf("*%s.Repository", repoImportAlias)
+	}
+
 	// Service implementation struct
 	sb.WriteString(fmt.Sprintf("// service implements the %s Service interface.\n", svcModelName))
 	sb.WriteString("type service struct {\n")
-	sb.WriteString(fmt.Sprintf("\trepo %s.Repository\n", repoImportAlias))
+	sb.WriteString(fmt.Sprintf("\trepo %s\n", repoType))
 	sb.WriteString("}\n\n")
 
 	// Constructor
 	sb.WriteString(fmt.Sprintf("// NewService creates a new %s service.\n", svcModelName))
-	sb.WriteString(fmt.Sprintf("func NewService(repo %s.Repository) Service {\n", repoImportAlias))
+	sb.WriteString(fmt.Sprintf("func NewService(repo %s) Service {\n", repoType))
 	sb.WriteString("\treturn &service{repo: repo}\n")
 	sb.WriteString("}\n")
 

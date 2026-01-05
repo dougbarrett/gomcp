@@ -53,14 +53,6 @@ func Connect(cfg *config.Config) *gorm.DB {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Run migrations
-	if err := db.AutoMigrate(
-		// MCP:MODELS:START
-		// MCP:MODELS:END
-	); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
-	}
-
 	// Ensure base model is used
 	_ = models.BaseModel{}
 

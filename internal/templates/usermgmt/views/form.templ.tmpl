@@ -10,7 +10,7 @@ import (
 
 // FormProps contains props for the user form.
 type FormProps struct {
-	User      *models.User
+	UserID    uint
 	Name      string
 	Email     string
 	RoleID    uint
@@ -173,8 +173,8 @@ templ UserForm(props FormProps) {
 }
 
 func formAction(props FormProps) templ.SafeURL {
-	if props.IsEdit && props.User != nil {
-		return templ.SafeURL(fmt.Sprintf("/admin/users/%d", props.User.ID))
+	if props.IsEdit && props.UserID > 0 {
+		return templ.SafeURL(fmt.Sprintf("/admin/users/%d", props.UserID))
 	}
 	return "/admin/users"
 }

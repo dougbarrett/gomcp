@@ -3,228 +3,144 @@ package user
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"[[.ModulePath]]/internal/models"
-	"[[.ModulePath]]/internal/repository/user"
+	userrepo "[[.ModulePath]]/internal/repository/user"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
-	// ErrUserNotFound is returned when user doesn't exist.
+	// ErrUserNotFound is returned when a user is not found.
 	ErrUserNotFound = errors.New("user not found")
-	// ErrEmailExists is returned when email is already registered.
+	// ErrEmailExists is returned when trying to create a user with an existing email.
 	ErrEmailExists = errors.New("email already exists")
-	// ErrCannotDeleteSelf is returned when trying to delete own account.
-	ErrCannotDeleteSelf = errors.New("cannot delete your own account")
-	// ErrCannotDeactivateSelf is returned when trying to deactivate own account.
-	ErrCannotDeactivateSelf = errors.New("cannot deactivate your own account")
-	// ErrInvalidPassword is returned when password is too short.
-	ErrInvalidPassword = errors.New("password must be at least 8 characters")
 )
 
-// Service handles user management operations.
+// Service provides user management operations.
 type Service struct {
-	repo *user.Repository
+	repo *userrepo.Repository
 }
 
-// NewService creates a new user Service.
-func NewService(repo *user.Repository) *Service {
+// NewService creates a new user management Service.
+func NewService(repo *userrepo.Repository) *Service {
 	return &Service{repo: repo}
 }
 
-// CreateDTO contains data for creating a user.
-type CreateDTO struct {
-	Name     string
-	Email    string
-	Password string
-	RoleID   uint
-	Active   bool
-}
-
-// UpdateDTO contains data for updating a user.
-type UpdateDTO struct {
-	Name     string
-	Email    string
-	Password string // Optional - only update if non-empty
-	RoleID   uint
-	Active   bool
-}
-
-// ListParams contains parameters for listing users.
-type ListParams struct {
-	Page     int
-	PageSize int
-	Search   string
-	RoleID   uint
-	Active   *bool
-	OrderBy  string
-	OrderDir string
-}
-
-// Create creates a new user.
-func (s *Service) Create(ctx context.Context, dto CreateDTO) (*models.User, error) {
-	// Validate password
-	if len(dto.Password) < 8 {
-		return nil, ErrInvalidPassword
+// ListUsers returns a paginated list of users.
+func (s *Service) ListUsers(ctx context.Context, page, pageSize int, search string) ([]models.User, int64, error) {
+	opts := []userrepo.QueryOption{
+		userrepo.WithPreloadRole(),
+		userrepo.WithPagination(page, pageSize),
+		userrepo.WithOrder("created_at", true),
 	}
+	if search != "" {
+		opts = append(opts, userrepo.WithSearch(search))
+	}
+	return s.repo.FindAll(ctx, opts...)
+}
 
-	// Check if email already exists
-	exists, err := s.repo.ExistsByEmail(ctx, dto.Email)
+// GetUser returns a user by ID.
+func (s *Service) GetUser(ctx context.Context, id uint) (*models.User, error) {
+	user, err := s.repo.FindByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check email: %w", err)
+		return nil, ErrUserNotFound
+	}
+	return user, nil
+}
+
+// CreateUser creates a new user.
+func (s *Service) CreateUser(ctx context.Context, name, email, password string, roleID uint, active bool) (*models.User, error) {
+	// Check if email exists
+	exists, err := s.repo.ExistsByEmail(ctx, email)
+	if err != nil {
+		return nil, err
 	}
 	if exists {
 		return nil, ErrEmailExists
 	}
 
-	// Create user
-	newUser := &models.User{
-		Name:   dto.Name,
-		Email:  dto.Email,
-		RoleID: dto.RoleID,
-		Active: dto.Active,
-	}
-
-	if err := newUser.SetPassword(dto.Password); err != nil {
-		return nil, fmt.Errorf("failed to hash password: %w", err)
-	}
-
-	if err := s.repo.Create(ctx, newUser); err != nil {
-		return nil, fmt.Errorf("failed to create user: %w", err)
-	}
-
-	// Fetch with role preloaded
-	return s.repo.FindByID(ctx, newUser.ID)
-}
-
-// GetByID retrieves a user by ID.
-func (s *Service) GetByID(ctx context.Context, id uint) (*models.User, error) {
-	u, err := s.repo.FindByID(ctx, id)
+	// Hash password
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, ErrUserNotFound
+		return nil, err
 	}
-	return u, nil
+
+	user := &models.User{
+		Name:         name,
+		Email:        email,
+		PasswordHash: string(hash),
+		RoleID:       roleID,
+		Active:       active,
+	}
+
+	if err := s.repo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
 
-// List retrieves users with pagination and filters.
-func (s *Service) List(ctx context.Context, params ListParams) ([]models.User, int64, error) {
-	// Build query options
-	var opts []user.QueryOption
-
-	// Add search
-	if params.Search != "" {
-		opts = append(opts, user.WithSearch(params.Search))
-	}
-
-	// Add role filter
-	if params.RoleID > 0 {
-		opts = append(opts, user.WithRoleID(params.RoleID))
-	}
-
-	// Add active filter
-	if params.Active != nil {
-		opts = append(opts, user.WithActive(*params.Active))
-	}
-
-	// Add ordering
-	if params.OrderBy != "" {
-		desc := params.OrderDir == "desc"
-		opts = append(opts, user.WithOrder(params.OrderBy, desc))
-	}
-
-	// Add preload
-	opts = append(opts, user.WithPreloadRole())
-
-	// Add pagination
-	page := params.Page
-	if page < 1 {
-		page = 1
-	}
-	pageSize := params.PageSize
-	if pageSize < 1 {
-		pageSize = 10
-	}
-	opts = append(opts, user.WithPagination(page, pageSize))
-
-	return s.repo.FindAll(ctx, opts...)
-}
-
-// Update updates a user.
-func (s *Service) Update(ctx context.Context, id uint, dto UpdateDTO) (*models.User, error) {
-	// Find existing user
-	existing, err := s.repo.FindByID(ctx, id)
+// UpdateUser updates a user's details.
+func (s *Service) UpdateUser(ctx context.Context, id uint, name, email string, roleID uint, active bool) (*models.User, error) {
+	user, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
 
-	// Check if email is being changed and already exists
-	if dto.Email != existing.Email {
-		exists, err := s.repo.ExistsByEmail(ctx, dto.Email)
+	// Check if email is taken by another user
+	if user.Email != email {
+		exists, err := s.repo.ExistsByEmail(ctx, email)
 		if err != nil {
-			return nil, fmt.Errorf("failed to check email: %w", err)
+			return nil, err
 		}
 		if exists {
 			return nil, ErrEmailExists
 		}
 	}
 
-	// Update fields
-	existing.Name = dto.Name
-	existing.Email = dto.Email
-	existing.RoleID = dto.RoleID
-	existing.Active = dto.Active
+	user.Name = name
+	user.Email = email
+	user.RoleID = roleID
+	user.Active = active
 
-	// Update password if provided
-	if dto.Password != "" {
-		if len(dto.Password) < 8 {
-			return nil, ErrInvalidPassword
-		}
-		if err := existing.SetPassword(dto.Password); err != nil {
-			return nil, fmt.Errorf("failed to hash password: %w", err)
-		}
+	if err := s.repo.Update(ctx, user); err != nil {
+		return nil, err
 	}
 
-	if err := s.repo.Update(ctx, existing); err != nil {
-		return nil, fmt.Errorf("failed to update user: %w", err)
-	}
-
-	// Fetch with role preloaded
-	return s.repo.FindByID(ctx, id)
+	return user, nil
 }
 
-// Delete deletes a user.
-func (s *Service) Delete(ctx context.Context, id uint, currentUserID uint) error {
-	// Prevent self-deletion
-	if id == currentUserID {
-		return ErrCannotDeleteSelf
-	}
-
-	// Check user exists
-	_, err := s.repo.FindByID(ctx, id)
+// UpdatePassword updates a user's password.
+func (s *Service) UpdatePassword(ctx context.Context, id uint, password string) error {
+	user, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return ErrUserNotFound
 	}
 
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user.PasswordHash = string(hash)
+	return s.repo.Update(ctx, user)
+}
+
+// DeleteUser deletes a user.
+func (s *Service) DeleteUser(ctx context.Context, id uint) error {
 	return s.repo.Delete(ctx, id)
 }
 
-// SetActive sets a user's active status.
-func (s *Service) SetActive(ctx context.Context, id uint, active bool, currentUserID uint) error {
-	// Prevent self-deactivation
-	if id == currentUserID && !active {
-		return ErrCannotDeactivateSelf
-	}
-
-	// Check user exists
-	_, err := s.repo.FindByID(ctx, id)
+// ToggleActive toggles a user's active status.
+func (s *Service) ToggleActive(ctx context.Context, id uint) error {
+	user, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return ErrUserNotFound
 	}
-
-	return s.repo.SetActive(ctx, id, active)
+	return s.repo.SetActive(ctx, id, !user.Active)
 }
 
-// GetRoles retrieves all roles.
+// GetRoles returns all available roles.
 func (s *Service) GetRoles(ctx context.Context) ([]models.Role, error) {
 	return s.repo.FindAllRoles(ctx)
 }

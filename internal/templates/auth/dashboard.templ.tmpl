@@ -3,6 +3,7 @@ package views
 import (
 	"[[.ModulePath]]/internal/models"
 	"[[.ModulePath]]/internal/web/components"
+	"[[.ModulePath]]/internal/web/middleware"
 )
 
 // DashboardProps contains props for the dashboard view.
@@ -60,6 +61,7 @@ templ DashboardContent(props DashboardProps) {
 							<span>Settings</span>
 						</a>
 						<form method="POST" action="/logout" class="m-0">
+							<input type="hidden" name="csrf_token" value={ middleware.GetCSRFToken(ctx) }/>
 							<button type="submit" class="flex items-center gap-2 p-2 rounded hover:bg-muted transition-colors w-full text-left text-red-600">
 								@components.Icon("arrow-right-on-rectangle", "h-5 w-5")
 								<span>Logout</span>

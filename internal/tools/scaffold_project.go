@@ -255,6 +255,7 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 				{"usermgmt/views/list.templ.tmpl", "internal/web/users/views/list.templ"},
 				{"usermgmt/views/form.templ.tmpl", "internal/web/users/views/form.templ"},
 				{"usermgmt/views/show.templ.tmpl", "internal/web/users/views/show.templ"},
+				{"usermgmt/views/password.templ.tmpl", "internal/web/users/views/password.templ"},
 			}
 
 			for _, f := range userMgmtFiles {

@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"[[.ModulePath]]/internal/models"
 	"[[.ModulePath]]/internal/services/auth"
-	"[[.ModulePath]]/internal/services/user"
+	usersvc "[[.ModulePath]]/internal/services/user"
 	"[[.ModulePath]]/internal/web"
 	"[[.ModulePath]]/internal/web/layouts"
 	authmiddleware "[[.ModulePath]]/internal/web/middleware"
@@ -15,12 +16,12 @@ import (
 
 // Controller handles user management HTTP requests.
 type Controller struct {
-	userService *user.Service
+	userService *usersvc.Service
 	authService *auth.Service
 }
 
 // NewController creates a new users Controller.
-func NewController(userService *user.Service, authService *auth.Service) *Controller {
+func NewController(userService *usersvc.Service, authService *auth.Service) *Controller {
 	return &Controller{
 		userService: userService,
 		authService: authService,
@@ -28,7 +29,7 @@ func NewController(userService *user.Service, authService *auth.Service) *Contro
 }
 
 // RegisterRoutes registers user management routes on the given router.
-// Routes should be protected by RequireAuth and RequireAdmin middleware.
+// Routes should be protected by RequireAuth + RequireAdmin middleware.
 func (c *Controller) RegisterRoutes(r chi.Router) {
 	r.Get("/", c.List)
 	r.Get("/new", c.New)
@@ -36,63 +37,48 @@ func (c *Controller) RegisterRoutes(r chi.Router) {
 	r.Get("/{id}", c.Show)
 	r.Get("/{id}/edit", c.Edit)
 	r.Put("/{id}", c.Update)
-	r.Post("/{id}", c.Update) // Form fallback
+	r.Post("/{id}", c.Update) // For HTML form compatibility
 	r.Delete("/{id}", c.Delete)
 	r.Post("/{id}/toggle-active", c.ToggleActive)
+	r.Get("/{id}/password", c.EditPassword)
+	r.Post("/{id}/password", c.UpdatePassword)
 }
 
 // List renders the users list page.
 func (c *Controller) List(w http.ResponseWriter, r *http.Request) {
 	res := web.NewResponse(w, r)
 
-	// Parse query parameters
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
 		page = 1
 	}
+	pageSize := 20
 	search := r.URL.Query().Get("search")
-	orderBy := r.URL.Query().Get("sort")
-	if orderBy == "" {
-		orderBy = "created_at"
-	}
-	orderDir := r.URL.Query().Get("dir")
-	if orderDir == "" {
-		orderDir = "desc"
-	}
 
-	// Fetch users
-	users, total, err := c.userService.List(r.Context(), user.ListParams{
-		Page:     page,
-		PageSize: 10,
-		Search:   search,
-		OrderBy:  orderBy,
-		OrderDir: orderDir,
-	})
+	users, total, err := c.userService.ListUsers(r.Context(), page, pageSize, search)
 	if err != nil {
 		res.Error("Failed to load users")
 		return
 	}
 
-	// Calculate pagination
-	totalPages := int((total + 9) / 10)
+	totalPages := int((total + int64(pageSize) - 1) / int64(pageSize))
 
 	props := views.ListProps{
 		Users:       users,
-		Total:       total,
 		Page:        page,
+		PageSize:    pageSize,
 		TotalPages:  totalPages,
+		TotalCount:  int(total),
 		Search:      search,
-		OrderBy:     orderBy,
-		OrderDir:    orderDir,
 		CSRFToken:   authmiddleware.GetCSRFToken(r.Context()),
 	}
 
 	if res.IsHTMX() {
-		res.Render(views.UsersTable(props))
+		res.Render(views.UserTable(props))
 		return
 	}
 
-	res.Render(layouts.DashboardPage("User Management", views.ListPage(props)))
+	res.Render(layouts.DashboardPage("Users", views.ListPage(props)))
 }
 
 // New renders the new user form.
@@ -116,10 +102,10 @@ func (c *Controller) New(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res.Render(layouts.DashboardPage("Create User", views.FormPage(props)))
+	res.Render(layouts.DashboardPage("New User", views.FormPage(props)))
 }
 
-// Create handles the create user form submission.
+// Create handles the new user form submission.
 func (c *Controller) Create(w http.ResponseWriter, r *http.Request) {
 	res := web.NewResponse(w, r)
 
@@ -128,73 +114,63 @@ func (c *Controller) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	name := r.FormValue("name")
+	email := r.FormValue("email")
+	password := r.FormValue("password")
 	roleID, _ := strconv.ParseUint(r.FormValue("role_id"), 10, 32)
 	active := r.FormValue("active") == "on" || r.FormValue("active") == "true"
 
-	dto := user.CreateDTO{
-		Name:     r.FormValue("name"),
-		Email:    r.FormValue("email"),
-		Password: r.FormValue("password"),
-		RoleID:   uint(roleID),
-		Active:   active,
-	}
-
 	// Validate
 	errors := make(map[string]string)
-	if dto.Name == "" {
+	if name == "" {
 		errors["name"] = "Name is required"
 	}
-	if dto.Email == "" {
+	if email == "" {
 		errors["email"] = "Email is required"
 	}
-	if dto.Password == "" {
+	if password == "" {
 		errors["password"] = "Password is required"
-	} else if len(dto.Password) < 8 {
+	} else if len(password) < 8 {
 		errors["password"] = "Password must be at least 8 characters"
 	}
-	if dto.RoleID == 0 {
+	if roleID == 0 {
 		errors["role_id"] = "Role is required"
 	}
 
 	if len(errors) > 0 {
 		roles, _ := c.userService.GetRoles(r.Context())
 		props := views.FormProps{
-			Name:      dto.Name,
-			Email:     dto.Email,
-			RoleID:    dto.RoleID,
-			Active:    dto.Active,
+			Name:      name,
+			Email:     email,
+			RoleID:    uint(roleID),
+			Active:    active,
 			Roles:     roles,
-			IsEdit:    false,
 			Errors:    errors,
+			IsEdit:    false,
 			CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
 		}
 		res.Render(views.UserForm(props))
 		return
 	}
 
-	// Create user
-	_, err := c.userService.Create(r.Context(), dto)
+	_, err := c.userService.CreateUser(r.Context(), name, email, password, uint(roleID), active)
 	if err != nil {
-		roles, _ := c.userService.GetRoles(r.Context())
-		errMsg := "Failed to create user"
-		if err == user.ErrEmailExists {
-			errors["email"] = "Email already exists"
-		} else if err == user.ErrInvalidPassword {
-			errors["password"] = err.Error()
-		} else {
-			errors["_form"] = errMsg
+		if err == usersvc.ErrEmailExists {
+			roles, _ := c.userService.GetRoles(r.Context())
+			props := views.FormProps{
+				Name:      name,
+				Email:     email,
+				RoleID:    uint(roleID),
+				Active:    active,
+				Roles:     roles,
+				Errors:    map[string]string{"email": "Email already exists"},
+				IsEdit:    false,
+				CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
+			}
+			res.Render(views.UserForm(props))
+			return
 		}
-		props := views.FormProps{
-			Name:      dto.Name,
-			Email:     dto.Email,
-			RoleID:    dto.RoleID,
-			Active:    dto.Active,
-			Roles:     roles,
-			IsEdit:    false,
-			Errors:    errors,
-			CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
-		}
-		res.Render(views.UserForm(props))
+		res.Error("Failed to create user")
 		return
 	}
 
@@ -208,7 +184,7 @@ func (c *Controller) Create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
 }
 
-// Show renders a user detail page.
+// Show renders the user details page.
 func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
 	res := web.NewResponse(w, r)
 
@@ -218,17 +194,21 @@ func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := c.userService.GetByID(r.Context(), uint(id))
+	user, err := c.userService.GetUser(r.Context(), uint(id))
 	if err != nil {
 		res.Error("User not found")
 		return
 	}
 
-	currentUser := authmiddleware.GetUserFromContext(r.Context())
+	// Get current user ID for self-action prevention
+	var currentUserID uint
+	if currentUser := authmiddleware.GetUserFromContext(r.Context()); currentUser != nil {
+		currentUserID = currentUser.ID
+	}
 
 	props := views.ShowProps{
-		User:          u,
-		CurrentUserID: currentUser.ID,
+		User:          user,
+		CurrentUserID: currentUserID,
 		CSRFToken:     authmiddleware.GetCSRFToken(r.Context()),
 	}
 
@@ -250,7 +230,7 @@ func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := c.userService.GetByID(r.Context(), uint(id))
+	user, err := c.userService.GetUser(r.Context(), uint(id))
 	if err != nil {
 		res.Error("User not found")
 		return
@@ -263,11 +243,11 @@ func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	props := views.FormProps{
-		User:      u,
-		Name:      u.Name,
-		Email:     u.Email,
-		RoleID:    u.RoleID,
-		Active:    u.Active,
+		UserID:    user.ID,
+		Name:      user.Name,
+		Email:     user.Email,
+		RoleID:    user.RoleID,
+		Active:    user.Active,
 		Roles:     roles,
 		IsEdit:    true,
 		CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
@@ -281,7 +261,7 @@ func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
 	res.Render(layouts.DashboardPage("Edit User", views.FormPage(props)))
 }
 
-// Update handles the update user form submission.
+// Update handles the edit user form submission.
 func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 	res := web.NewResponse(w, r)
 
@@ -296,74 +276,59 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	name := r.FormValue("name")
+	email := r.FormValue("email")
 	roleID, _ := strconv.ParseUint(r.FormValue("role_id"), 10, 32)
 	active := r.FormValue("active") == "on" || r.FormValue("active") == "true"
 
-	dto := user.UpdateDTO{
-		Name:     r.FormValue("name"),
-		Email:    r.FormValue("email"),
-		Password: r.FormValue("password"), // Optional on update
-		RoleID:   uint(roleID),
-		Active:   active,
-	}
-
 	// Validate
 	errors := make(map[string]string)
-	if dto.Name == "" {
+	if name == "" {
 		errors["name"] = "Name is required"
 	}
-	if dto.Email == "" {
+	if email == "" {
 		errors["email"] = "Email is required"
 	}
-	if dto.RoleID == 0 {
+	if roleID == 0 {
 		errors["role_id"] = "Role is required"
 	}
-	if dto.Password != "" && len(dto.Password) < 8 {
-		errors["password"] = "Password must be at least 8 characters"
-	}
-
-	u, _ := c.userService.GetByID(r.Context(), uint(id))
 
 	if len(errors) > 0 {
 		roles, _ := c.userService.GetRoles(r.Context())
 		props := views.FormProps{
-			User:      u,
-			Name:      dto.Name,
-			Email:     dto.Email,
-			RoleID:    dto.RoleID,
-			Active:    dto.Active,
+			UserID:    uint(id),
+			Name:      name,
+			Email:     email,
+			RoleID:    uint(roleID),
+			Active:    active,
 			Roles:     roles,
-			IsEdit:    true,
 			Errors:    errors,
+			IsEdit:    true,
 			CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
 		}
 		res.Render(views.UserForm(props))
 		return
 	}
 
-	// Update user
-	_, err = c.userService.Update(r.Context(), uint(id), dto)
+	_, err = c.userService.UpdateUser(r.Context(), uint(id), name, email, uint(roleID), active)
 	if err != nil {
-		roles, _ := c.userService.GetRoles(r.Context())
-		if err == user.ErrEmailExists {
-			errors["email"] = "Email already exists"
-		} else if err == user.ErrInvalidPassword {
-			errors["password"] = err.Error()
-		} else {
-			errors["_form"] = "Failed to update user"
+		if err == usersvc.ErrEmailExists {
+			roles, _ := c.userService.GetRoles(r.Context())
+			props := views.FormProps{
+				UserID:    uint(id),
+				Name:      name,
+				Email:     email,
+				RoleID:    uint(roleID),
+				Active:    active,
+				Roles:     roles,
+				Errors:    map[string]string{"email": "Email already exists"},
+				IsEdit:    true,
+				CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
+			}
+			res.Render(views.UserForm(props))
+			return
 		}
-		props := views.FormProps{
-			User:      u,
-			Name:      dto.Name,
-			Email:     dto.Email,
-			RoleID:    dto.RoleID,
-			Active:    dto.Active,
-			Roles:     roles,
-			IsEdit:    true,
-			Errors:    errors,
-			CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
-		}
-		res.Render(views.UserForm(props))
+		res.Error("Failed to update user")
 		return
 	}
 
@@ -387,21 +352,15 @@ func (c *Controller) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Prevent self-deletion
 	currentUser := authmiddleware.GetUserFromContext(r.Context())
+	if currentUser != nil && currentUser.ID == uint(id) {
+		res.Error("Cannot delete your own account")
+		return
+	}
 
-	err = c.userService.Delete(r.Context(), uint(id), currentUser.ID)
-	if err != nil {
-		if err == user.ErrCannotDeleteSelf {
-			c.authService.AddFlashError(w, r, "You cannot delete your own account")
-		} else {
-			c.authService.AddFlashError(w, r, "Failed to delete user")
-		}
-
-		if res.IsHTMX() {
-			res.Redirect("/admin/users")
-			return
-		}
-		http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+	if err := c.userService.DeleteUser(r.Context(), uint(id)); err != nil {
+		res.Error("Failed to delete user")
 		return
 	}
 
@@ -415,7 +374,7 @@ func (c *Controller) Delete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
 }
 
-// ToggleActive handles toggling user active status.
+// ToggleActive toggles a user's active status.
 func (c *Controller) ToggleActive(w http.ResponseWriter, r *http.Request) {
 	res := web.NewResponse(w, r)
 
@@ -425,42 +384,105 @@ func (c *Controller) ToggleActive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Prevent self-deactivation
 	currentUser := authmiddleware.GetUserFromContext(r.Context())
-
-	// Get current user to determine new status
-	u, err := c.userService.GetByID(r.Context(), uint(id))
-	if err != nil {
-		c.authService.AddFlashError(w, r, "User not found")
-		if res.IsHTMX() {
-			res.Redirect("/admin/users")
-			return
-		}
-		http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+	if currentUser != nil && currentUser.ID == uint(id) {
+		res.Error("Cannot change your own active status")
 		return
 	}
 
-	newStatus := !u.Active
-	err = c.userService.SetActive(r.Context(), uint(id), newStatus, currentUser.ID)
-	if err != nil {
-		if err == user.ErrCannotDeactivateSelf {
-			c.authService.AddFlashError(w, r, "You cannot deactivate your own account")
-		} else {
-			c.authService.AddFlashError(w, r, "Failed to update user status")
-		}
-
-		if res.IsHTMX() {
-			res.Redirect("/admin/users")
-			return
-		}
-		http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+	if err := c.userService.ToggleActive(r.Context(), uint(id)); err != nil {
+		res.Error("Failed to update user status")
 		return
 	}
 
-	status := "activated"
-	if !newStatus {
-		status = "deactivated"
+	c.authService.AddFlashSuccess(w, r, "User status updated")
+
+	if res.IsHTMX() {
+		w.Header().Set("HX-Refresh", "true")
+		return
 	}
-	c.authService.AddFlashSuccess(w, r, "User "+status+" successfully")
+
+	http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+}
+
+// EditPassword renders the password change form.
+func (c *Controller) EditPassword(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		res.Error("Invalid user ID")
+		return
+	}
+
+	user, err := c.userService.GetUser(r.Context(), uint(id))
+	if err != nil {
+		res.Error("User not found")
+		return
+	}
+
+	props := views.PasswordProps{
+		UserID:    user.ID,
+		UserName:  user.Name,
+		CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
+	}
+
+	if res.IsHTMX() {
+		res.Render(views.PasswordForm(props))
+		return
+	}
+
+	res.Render(layouts.DashboardPage("Change Password", views.PasswordPage(props)))
+}
+
+// UpdatePassword handles the password change form submission.
+func (c *Controller) UpdatePassword(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		res.Error("Invalid user ID")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		res.Error("Invalid form data")
+		return
+	}
+
+	password := r.FormValue("password")
+	confirmPassword := r.FormValue("confirm_password")
+
+	// Validate
+	errors := make(map[string]string)
+	if password == "" {
+		errors["password"] = "Password is required"
+	} else if len(password) < 8 {
+		errors["password"] = "Password must be at least 8 characters"
+	}
+	if password != confirmPassword {
+		errors["confirm_password"] = "Passwords do not match"
+	}
+
+	if len(errors) > 0 {
+		user, _ := c.userService.GetUser(r.Context(), uint(id))
+		props := views.PasswordProps{
+			UserID:    uint(id),
+			UserName:  user.Name,
+			Errors:    errors,
+			CSRFToken: authmiddleware.GetCSRFToken(r.Context()),
+		}
+		res.Render(views.PasswordForm(props))
+		return
+	}
+
+	if err := c.userService.UpdatePassword(r.Context(), uint(id), password); err != nil {
+		res.Error("Failed to update password")
+		return
+	}
+
+	c.authService.AddFlashSuccess(w, r, "Password updated successfully")
 
 	if res.IsHTMX() {
 		res.Redirect("/admin/users")

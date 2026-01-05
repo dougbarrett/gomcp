@@ -11,7 +11,7 @@ import (
 // FS is the embedded filesystem containing all template files.
 // Templates use [[ ]] delimiters instead of {{ }} to avoid conflicts with Go templates.
 //
-//go:embed project/*.tmpl domain/*.tmpl views/*.tmpl components/*.tmpl config/*.tmpl seed/*.tmpl auth/*.tmpl
+//go:embed project/*.tmpl domain/*.tmpl views/*.tmpl components/*.tmpl config/*.tmpl seed/*.tmpl auth/*.tmpl usermgmt/*.tmpl usermgmt/views/*.tmpl
 var FS embed.FS
 
 // Template directories:
@@ -22,6 +22,7 @@ var FS embed.FS
 // - config/     : Configuration templates (page.toml)
 // - seed/       : Seeder templates (seeder.go)
 // - auth/       : Authentication templates (user_model, middleware, service, controller, views)
+// - usermgmt/   : User management templates (service, controller, views)
 
 // Categories of templates available.
 var Categories = []string{
@@ -32,6 +33,7 @@ var Categories = []string{
 	"config",
 	"seed",
 	"auth",
+	"usermgmt",
 }
 
 // ReadTemplate reads a template file by path and returns its contents.

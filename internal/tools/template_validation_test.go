@@ -330,3 +330,109 @@ func TestTemplateValidation_ConfigTemplates(t *testing.T) {
 		}
 	}
 }
+
+func TestTemplateValidation_AuthAndUserManagement(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping template validation in short mode")
+	}
+
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go command not available")
+	}
+
+	registry, tmpDir := testRegistry(t)
+
+	// Scaffold a project with auth and user management
+	projectInput := types.ScaffoldProjectInput{
+		ProjectName:        "authvalidation",
+		ModulePath:         "github.com/test/authvalidation",
+		DatabaseType:       "sqlite",
+		WithAuth:           true,
+		WithUserManagement: true,
+		DryRun:             false,
+	}
+
+	result, err := scaffoldProject(registry, projectInput)
+	if err != nil {
+		t.Fatalf("scaffoldProject error: %v", err)
+	}
+	if !result.Success {
+		t.Fatalf("scaffoldProject failed: %s", result.Message)
+	}
+
+	projectDir := filepath.Join(tmpDir, "authvalidation")
+
+	// Verify auth files exist
+	authFiles := []string{
+		"internal/models/user.go",
+		"internal/models/role.go",
+		"internal/repository/user/user.go",
+		"internal/services/auth/auth.go",
+		"internal/services/auth/session.go",
+		"internal/web/auth/auth.go",
+		"internal/web/middleware/auth.go",
+	}
+
+	for _, file := range authFiles {
+		path := filepath.Join(projectDir, file)
+		if !fileExists(path) {
+			t.Errorf("expected auth file %s to exist", file)
+		}
+	}
+
+	// Verify user management files exist
+	userMgmtFiles := []string{
+		"internal/services/user/user.go",
+		"internal/web/users/users.go",
+		"internal/web/users/views/list.templ",
+		"internal/web/users/views/form.templ",
+		"internal/web/users/views/show.templ",
+		"internal/web/users/views/password.templ",
+	}
+
+	for _, file := range userMgmtFiles {
+		path := filepath.Join(projectDir, file)
+		if !fileExists(path) {
+			t.Errorf("expected user management file %s to exist", file)
+		}
+	}
+
+	// Validate all .go files have valid syntax
+	err = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") {
+			return nil
+		}
+
+		cmd := exec.Command("gofmt", "-e", path)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Errorf("syntax error in %s: %s", path, string(output))
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("failed to walk project directory: %v", err)
+	}
+
+	// Verify base_layout.templ has admin section
+	baseLayoutPath := filepath.Join(projectDir, "internal/web/layouts/base.templ")
+	if fileExists(baseLayoutPath) {
+		content := readFile(t, baseLayoutPath)
+		if !strings.Contains(content, "middleware.IsAdmin") {
+			t.Error("base layout should contain admin visibility check")
+		}
+		if !strings.Contains(content, "MCP:NAV_ITEMS_ADMIN") {
+			t.Error("base layout should contain admin nav markers")
+		}
+		if !strings.Contains(content, "/admin/users") {
+			t.Error("base layout should contain Users nav item for user management")
+		}
+	}
+}

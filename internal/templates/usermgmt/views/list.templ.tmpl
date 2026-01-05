@@ -11,12 +11,11 @@ import (
 // ListProps contains props for the users list page.
 type ListProps struct {
 	Users      []models.User
-	Total      int64
 	Page       int
+	PageSize   int
 	TotalPages int
+	TotalCount int
 	Search     string
-	OrderBy    string
-	OrderDir   string
 	CSRFToken  string
 }
 
@@ -50,8 +49,6 @@ templ searchForm(props ListProps) {
 		hx-trigger="submit, keyup changed delay:300ms from:#search-input"
 		class="flex gap-2"
 	>
-		<input type="hidden" name="sort" value={ props.OrderBy }/>
-		<input type="hidden" name="dir" value={ props.OrderDir }/>
 		@components.Input(components.InputProps{
 			ID:          "search-input",
 			Name:        "search",
@@ -74,11 +71,11 @@ templ UsersTable(props ListProps) {
 				<table class="w-full">
 					<thead class="bg-muted/50">
 						<tr>
-							@sortableHeader("Name", "name", props)
-							@sortableHeader("Email", "email", props)
+							<th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Name</th>
+							<th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Email</th>
 							<th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Role</th>
-							@sortableHeader("Status", "active", props)
-							@sortableHeader("Created", "created_at", props)
+							<th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
+							<th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Created</th>
 							<th class="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
 						</tr>
 					</thead>
@@ -101,34 +98,6 @@ templ UsersTable(props ListProps) {
 			}
 		}
 	}
-}
-
-// sortableHeader renders a sortable table header.
-templ sortableHeader(label, field string, props ListProps) {
-	<th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-		<button
-			hx-get={ fmt.Sprintf("/admin/users?sort=%s&dir=%s&search=%s", field, nextDir(field, props), props.Search) }
-			hx-target="#users-table"
-			class="flex items-center gap-1 hover:text-foreground"
-		>
-			{ label }
-			if props.OrderBy == field {
-				if props.OrderDir == "asc" {
-					@components.Icon("chevron-up", "h-4 w-4")
-				} else {
-					@components.Icon("chevron-down", "h-4 w-4")
-				}
-			}
-		</button>
-	</th>
-}
-
-// nextDir returns the next sort direction.
-func nextDir(field string, props ListProps) string {
-	if props.OrderBy == field && props.OrderDir == "asc" {
-		return "desc"
-	}
-	return "asc"
 }
 
 // userRow renders a single user row.
@@ -246,12 +215,12 @@ templ statusBadge(active bool) {
 templ pagination(props ListProps) {
 	<div class="flex items-center justify-between px-4 py-3 border-t">
 		<div class="text-sm text-muted-foreground">
-			Showing { strconv.Itoa((props.Page-1)*10+1) } to { strconv.Itoa(min(props.Page*10, int(props.Total))) } of { strconv.FormatInt(props.Total, 10) } users
+			Showing { strconv.Itoa((props.Page-1)*props.PageSize+1) } to { strconv.Itoa(minInt(props.Page*props.PageSize, props.TotalCount)) } of { strconv.Itoa(props.TotalCount) } users
 		</div>
 		<div class="flex gap-1">
 			if props.Page > 1 {
 				<button
-					hx-get={ fmt.Sprintf("/admin/users?page=%d&sort=%s&dir=%s&search=%s", props.Page-1, props.OrderBy, props.OrderDir, props.Search) }
+					hx-get={ fmt.Sprintf("/admin/users?page=%d&search=%s", props.Page-1, props.Search) }
 					hx-target="#users-table"
 					class="px-3 py-1 border rounded hover:bg-muted"
 				>
@@ -260,7 +229,7 @@ templ pagination(props ListProps) {
 			}
 			for i := maxInt(1, props.Page-2); i <= minInt(props.TotalPages, props.Page+2); i++ {
 				<button
-					hx-get={ fmt.Sprintf("/admin/users?page=%d&sort=%s&dir=%s&search=%s", i, props.OrderBy, props.OrderDir, props.Search) }
+					hx-get={ fmt.Sprintf("/admin/users?page=%d&search=%s", i, props.Search) }
 					hx-target="#users-table"
 					class={ "px-3 py-1 border rounded", templ.KV("bg-primary text-primary-foreground", i == props.Page), templ.KV("hover:bg-muted", i != props.Page) }
 				>
@@ -269,7 +238,7 @@ templ pagination(props ListProps) {
 			}
 			if props.Page < props.TotalPages {
 				<button
-					hx-get={ fmt.Sprintf("/admin/users?page=%d&sort=%s&dir=%s&search=%s", props.Page+1, props.OrderBy, props.OrderDir, props.Search) }
+					hx-get={ fmt.Sprintf("/admin/users?page=%d&search=%s", props.Page+1, props.Search) }
 					hx-target="#users-table"
 					class="px-3 py-1 border rounded hover:bg-muted"
 				>
