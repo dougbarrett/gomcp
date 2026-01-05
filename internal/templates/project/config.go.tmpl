@@ -16,6 +16,7 @@ type Config struct {
 	Server   ServerConfig   `toml:"server"`
 	Database DatabaseConfig `toml:"database"`
 	Session  SessionConfig  `toml:"session"`
+	Auth     AuthConfig     `toml:"auth"`
 }
 
 // ServerConfig holds server-related configuration.
@@ -30,6 +31,13 @@ type SessionConfig struct {
 	MaxAge   int    `toml:"max_age"`   // in seconds
 	Secure   bool   `toml:"secure"`    // HTTPS only
 	HttpOnly bool   `toml:"http_only"`
+}
+
+// AuthConfig holds authentication-related configuration.
+type AuthConfig struct {
+	// HomeRoute is where users are redirected after login/registration.
+	// Defaults to "/dashboard" but can be changed to any authenticated route.
+	HomeRoute string `toml:"home_route"`
 }
 
 // DatabaseConfig holds database-related configuration.
@@ -54,6 +62,9 @@ func Load() *Config {
 			MaxAge:   86400 * 7, // 7 days
 			Secure:   getEnv("SESSION_SECURE", "false") == "true",
 			HttpOnly: true,
+		},
+		Auth: AuthConfig{
+			HomeRoute: getEnv("AUTH_HOME_ROUTE", "/dashboard"),
 		},
 	}
 

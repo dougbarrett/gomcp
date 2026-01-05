@@ -1,14 +1,18 @@
 package [[.PackageName]]
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
+	[[- if hasTimeFields .Fields]]
+	"time"
+	[[- end]]
 
 	[[.PackageName]]svc "[[.ModulePath]]/internal/services/[[.PackageName]]"
 	"[[.ModulePath]]/internal/web"
 	[[- if .WithCrudViews]]
 	"[[.ModulePath]]/internal/web/[[.PackageName]]/views"
+	"[[.ModulePath]]/internal/web/layouts"
+	"[[.ModulePath]]/internal/web/middleware"
 	[[- end]]
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
@@ -70,24 +74,22 @@ func (c *Controller) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	[[- if .WithCrudViews]]
-	// For HTMX partial requests, render just the list content
-	if res.IsHTMX() {
-		c.render(w, r, views.[[.ModelName]]ListPartial(views.[[.ModelName]]ListProps{
-			Items:      result.Items,
-			Page:       result.Page,
-			TotalPages: result.TotalPages,
-			TotalItems: result.TotalItems,
-		}))
-		return
-	}
-
-	// For full page requests, render the complete list view
-	c.render(w, r, views.[[.ModelName]]List(views.[[.ModelName]]ListProps{
+	props := views.[[.ModelName]]ListProps{
 		Items:      result.Items,
 		Page:       result.Page,
 		TotalPages: result.TotalPages,
 		TotalItems: result.TotalItems,
-	}))
+		CSRFToken:  middleware.GetCSRFToken(r.Context()),
+	}
+
+	// For HTMX partial requests, render just the list content
+	if res.IsHTMX() {
+		c.render(w, r, views.[[.ModelName]]ListPartial(props))
+		return
+	}
+
+	// For full page requests, wrap in dashboard layout
+	c.render(w, r, layouts.DashboardPage("[[pluralize .ModelName]]", views.[[.ModelName]]List(props)))
 	[[- else]]
 	// Return JSON response
 	res.JSON(http.StatusOK, result)
@@ -111,9 +113,19 @@ func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
 	}
 
 	[[- if .WithCrudViews]]
-	c.render(w, r, views.[[.ModelName]]Show(views.[[.ModelName]]ShowProps{
-		Item: [[.VariableName]],
-	}))
+	props := views.[[.ModelName]]ShowProps{
+		Item:      [[.VariableName]],
+		CSRFToken: middleware.GetCSRFToken(r.Context()),
+	}
+
+	// For HTMX partial requests, render just the content
+	if res.IsHTMX() {
+		c.render(w, r, views.[[.ModelName]]Show(props))
+		return
+	}
+
+	// For full page requests, wrap in dashboard layout
+	c.render(w, r, layouts.DashboardPage("[[.ModelName]]", views.[[.ModelName]]Show(props)))
 	[[- else]]
 	res.JSON(http.StatusOK, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
 	[[- end]]
@@ -123,9 +135,10 @@ func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) New(w http.ResponseWriter, r *http.Request) {
 	[[- if .WithCrudViews]]
 	c.render(w, r, views.[[.ModelName]]Form(views.[[.ModelName]]FormProps{
-		Item:   nil,
-		Errors: nil,
-		IsEdit: false,
+		Item:      nil,
+		Errors:    nil,
+		IsEdit:    false,
+		CSRFToken: middleware.GetCSRFToken(r.Context()),
 	}))
 	[[- else]]
 	res := web.NewResponse(w, r)
@@ -137,16 +150,56 @@ func (c *Controller) New(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) Create(w http.ResponseWriter, r *http.Request) {
 	res := web.NewResponse(w, r)
 
-	var input [[.PackageName]]svc.Create[[.ModelName]]Input
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		res.Error(http.StatusBadRequest, "Invalid request body")
+	if err := r.ParseForm(); err != nil {
+		res.Error(http.StatusBadRequest, "Invalid form data")
 		return
+	}
+
+	input := [[.PackageName]]svc.Create[[.ModelName]]Input{
+	[[- range .Fields]]
+	[[- if eq .Type "string"]]
+		[[.Name]]: r.FormValue("[[.JSONName]]"),
+	[[- else if eq .Type "int"]]
+		[[.Name]]: func() int { v, _ := strconv.Atoi(r.FormValue("[[.JSONName]]")); return v }(),
+	[[- else if eq .Type "int64"]]
+		[[.Name]]: func() int64 { v, _ := strconv.ParseInt(r.FormValue("[[.JSONName]]"), 10, 64); return v }(),
+	[[- else if eq .Type "uint"]]
+		[[.Name]]: func() uint { v, _ := strconv.ParseUint(r.FormValue("[[.JSONName]]"), 10, 32); return uint(v) }(),
+	[[- else if eq .Type "float64"]]
+		[[.Name]]: func() float64 { v, _ := strconv.ParseFloat(r.FormValue("[[.JSONName]]"), 64); return v }(),
+	[[- else if eq .Type "bool"]]
+		[[.Name]]: r.FormValue("[[.JSONName]]") == "true" || r.FormValue("[[.JSONName]]") == "on",
+	[[- else if eq .Type "time.Time"]]
+		[[.Name]]: func() time.Time { v, _ := time.Parse("2006-01-02T15:04", r.FormValue("[[.JSONName]]")); return v }(),
+	[[- else if eq .Type "*time.Time"]]
+		[[.Name]]: func() *time.Time { if r.FormValue("[[.JSONName]]") == "" { return nil }; v, _ := time.Parse("2006-01-02", r.FormValue("[[.JSONName]]")); return &v }(),
+	[[- else]]
+		[[.Name]]: r.FormValue("[[.JSONName]]"),
+	[[- end]]
+	[[- end]]
+	[[- range .Relationships]]
+	[[- if .IsBelongsTo]]
+		[[.ForeignKey]]: func() uint { v, _ := strconv.ParseUint(r.FormValue("[[.ForeignKey | toJSONTag]]"), 10, 32); return uint(v) }(),
+	[[- end]]
+	[[- end]]
 	}
 
 	[[.VariableName]], err := c.service.Create(r.Context(), input)
 	if err != nil {
+		[[- if .WithCrudViews]]
+		// Re-render form with error
+		csrfToken := middleware.GetCSRFToken(r.Context())
+		c.render(w, r, views.[[.ModelName]]Form(views.[[.ModelName]]FormProps{
+			Item:      nil,
+			Errors:    map[string]string{"_error": err.Error()},
+			IsEdit:    false,
+			CSRFToken: csrfToken,
+		}))
+		return
+		[[- else]]
 		res.Error(http.StatusInternalServerError, err.Error())
 		return
+		[[- end]]
 	}
 
 	if res.IsHTMX() {
@@ -177,9 +230,10 @@ func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
 
 	[[- if .WithCrudViews]]
 	c.render(w, r, views.[[.ModelName]]Form(views.[[.ModelName]]FormProps{
-		Item:   [[.VariableName]],
-		Errors: nil,
-		IsEdit: true,
+		Item:      [[.VariableName]],
+		Errors:    nil,
+		IsEdit:    true,
+		CSRFToken: middleware.GetCSRFToken(r.Context()),
 	}))
 	[[- else]]
 	res.JSON(http.StatusOK, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
@@ -196,11 +250,75 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input [[.PackageName]]svc.Update[[.ModelName]]Input
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		res.Error(http.StatusBadRequest, "Invalid request body")
+	if err := r.ParseForm(); err != nil {
+		res.Error(http.StatusBadRequest, "Invalid form data")
 		return
 	}
+
+	// Build input with pointer fields for partial updates
+	input := [[.PackageName]]svc.Update[[.ModelName]]Input{}
+	[[- range .Fields]]
+	[[- if eq .Type "string"]]
+	if v := r.FormValue("[[.JSONName]]"); v != "" {
+		input.[[.Name]] = &v
+	}
+	[[- else if eq .Type "int"]]
+	if v := r.FormValue("[[.JSONName]]"); v != "" {
+		if i, err := strconv.Atoi(v); err == nil {
+			input.[[.Name]] = &i
+		}
+	}
+	[[- else if eq .Type "int64"]]
+	if v := r.FormValue("[[.JSONName]]"); v != "" {
+		if i, err := strconv.ParseInt(v, 10, 64); err == nil {
+			input.[[.Name]] = &i
+		}
+	}
+	[[- else if eq .Type "uint"]]
+	if v := r.FormValue("[[.JSONName]]"); v != "" {
+		if i, err := strconv.ParseUint(v, 10, 32); err == nil {
+			u := uint(i)
+			input.[[.Name]] = &u
+		}
+	}
+	[[- else if eq .Type "float64"]]
+	if v := r.FormValue("[[.JSONName]]"); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			input.[[.Name]] = &f
+		}
+	}
+	[[- else if eq .Type "bool"]]
+	// For checkboxes, explicit handling: form sends "true"/"on" when checked
+	boolVal := r.FormValue("[[.JSONName]]") == "true" || r.FormValue("[[.JSONName]]") == "on"
+	input.[[.Name]] = &boolVal
+	[[- else if eq .Type "time.Time"]]
+	if v := r.FormValue("[[.JSONName]]"); v != "" {
+		if t, err := time.Parse("2006-01-02T15:04", v); err == nil {
+			input.[[.Name]] = &t
+		}
+	}
+	[[- else if eq .Type "*time.Time"]]
+	if v := r.FormValue("[[.JSONName]]"); v != "" {
+		if t, err := time.Parse("2006-01-02", v); err == nil {
+			input.[[.Name]] = &t
+		}
+	}
+	[[- else]]
+	if v := r.FormValue("[[.JSONName]]"); v != "" {
+		input.[[.Name]] = &v
+	}
+	[[- end]]
+	[[- end]]
+	[[- range .Relationships]]
+	[[- if .IsBelongsTo]]
+	if v := r.FormValue("[[.ForeignKey | toJSONTag]]"); v != "" {
+		if i, err := strconv.ParseUint(v, 10, 32); err == nil {
+			u := uint(i)
+			input.[[.ForeignKey]] = &u
+		}
+	}
+	[[- end]]
+	[[- end]]
 
 	[[.VariableName]], err := c.service.Update(r.Context(), uint(id), input)
 	if err != nil {
@@ -208,12 +326,27 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 			res.Error(http.StatusNotFound, err.Error())
 			return
 		}
+		[[- if .WithCrudViews]]
+		// Re-fetch item for re-rendering form with error
+		existing, _ := c.service.GetByID(r.Context(), uint(id))
+		csrfToken := middleware.GetCSRFToken(r.Context())
+		c.render(w, r, views.[[.ModelName]]Form(views.[[.ModelName]]FormProps{
+			Item:      existing,
+			Errors:    map[string]string{"_error": err.Error()},
+			IsEdit:    true,
+			CSRFToken: csrfToken,
+		}))
+		return
+		[[- else]]
 		res.Error(http.StatusInternalServerError, err.Error())
 		return
+		[[- end]]
 	}
 
 	if res.IsHTMX() {
 		res.Success("[[.ModelName]] updated successfully")
+		res.Redirect("[[.URLPath]]/" + strconv.FormatUint(uint64([[.VariableName]].ID), 10))
+		return
 	}
 
 	res.JSON(http.StatusOK, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))

@@ -18,13 +18,17 @@ func NewRouter(cfg *config.Config) *chi.Mux {
 	r.Use(chimiddleware.RealIP)
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
-	r.Use(middleware.MethodOverride) // Support PUT/DELETE in HTML forms via _method field
 	r.Use(middleware.CORS)
 
 	// CSRF protection - uses session secret from config
 	// For HTMX requests, include X-CSRF-Token header
 	r.Use(middleware.CSRF(cfg))
 	r.Use(middleware.InjectCSRFToken)
+
+	// Method override MUST come AFTER CSRF middleware.
+	// gorilla/csrf reads the csrf_token from form body, and ParseForm() can only be called once.
+	// If MethodOverride came first, it would consume the body before CSRF could read the token.
+	r.Use(middleware.MethodOverride)
 
 	// Serve static files
 	fileServer := http.FileServer(http.Dir("assets"))

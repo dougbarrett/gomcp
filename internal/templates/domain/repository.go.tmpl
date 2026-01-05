@@ -97,9 +97,19 @@ func (r *repository) Create(ctx context.Context, [[.VariableName]] *models.[[.Mo
 }
 
 // FindByID finds a [[.ModelName]] by ID.
+[[- if .HasRelationships]]
+// Relationships are preloaded by default when defined.
+[[- end]]
 func (r *repository) FindByID(ctx context.Context, id uint) (*models.[[.ModelName]], error) {
 	var [[.VariableName]] models.[[.ModelName]]
-	err := r.db.WithContext(ctx).First(&[[.VariableName]], id).Error
+	db := r.db.WithContext(ctx)
+[[- if .HasRelationships]]
+	// Preload default relationships
+[[- range .PreloadRelationships]]
+	db = db.Preload("[[.FieldName]]")
+[[- end]]
+[[- end]]
+	err := db.First(&[[.VariableName]], id).Error
 	if err != nil {
 		return nil, err
 	}

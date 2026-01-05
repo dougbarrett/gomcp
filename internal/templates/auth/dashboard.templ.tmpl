@@ -1,0 +1,107 @@
+package views
+
+import (
+	"[[.ModulePath]]/internal/models"
+	"[[.ModulePath]]/internal/web/components"
+)
+
+// DashboardProps contains props for the dashboard view.
+type DashboardProps struct {
+	User *models.User
+}
+
+// DashboardContent renders the main dashboard content.
+templ DashboardContent(props DashboardProps) {
+	<div class="space-y-6">
+		// Welcome header
+		@components.PageHeader("Dashboard") {
+			<p class="text-muted-foreground">
+				Welcome back, { props.User.Name }!
+			</p>
+		}
+
+		// Quick stats cards
+		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+			@statsCard("Account Status", func() string {
+				if props.User.Active {
+					return "Active"
+				}
+				return "Inactive"
+			}(), "check-circle")
+
+			@statsCard("Role", func() string {
+				if props.User.Role != nil {
+					return props.User.Role.Name
+				}
+				return "User"
+			}(), "shield")
+
+			@statsCard("Email", props.User.Email, "mail")
+
+			@statsCard("Last Login", func() string {
+				if props.User.LastLoginAt != nil {
+					return props.User.LastLoginAt.Format("Jan 2, 2006")
+				}
+				return "Never"
+			}(), "clock")
+		</div>
+
+		// Main content area
+		<div class="grid gap-4 md:grid-cols-2">
+			// Quick actions card
+			@components.Card(components.CardProps{}) {
+				@components.CardHeader("") {
+					<h3 class="text-lg font-semibold">Quick Actions</h3>
+				}
+				@components.CardContent("") {
+					<div class="space-y-2">
+						<a href="/profile" class="flex items-center gap-2 p-2 rounded hover:bg-muted transition-colors">
+							@components.Icon("user", "h-5 w-5")
+							<span>Edit Profile</span>
+						</a>
+						<a href="/settings" class="flex items-center gap-2 p-2 rounded hover:bg-muted transition-colors">
+							@components.Icon("cog", "h-5 w-5")
+							<span>Settings</span>
+						</a>
+						<form method="POST" action="/logout" class="m-0">
+							<button type="submit" class="flex items-center gap-2 p-2 rounded hover:bg-muted transition-colors w-full text-left text-red-600">
+								@components.Icon("arrow-right-on-rectangle", "h-5 w-5")
+								<span>Logout</span>
+							</button>
+						</form>
+					</div>
+				}
+			}
+
+			// Recent activity card (placeholder)
+			@components.Card(components.CardProps{}) {
+				@components.CardHeader("") {
+					<h3 class="text-lg font-semibold">Recent Activity</h3>
+				}
+				@components.CardContent("") {
+					<div class="text-center py-8 text-muted-foreground">
+						<p>No recent activity to display.</p>
+						<p class="text-sm mt-2">Activity will appear here as you use the application.</p>
+					</div>
+				}
+			}
+		</div>
+	</div>
+}
+
+// statsCard renders a statistics card.
+templ statsCard(title, value, icon string) {
+	@components.Card(components.CardProps{}) {
+		<div class="p-6">
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="text-sm font-medium text-muted-foreground">{ title }</p>
+					<p class="text-2xl font-bold mt-1">{ value }</p>
+				</div>
+				<div class="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+					@components.Icon(icon, "h-5 w-5 text-primary")
+				</div>
+			</div>
+		</div>
+	}
+}

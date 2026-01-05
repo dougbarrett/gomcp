@@ -354,5 +354,15 @@ func TemplateFuncMap() template.FuncMap {
 			}
 			return "string"
 		},
+
+		// Check if any field is a time type (for imports)
+		"hasTimeFields": func(fields []FieldData) bool {
+			for _, f := range fields {
+				if strings.Contains(f.Type, "time.Time") {
+					return true
+				}
+			}
+			return false
+		},
 	}
 }

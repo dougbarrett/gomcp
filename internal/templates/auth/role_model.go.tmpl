@@ -1,0 +1,36 @@
+package models
+
+import "time"
+
+// Role represents a user role for RBAC.
+type Role struct {
+	ID          uint      `gorm:"primarykey" json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Name        string    `gorm:"uniqueIndex;size:50;not null" json:"name"`
+	Description string    `gorm:"size:255" json:"description"`
+}
+
+// RoleAdmin is the admin role name.
+const RoleAdmin = "admin"
+
+// RoleUser is the default user role name.
+const RoleUser = "user"
+
+// DefaultRoles returns the default roles to seed.
+func DefaultRoles() []Role {
+	return []Role{
+		{ID: 1, Name: RoleAdmin, Description: "Administrator with full access"},
+		{ID: 2, Name: RoleUser, Description: "Regular user with limited access"},
+	}
+}
+
+// IsAdmin returns true if this is the admin role.
+func (r *Role) IsAdmin() bool {
+	return r.Name == RoleAdmin
+}
+
+// TableName returns the table name for the Role model.
+func (Role) TableName() string {
+	return "roles"
+}

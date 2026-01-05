@@ -35,6 +35,7 @@ type Service struct {
 	userRepo      *user.Repository
 	store         sessions.Store
 	sessionMaxAge int
+	homeRoute     string
 }
 
 // NewService creates a new auth Service.
@@ -51,7 +52,16 @@ func NewService(userRepo *user.Repository, cfg *config.Config) *Service {
 		userRepo:      userRepo,
 		store:         store,
 		sessionMaxAge: cfg.Session.MaxAge,
+		homeRoute:     cfg.Auth.HomeRoute,
 	}
+}
+
+// HomeRoute returns the configured route to redirect to after authentication.
+func (s *Service) HomeRoute() string {
+	if s.homeRoute == "" {
+		return "/dashboard"
+	}
+	return s.homeRoute
 }
 
 // LoginInput contains login form data.
@@ -119,11 +129,11 @@ func (s *Service) Register(ctx context.Context, w http.ResponseWriter, r *http.R
 		return nil, ErrEmailExists
 	}
 
-	// Create user
+	// Create user with default role
 	user := &models.User{
 		Name:   input.Name,
 		Email:  input.Email,
-		Role:   models.RoleUser,
+		RoleID: models.DefaultUserRoleID,
 		Active: true,
 	}
 

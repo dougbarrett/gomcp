@@ -46,7 +46,7 @@ func (c *Controller) RegisterRegistrationRoutes(r chi.Router) {
 func (c *Controller) ShowLogin(w http.ResponseWriter, r *http.Request) {
 	// Check if already logged in
 	if c.authService.ValidateSession(r) {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		http.Redirect(w, r, c.authService.HomeRoute(), http.StatusSeeOther)
 		return
 	}
 
@@ -102,10 +102,10 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Redirect to home or intended URL
+	// Redirect to home route or intended URL
 	redirectURL := r.URL.Query().Get("redirect")
 	if redirectURL == "" {
-		redirectURL = "/"
+		redirectURL = c.authService.HomeRoute()
 	}
 
 	if r.Header.Get("HX-Request") == "true" {
@@ -120,7 +120,7 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) ShowRegister(w http.ResponseWriter, r *http.Request) {
 	// Check if already logged in
 	if c.authService.ValidateSession(r) {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		http.Redirect(w, r, c.authService.HomeRoute(), http.StatusSeeOther)
 		return
 	}
 
@@ -197,13 +197,14 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Redirect to home
+	// Redirect to home route
+	homeRoute := c.authService.HomeRoute()
 	if r.Header.Get("HX-Request") == "true" {
-		w.Header().Set("HX-Redirect", "/")
+		w.Header().Set("HX-Redirect", homeRoute)
 		return
 	}
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, homeRoute, http.StatusSeeOther)
 }
 
 // Logout logs the user out.

@@ -1,0 +1,57 @@
+package dashboard
+
+import (
+	"net/http"
+
+	"[[.ModulePath]]/internal/models"
+	"[[.ModulePath]]/internal/web"
+	"[[.ModulePath]]/internal/web/dashboard/views"
+	"[[.ModulePath]]/internal/web/layouts"
+	authmiddleware "[[.ModulePath]]/internal/web/middleware"
+	"github.com/go-chi/chi/v5"
+)
+
+// Controller handles dashboard HTTP requests.
+type Controller struct{}
+
+// NewController creates a new dashboard Controller.
+func NewController() *Controller {
+	return &Controller{}
+}
+
+// RegisterRoutes registers dashboard routes on the given router.
+// Routes should be protected by RequireAuth middleware.
+func (c *Controller) RegisterRoutes(r chi.Router) {
+	r.Get("/", c.Show)
+}
+
+// Show renders the dashboard home page.
+func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
+	res := web.NewResponse(w, r)
+
+	// Get user from context (set by auth middleware)
+	user := authmiddleware.GetUserFromContext(r.Context())
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	props := views.DashboardProps{
+		User: user,
+	}
+
+	// For HTMX partial requests, render just the content
+	if res.IsHTMX() {
+		res.Render(views.DashboardContent(props))
+		return
+	}
+
+	// For full page requests, wrap in dashboard layout
+	res.Render(layouts.DashboardPage("Dashboard", views.DashboardContent(props)))
+}
+
+// DashboardData represents stats shown on the dashboard.
+type DashboardData struct {
+	User *models.User
+	// Add more dashboard-specific data as needed
+}

@@ -7,13 +7,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// UserRole represents user permission levels.
-type UserRole string
+// DefaultUserRoleID is the role ID assigned to new users (regular user).
+const DefaultUserRoleID uint = 2
 
-const (
-	RoleUser  UserRole = "user"
-	RoleAdmin UserRole = "admin"
-)
+// AdminRoleID is the role ID for administrators.
+const AdminRoleID uint = 1
 
 // User represents an authenticated user.
 type User struct {
@@ -24,7 +22,8 @@ type User struct {
 	Email        string         `gorm:"uniqueIndex;size:255;not null" json:"email"`
 	PasswordHash string         `gorm:"size:255;not null" json:"-"`
 	Name         string         `gorm:"size:255" json:"name"`
-	Role         UserRole       `gorm:"size:50;default:user" json:"role"`
+	RoleID       uint           `gorm:"not null;default:2" json:"role_id"`
+	Role         *Role          `gorm:"foreignKey:RoleID" json:"role,omitempty"`
 	Active       bool           `gorm:"default:true" json:"active"`
 	LastLoginAt  *time.Time     `json:"last_login_at,omitempty"`
 	AvatarURL    string         `gorm:"size:500" json:"avatar_url,omitempty"`
@@ -48,7 +47,10 @@ func (u *User) CheckPassword(password string) bool {
 
 // IsAdmin checks if the user has admin role.
 func (u *User) IsAdmin() bool {
-	return u.Role == RoleAdmin
+	if u.Role != nil {
+		return u.Role.IsAdmin()
+	}
+	return u.RoleID == AdminRoleID
 }
 
 // UpdateLastLogin sets the last login timestamp.
@@ -59,8 +61,8 @@ func (u *User) UpdateLastLogin() {
 
 // BeforeCreate is a GORM hook to validate user before creation.
 func (u *User) BeforeCreate(tx *gorm.DB) error {
-	if u.Role == "" {
-		u.Role = RoleUser
+	if u.RoleID == 0 {
+		u.RoleID = DefaultUserRoleID
 	}
 	return nil
 }

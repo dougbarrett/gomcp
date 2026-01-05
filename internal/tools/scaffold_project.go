@@ -118,6 +118,8 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 			"internal/services/auth",
 			"internal/web/auth",
 			"internal/web/auth/views",
+			"internal/web/dashboard",
+			"internal/web/dashboard/views",
 		)
 	}
 
@@ -166,15 +168,24 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 			template string
 			output   string
 		}{
+			// Role model (must be before User model since User references Role)
+			{"auth/role_model.go.tmpl", "internal/models/role.go"},
+			// User model and repository
 			{"auth/user_model.go.tmpl", "internal/models/user.go"},
 			{"auth/user_repository.go.tmpl", "internal/repository/user/user.go"},
+			// Auth service
 			{"auth/auth_service.go.tmpl", "internal/services/auth/auth.go"},
 			{"auth/session.go.tmpl", "internal/services/auth/session.go"},
+			// Auth middleware and controller
 			{"auth/auth_middleware.go.tmpl", "internal/web/middleware/auth.go"},
 			{"auth/auth_controller.go.tmpl", "internal/web/auth/auth.go"},
+			// Auth views
 			{"auth/auth_layout.templ.tmpl", "internal/web/auth/views/layout.templ"},
 			{"auth/login.templ.tmpl", "internal/web/auth/views/login.templ"},
 			{"auth/register.templ.tmpl", "internal/web/auth/views/register.templ"},
+			// Dashboard
+			{"auth/dashboard_controller.go.tmpl", "internal/web/dashboard/dashboard.go"},
+			{"auth/dashboard.templ.tmpl", "internal/web/dashboard/views/dashboard.templ"},
 		}
 
 		for _, f := range authFiles {
