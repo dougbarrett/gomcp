@@ -7,6 +7,9 @@ import (
 
 	"[[.ModulePath]]/internal/config"
 	"[[.ModulePath]]/internal/database"
+[[- if .WithAuth]]
+	"[[.ModulePath]]/internal/models"
+[[- end]]
 )
 
 func main() {
@@ -30,7 +33,45 @@ func main() {
 
 	log.Println("Seeding database...")
 
-	// Run seeders
+[[- if .WithAuth]]
+
+	// Seed roles
+	log.Println("Seeding roles...")
+	if err := models.SeedRoles(db); err != nil {
+		log.Printf("Warning: failed to seed roles: %v", err)
+	}
+
+	// Seed admin user
+	log.Println("Seeding admin user...")
+	var existingAdmin models.User
+	if err := db.Where("email = ?", "admin@example.com").First(&existingAdmin).Error; err != nil {
+		// Admin doesn't exist, create one
+		adminRole, err := models.GetRoleByName(db, "admin")
+		if err != nil {
+			log.Printf("Warning: admin role not found, skipping admin user creation: %v", err)
+		} else {
+			admin := models.User{
+				Email:  "admin@example.com",
+				Name:   "Admin User",
+				RoleID: adminRole.ID,
+				Active: true,
+			}
+			if err := admin.SetPassword("admin123"); err != nil {
+				log.Printf("Warning: failed to set admin password: %v", err)
+			} else {
+				if err := db.Create(&admin).Error; err != nil {
+					log.Printf("Warning: failed to create admin user: %v", err)
+				} else {
+					log.Println("Admin user created: admin@example.com / admin123")
+				}
+			}
+		}
+	} else {
+		log.Println("Admin user already exists, skipping...")
+	}
+[[- end]]
+
+	// Run custom seeders
 	// Add seeder calls here
 	_ = db
 	_ = ctx

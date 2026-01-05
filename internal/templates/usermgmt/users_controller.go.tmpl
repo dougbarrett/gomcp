@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"[[.ModulePath]]/internal/models"
 	"[[.ModulePath]]/internal/services/auth"
 	usersvc "[[.ModulePath]]/internal/services/user"
 	"[[.ModulePath]]/internal/web"
@@ -57,7 +56,7 @@ func (c *Controller) List(w http.ResponseWriter, r *http.Request) {
 
 	users, total, err := c.userService.ListUsers(r.Context(), page, pageSize, search)
 	if err != nil {
-		res.Error("Failed to load users")
+		res.Error(http.StatusInternalServerError, "Failed to load users")
 		return
 	}
 
@@ -74,7 +73,7 @@ func (c *Controller) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if res.IsHTMX() {
-		res.Render(views.UserTable(props))
+		res.Render(views.UsersTable(props))
 		return
 	}
 
@@ -87,7 +86,7 @@ func (c *Controller) New(w http.ResponseWriter, r *http.Request) {
 
 	roles, err := c.userService.GetRoles(r.Context())
 	if err != nil {
-		res.Error("Failed to load roles")
+		res.Error(http.StatusInternalServerError, "Failed to load roles")
 		return
 	}
 
@@ -110,7 +109,7 @@ func (c *Controller) Create(w http.ResponseWriter, r *http.Request) {
 	res := web.NewResponse(w, r)
 
 	if err := r.ParseForm(); err != nil {
-		res.Error("Invalid form data")
+		res.Error(http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
@@ -170,7 +169,7 @@ func (c *Controller) Create(w http.ResponseWriter, r *http.Request) {
 			res.Render(views.UserForm(props))
 			return
 		}
-		res.Error("Failed to create user")
+		res.Error(http.StatusInternalServerError, "Failed to create user")
 		return
 	}
 
@@ -190,13 +189,13 @@ func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
-		res.Error("Invalid user ID")
+		res.Error(http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	user, err := c.userService.GetUser(r.Context(), uint(id))
 	if err != nil {
-		res.Error("User not found")
+		res.Error(http.StatusNotFound, "User not found")
 		return
 	}
 
@@ -226,19 +225,19 @@ func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
-		res.Error("Invalid user ID")
+		res.Error(http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	user, err := c.userService.GetUser(r.Context(), uint(id))
 	if err != nil {
-		res.Error("User not found")
+		res.Error(http.StatusNotFound, "User not found")
 		return
 	}
 
 	roles, err := c.userService.GetRoles(r.Context())
 	if err != nil {
-		res.Error("Failed to load roles")
+		res.Error(http.StatusInternalServerError, "Failed to load roles")
 		return
 	}
 
@@ -267,12 +266,12 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
-		res.Error("Invalid user ID")
+		res.Error(http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		res.Error("Invalid form data")
+		res.Error(http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
@@ -328,7 +327,7 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 			res.Render(views.UserForm(props))
 			return
 		}
-		res.Error("Failed to update user")
+		res.Error(http.StatusInternalServerError, "Failed to update user")
 		return
 	}
 
@@ -348,19 +347,19 @@ func (c *Controller) Delete(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
-		res.Error("Invalid user ID")
+		res.Error(http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	// Prevent self-deletion
 	currentUser := authmiddleware.GetUserFromContext(r.Context())
 	if currentUser != nil && currentUser.ID == uint(id) {
-		res.Error("Cannot delete your own account")
+		res.Error(http.StatusForbidden, "Cannot delete your own account")
 		return
 	}
 
 	if err := c.userService.DeleteUser(r.Context(), uint(id)); err != nil {
-		res.Error("Failed to delete user")
+		res.Error(http.StatusInternalServerError, "Failed to delete user")
 		return
 	}
 
@@ -380,19 +379,19 @@ func (c *Controller) ToggleActive(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
-		res.Error("Invalid user ID")
+		res.Error(http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	// Prevent self-deactivation
 	currentUser := authmiddleware.GetUserFromContext(r.Context())
 	if currentUser != nil && currentUser.ID == uint(id) {
-		res.Error("Cannot change your own active status")
+		res.Error(http.StatusForbidden, "Cannot change your own active status")
 		return
 	}
 
 	if err := c.userService.ToggleActive(r.Context(), uint(id)); err != nil {
-		res.Error("Failed to update user status")
+		res.Error(http.StatusInternalServerError, "Failed to update user status")
 		return
 	}
 
@@ -412,13 +411,13 @@ func (c *Controller) EditPassword(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
-		res.Error("Invalid user ID")
+		res.Error(http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	user, err := c.userService.GetUser(r.Context(), uint(id))
 	if err != nil {
-		res.Error("User not found")
+		res.Error(http.StatusNotFound, "User not found")
 		return
 	}
 
@@ -442,12 +441,12 @@ func (c *Controller) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
-		res.Error("Invalid user ID")
+		res.Error(http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		res.Error("Invalid form data")
+		res.Error(http.StatusBadRequest, "Invalid form data")
 		return
 	}
 
@@ -478,7 +477,7 @@ func (c *Controller) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := c.userService.UpdatePassword(r.Context(), uint(id), password); err != nil {
-		res.Error("Failed to update password")
+		res.Error(http.StatusInternalServerError, "Failed to update password")
 		return
 	}
 

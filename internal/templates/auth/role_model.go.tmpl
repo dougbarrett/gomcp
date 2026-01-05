@@ -41,12 +41,24 @@ func (Role) TableName() string {
 
 // SeedRoles ensures default roles exist in the database.
 // This is idempotent - it only creates roles that don't exist.
-func SeedRoles(db *gorm.DB) {
+func SeedRoles(db *gorm.DB) error {
 	for _, role := range DefaultRoles() {
 		var existing Role
 		if err := db.First(&existing, role.ID).Error; err != nil {
 			// Role doesn't exist, create it
-			db.Create(&role)
+			if err := db.Create(&role).Error; err != nil {
+				return err
+			}
 		}
 	}
+	return nil
+}
+
+// GetRoleByName returns a role by its name.
+func GetRoleByName(db *gorm.DB, name string) (*Role, error) {
+	var role Role
+	if err := db.Where("name = ?", name).First(&role).Error; err != nil {
+		return nil, err
+	}
+	return &role, nil
 }
