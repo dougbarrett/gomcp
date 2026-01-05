@@ -11,7 +11,9 @@ import (
 	"[[.ModulePath]]/internal/web"
 	[[- if .WithCrudViews]]
 	"[[.ModulePath]]/internal/web/[[.PackageName]]/views"
+	[[- if ne .Layout "none"]]
 	"[[.ModulePath]]/internal/web/layouts"
+	[[- end]]
 	"[[.ModulePath]]/internal/web/middleware"
 	[[- end]]
 	"github.com/a-h/templ"
@@ -89,8 +91,14 @@ func (c *Controller) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For full page requests, wrap in dashboard layout
+	// For full page requests, wrap in layout
+	[[- if eq .Layout "none"]]
+	c.render(w, r, views.[[.ModelName]]List(props))
+	[[- else if eq .Layout "base"]]
+	c.render(w, r, layouts.BasePage("[[pluralize .ModelName]]", views.[[.ModelName]]List(props)))
+	[[- else]]
 	c.render(w, r, layouts.DashboardPage("[[pluralize .ModelName]]", views.[[.ModelName]]List(props)))
+	[[- end]]
 	[[- else]]
 	// Return JSON response
 	res.JSON(http.StatusOK, result)
@@ -125,8 +133,14 @@ func (c *Controller) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For full page requests, wrap in dashboard layout
+	// For full page requests, wrap in layout
+	[[- if eq .Layout "none"]]
+	c.render(w, r, views.[[.ModelName]]Show(props))
+	[[- else if eq .Layout "base"]]
+	c.render(w, r, layouts.BasePage("[[.ModelName]]", views.[[.ModelName]]Show(props)))
+	[[- else]]
 	c.render(w, r, layouts.DashboardPage("[[.ModelName]]", views.[[.ModelName]]Show(props)))
+	[[- end]]
 	[[- else]]
 	res.JSON(http.StatusOK, [[.PackageName]]svc.To[[.ModelName]]Response([[.VariableName]]))
 	[[- end]]

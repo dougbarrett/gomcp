@@ -104,12 +104,18 @@ func main() {
 		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 	})
 
-	// Protected routes
+	// Public routes (no authentication required)
+	// MCP:ROUTES:PUBLIC:START
+	// MCP:ROUTES:PUBLIC:END
+
+	// Protected routes (authentication required)
 	router.Group(func(r chi.Router) {
 		r.Use(authMiddleware.RequireAuth)
 		r.Route("/dashboard", dashboardController.RegisterRoutes)
 		r.Route("/profile", profileController.RegisterRoutes)
 		r.Route("/settings", profileController.RegisterRoutes) // Settings alias for profile
+		// MCP:ROUTES:AUTHENTICATED:START
+		// MCP:ROUTES:AUTHENTICATED:END
 	})
 [[- if .WithUserManagement]]
 
@@ -118,11 +124,15 @@ func main() {
 		r.Use(authMiddleware.RequireAuth)
 		r.Use(authMiddleware.RequireAdmin)
 		r.Route("/admin/users", usersController.RegisterRoutes)
+		// MCP:ROUTES:ADMIN:START
+		// MCP:ROUTES:ADMIN:END
 	})
 [[- end]]
 [[- else]]
 	// Home page
 	web.RegisterHomeRoute(router)
+	// MCP:ROUTES:PUBLIC:START
+	// MCP:ROUTES:PUBLIC:END
 [[- end]]
 	// MCP:ROUTES:END
 

@@ -16,7 +16,7 @@ func TestScaffoldController(t *testing.T) {
 			{
 				name:       "empty domain",
 				domainName: "",
-				wantErr:    "domain name is required",
+				wantErr:    "domain path is required",
 			},
 			{
 				name:       "invalid chars",

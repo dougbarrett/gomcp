@@ -201,7 +201,7 @@ func scaffoldDomain(registry *Registry, input types.ScaffoldDomainInput) (types.
 	if !input.DryRun {
 		mainGoPath := filepath.Join(registry.WorkingDir, "cmd", "web", "main.go")
 		if utils.FileExists(mainGoPath) {
-			if err := injectDomainWiring(mainGoPath, modulePath, pkgName, input.DomainName); err != nil {
+			if err := injectDomainWiring(mainGoPath, modulePath, pkgName, input.DomainName, data.RouteGroup); err != nil {
 				// Log warning but don't fail
 				fmt.Printf("Warning: could not inject DI wiring: %v\n", err)
 			} else {
@@ -347,7 +347,7 @@ func injectInverseRelationships(workingDir string, domainName string, relationsh
 }
 
 // injectDomainWiring injects the domain wiring into main.go.
-func injectDomainWiring(mainGoPath, modulePath, pkgName, domainName string) error {
+func injectDomainWiring(mainGoPath, modulePath, pkgName, domainName, routeGroup string) error {
 	injector, err := modifier.NewInjector(mainGoPath)
 	if err != nil {
 		return err
@@ -393,8 +393,8 @@ func injectDomainWiring(mainGoPath, modulePath, pkgName, domainName string) erro
 		return err
 	}
 
-	// Inject route
-	if err := injector.InjectRoute(domainName); err != nil {
+	// Inject route with route group
+	if err := injector.InjectRouteWithGroup(domainName, routeGroup); err != nil {
 		return err
 	}
 

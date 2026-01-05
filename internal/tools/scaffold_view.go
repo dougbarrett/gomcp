@@ -212,6 +212,12 @@ func buildViewData(input types.ScaffoldViewInput, modulePath string) generator.V
 		rowActions[i] = generator.NewRowActionData(action)
 	}
 
+	// Default layout to "dashboard"
+	layout := input.Layout
+	if layout == "" {
+		layout = "dashboard"
+	}
+
 	return generator.ViewData{
 		ModulePath:        modulePath,
 		DomainName:        input.DomainName,
@@ -234,5 +240,6 @@ func buildViewData(input types.ScaffoldViewInput, modulePath string) generator.V
 		SubmitURL:         submitURL,
 		Method:            method,
 		SuccessRedirect:   successRedirect,
+		Layout:            layout,
 	}
 }

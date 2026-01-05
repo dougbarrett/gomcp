@@ -80,6 +80,18 @@ func scaffoldController(registry *Registry, input types.ScaffoldControllerInput)
 		urlPath = utils.ToURLPath(input.DomainName) // Keep full path for URL
 	}
 
+	// Default layout to "dashboard"
+	layout := input.Layout
+	if layout == "" {
+		layout = "dashboard"
+	}
+
+	// Default route group to "public"
+	routeGroup := input.RouteGroup
+	if routeGroup == "" {
+		routeGroup = "public"
+	}
+
 	data := generator.DomainData{
 		ModulePath:   modulePath,
 		DomainName:   input.DomainName,
@@ -87,6 +99,8 @@ func scaffoldController(registry *Registry, input types.ScaffoldControllerInput)
 		PackageName:  pkgName,
 		VariableName: utils.ToVariableName(baseDomain),
 		URLPath:      urlPath,
+		Layout:       layout,
+		RouteGroup:   routeGroup,
 	}
 
 	// Create directory - use full path for nested domains

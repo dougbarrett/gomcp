@@ -64,6 +64,7 @@ func (r *Registry) RegisterAll(server *mcp.Server) {
 	RegisterScaffoldDomain(server, r)
 	RegisterScaffoldRepository(server, r)
 	RegisterScaffoldService(server, r)
+	RegisterScaffoldServiceForRepo(server, r)
 	RegisterScaffoldController(server, r)
 
 	// Phase 4: View layer tools

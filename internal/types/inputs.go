@@ -67,6 +67,10 @@ type ScaffoldDomainInput struct {
 	WithCrudViews *bool `json:"with_crud_views,omitempty"`
 	// WithSoftDelete includes soft delete support. Defaults to true.
 	WithSoftDelete *bool `json:"with_soft_delete,omitempty"`
+	// Layout specifies the view layout: dashboard, base, auth, none. Defaults to "dashboard".
+	Layout string `json:"layout,omitempty"`
+	// RouteGroup specifies the middleware context: public, authenticated, admin. Defaults to "public".
+	RouteGroup string `json:"route_group,omitempty"`
 	// DryRun previews changes without writing files.
 	DryRun bool `json:"dry_run,omitempty"`
 }
@@ -151,6 +155,10 @@ type ScaffoldControllerInput struct {
 	Actions []ActionDef `json:"actions"`
 	// BasePath is the URL base path. Defaults to /{domain_name}.
 	BasePath string `json:"base_path,omitempty"`
+	// Layout specifies the view layout: dashboard, base, auth, none. Defaults to "dashboard".
+	Layout string `json:"layout,omitempty"`
+	// RouteGroup specifies the middleware context: public, authenticated, admin. Defaults to "public".
+	RouteGroup string `json:"route_group,omitempty"`
 	// DryRun previews changes without writing files.
 	DryRun bool `json:"dry_run,omitempty"`
 }
@@ -215,6 +223,8 @@ type ScaffoldViewInput struct {
 	ViewName string `json:"view_name"`
 	// Config contains view-specific configuration.
 	Config ViewConfig `json:"config,omitempty"`
+	// Layout specifies the view layout: dashboard, base, auth, none. Defaults to "dashboard".
+	Layout string `json:"layout,omitempty"`
 	// DryRun previews changes without writing files.
 	DryRun bool `json:"dry_run,omitempty"`
 }
@@ -440,9 +450,17 @@ type ListDomainsInput struct {
 	// No input required - scans the project structure.
 }
 
+// DomainWiringDef defines how to wire a domain into main.go.
+type DomainWiringDef struct {
+	// Name is the domain name.
+	Name string `json:"name"`
+	// RouteGroup specifies the middleware context: public, authenticated, admin. Defaults to "public".
+	RouteGroup string `json:"route_group,omitempty"`
+}
+
 // UpdateDIWiringInput is the input for the update_di_wiring tool.
 type UpdateDIWiringInput struct {
-	// Domains is the list of domains to wire.
+	// Domains is the list of domains to wire (simple string format for backward compatibility).
 	Domains []string `json:"domains"`
 	// DryRun previews changes without writing files.
 	DryRun bool `json:"dry_run,omitempty"`
@@ -512,4 +530,19 @@ type ExtendEndpointDef struct {
 	Path string `json:"path"`
 	// Body is the handler implementation.
 	Body string `json:"body,omitempty"`
+}
+
+// ScaffoldServiceForRepoInput is the input for the scaffold_service_for_repo tool.
+type ScaffoldServiceForRepoInput struct {
+	// ServiceName is the service name (e.g., "usermgmt"). This becomes the package name.
+	ServiceName string `json:"service_name"`
+	// RepositoryDomain is the domain of the existing repository to wrap (e.g., "user").
+	RepositoryDomain string `json:"repository_domain"`
+	// IncludeMethods is the list of repository methods to include in the service.
+	// If empty, all methods are included.
+	IncludeMethods []string `json:"include_methods,omitempty"`
+	// ExcludeMethods is the list of repository methods to exclude from the service.
+	ExcludeMethods []string `json:"exclude_methods,omitempty"`
+	// DryRun previews changes without writing files.
+	DryRun bool `json:"dry_run,omitempty"`
 }

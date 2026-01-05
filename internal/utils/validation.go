@@ -269,9 +269,14 @@ func ParseDomainPath(path string) string {
 }
 
 // DomainPathToDir converts a domain path to a directory path.
-// For "admin/users" returns "admin/users", for "users" returns "users".
+// Each segment is converted to package name format (lowercase, no underscores).
+// For "admin/order_item" returns "admin/orderitem", for "order_item" returns "orderitem".
 func DomainPathToDir(path string) string {
-	return path // Already in the right format
+	segments := strings.Split(path, "/")
+	for i, seg := range segments {
+		segments[i] = ToPackageName(seg)
+	}
+	return strings.Join(segments, "/")
 }
 
 // ValidateFieldName validates a field name.

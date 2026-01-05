@@ -17,9 +17,9 @@ func TestScaffoldView(t *testing.T) {
 			domainName string
 			wantErr    string
 		}{
-			{"empty domain", "", "domain name"},
-			{"invalid chars", "user@profile", "domain name"},
-			{"starts with number", "123user", "domain name"},
+			{"empty domain", "", "domain path is required"},
+			{"invalid chars", "user@profile", "invalid character"},
+			{"starts with number", "123user", "must start with"},
 		}
 
 		for _, tt := range tests {

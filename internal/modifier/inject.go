@@ -28,6 +28,13 @@ const (
 	MarkerImportsEnd          = "MCP:IMPORTS:END"
 	MarkerRelationshipsStart  = "MCP:RELATIONSHIPS:START"
 	MarkerRelationshipsEnd    = "MCP:RELATIONSHIPS:END"
+	// Route group markers
+	MarkerRoutesPublicStart       = "MCP:ROUTES:PUBLIC:START"
+	MarkerRoutesPublicEnd         = "MCP:ROUTES:PUBLIC:END"
+	MarkerRoutesAuthenticatedStart = "MCP:ROUTES:AUTHENTICATED:START"
+	MarkerRoutesAuthenticatedEnd   = "MCP:ROUTES:AUTHENTICATED:END"
+	MarkerRoutesAdminStart        = "MCP:ROUTES:ADMIN:START"
+	MarkerRoutesAdminEnd          = "MCP:ROUTES:ADMIN:END"
 )
 
 // Injector handles code injection into files using marker comments.
@@ -289,13 +296,49 @@ func (i *Injector) InjectController(domainName string) error {
 	return i.InjectBetweenMarkers(MarkerControllersStart, MarkerControllersEnd, code)
 }
 
-// InjectRoute adds a route registration.
+// InjectRoute adds a route registration to the default (public) route group.
 // Routes are mounted at the default URL path (e.g., /products for "product" domain).
 // Users can later modify the path in main.go to mount under custom prefixes like /admin/products.
 func (i *Injector) InjectRoute(domainName string) error {
+	return i.InjectRouteWithGroup(domainName, "public")
+}
+
+// InjectRouteWithGroup adds a route registration to the specified route group.
+// Valid groups: "public" (no auth), "authenticated" (requires login), "admin" (requires admin role).
+// Falls back to the general MCP:ROUTES markers if group-specific markers are not found.
+func (i *Injector) InjectRouteWithGroup(domainName, routeGroup string) error {
 	varName := utils.ToControllerVariableName(domainName)
 	urlPath := utils.ToURLPath(domainName)
-	code := fmt.Sprintf(`router.Route("%s", %s.RegisterRoutes)`, urlPath, varName)
+
+	// For authenticated routes, the chi.Router variable is 'r' inside the group
+	routerVar := "router"
+	if routeGroup == "authenticated" || routeGroup == "admin" {
+		routerVar = "r"
+	}
+
+	code := fmt.Sprintf(`%s.Route("%s", %s.RegisterRoutes)`, routerVar, urlPath, varName)
+
+	// Determine which markers to use based on route group
+	var startMarker, endMarker string
+	switch routeGroup {
+	case "authenticated":
+		startMarker = MarkerRoutesAuthenticatedStart
+		endMarker = MarkerRoutesAuthenticatedEnd
+	case "admin":
+		startMarker = MarkerRoutesAdminStart
+		endMarker = MarkerRoutesAdminEnd
+	default: // "public" or empty
+		startMarker = MarkerRoutesPublicStart
+		endMarker = MarkerRoutesPublicEnd
+	}
+
+	// Try group-specific markers first
+	if i.HasMarker(startMarker) && i.HasMarker(endMarker) {
+		return i.InjectBetweenMarkers(startMarker, endMarker, code)
+	}
+
+	// Fall back to general routes markers with router variable
+	code = fmt.Sprintf(`router.Route("%s", %s.RegisterRoutes)`, urlPath, varName)
 	return i.InjectBetweenMarkers(MarkerRoutesStart, MarkerRoutesEnd, code)
 }
 

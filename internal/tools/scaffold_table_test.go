@@ -329,7 +329,7 @@ func TestBuildTableData(t *testing.T) {
 		},
 	}
 
-	data := buildTableData(input, "github.com/example/app")
+	data := buildTableData(input, "github.com/example/app", "product_category")
 
 	if data.ModulePath != "github.com/example/app" {
 		t.Errorf("expected ModulePath to be github.com/example/app, got %s", data.ModulePath)

@@ -148,6 +148,10 @@ type DomainData struct {
 	WithPagination bool
 	// WithSearch enables search in views.
 	WithSearch bool
+	// Layout specifies the view layout: dashboard, base, auth, none. Defaults to "dashboard".
+	Layout string
+	// RouteGroup specifies the middleware context: public, authenticated, admin. Defaults to "public".
+	RouteGroup string
 }
 
 // NewDomainData creates DomainData from ScaffoldDomainInput and module path.
@@ -163,6 +167,18 @@ func NewDomainData(input types.ScaffoldDomainInput, modulePath string) DomainDat
 	}
 
 	withCrudViews := input.GetWithCrudViews()
+
+	// Default layout to "dashboard"
+	layout := input.Layout
+	if layout == "" {
+		layout = "dashboard"
+	}
+
+	// Default route group to "public"
+	routeGroup := input.RouteGroup
+	if routeGroup == "" {
+		routeGroup = "public"
+	}
 
 	urlPath := utils.ToURLPath(input.DomainName)
 	return DomainData{
@@ -182,6 +198,8 @@ func NewDomainData(input types.ScaffoldDomainInput, modulePath string) DomainDat
 		WithCrudViews:        withCrudViews,
 		WithPagination:       withCrudViews, // Enable pagination when CRUD views are generated
 		WithSearch:           withCrudViews, // Enable search when CRUD views are generated
+		Layout:               layout,
+		RouteGroup:           routeGroup,
 	}
 }
 
@@ -269,6 +287,8 @@ type ViewData struct {
 	Method string
 	// SuccessRedirect is the redirect target.
 	SuccessRedirect string
+	// Layout specifies the view layout: dashboard, base, auth, none. Defaults to "dashboard".
+	Layout string
 }
 
 // FormData is the template data for form scaffolding.

@@ -67,15 +67,17 @@ func TestAllTemplatesParseCorrectly(t *testing.T) {
 // TestProjectTemplatesExecute tests that project templates execute with valid data.
 func TestProjectTemplatesExecute(t *testing.T) {
 	projectData := struct {
-		ProjectName  string
-		ModulePath   string
-		DatabaseType string
-		WithAuth     bool
+		ProjectName        string
+		ModulePath         string
+		DatabaseType       string
+		WithAuth           bool
+		WithUserManagement bool
 	}{
-		ProjectName:  "testproject",
-		ModulePath:   "github.com/test/testproject",
-		DatabaseType: "sqlite",
-		WithAuth:     true,
+		ProjectName:        "testproject",
+		ModulePath:         "github.com/test/testproject",
+		DatabaseType:       "sqlite",
+		WithAuth:           true,
+		WithUserManagement: false,
 	}
 
 	templates := []string{
@@ -140,6 +142,10 @@ func TestDomainTemplatesExecute(t *testing.T) {
 		PreloadRelationships []generator.RelationshipData
 		WithSoftDelete       bool
 		WithCrudViews        bool
+		WithPagination       bool
+		WithSearch           bool
+		Layout               string
+		RouteGroup           string
 	}{
 		ModulePath:     "github.com/test/testproject",
 		DomainName:     "product",
@@ -160,6 +166,10 @@ func TestDomainTemplatesExecute(t *testing.T) {
 		PreloadRelationships: []generator.RelationshipData{},
 		WithSoftDelete:       true,
 		WithCrudViews:        true,
+		WithPagination:       true,
+		WithSearch:           true,
+		Layout:               "dashboard",
+		RouteGroup:           "public",
 	}
 
 	templates := []string{
@@ -641,6 +651,10 @@ func TestDomainTemplatesWithRelationships(t *testing.T) {
 		PreloadRelationships []generator.RelationshipData
 		WithSoftDelete       bool
 		WithCrudViews        bool
+		WithPagination       bool
+		WithSearch           bool
+		Layout               string
+		RouteGroup           string
 	}{
 		ModulePath:     "github.com/test/testproject",
 		DomainName:     "order",
@@ -690,6 +704,10 @@ func TestDomainTemplatesWithRelationships(t *testing.T) {
 		},
 		WithSoftDelete: true,
 		WithCrudViews:  true,
+		WithPagination: true,
+		WithSearch:     true,
+		Layout:         "dashboard",
+		RouteGroup:     "public",
 	}
 
 	templates := []string{
