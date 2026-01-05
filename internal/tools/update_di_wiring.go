@@ -103,6 +103,14 @@ func updateDIWiring(registry *Registry, input types.UpdateDIWiringInput) (types.
 	for _, domain := range input.Domains {
 		pkgName := utils.ToPackageName(domain)
 
+		// Special handling for "auth" domain - it uses user repository, not auth repository
+		// and is typically scaffolded with scaffold_project --with_auth, not scaffold_domain
+		if pkgName == "auth" {
+			// Auth is special - skip standard wiring as it uses user repo and has custom initialization
+			// The auth service/controller are wired directly in main.go by scaffold_project with_auth
+			continue
+		}
+
 		// Inject imports
 		repoImport := fmt.Sprintf("%s/internal/repository/%s", modulePath, pkgName)
 		if err := injector.InjectImport(repoImport); err != nil {

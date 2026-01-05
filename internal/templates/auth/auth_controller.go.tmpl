@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"[[.ModulePath]]/internal/services/auth"
+	"[[.ModulePath]]/internal/web"
 	"[[.ModulePath]]/internal/web/auth/views"
 	"[[.ModulePath]]/internal/web/middleware"
-	"[[.ModulePath]]/internal/web/response"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -37,7 +37,7 @@ func (c *Controller) ShowLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.Render(w, r, views.LoginPage(views.LoginProps{
+	web.NewResponse(w, r).Render(views.LoginPage(views.LoginProps{
 		CSRFToken: middleware.GetCSRFToken(r.Context()),
 	}))
 }
@@ -47,7 +47,7 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
 	csrfToken := middleware.GetCSRFToken(r.Context())
 
 	if err := r.ParseForm(); err != nil {
-		response.Render(w, r, views.LoginPage(views.LoginProps{
+		web.NewResponse(w, r).Render(views.LoginPage(views.LoginProps{
 			Error:     "Invalid form data",
 			CSRFToken: csrfToken,
 		}))
@@ -70,7 +70,7 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(errors) > 0 {
-		response.Render(w, r, views.LoginPage(views.LoginProps{
+		web.NewResponse(w, r).Render(views.LoginPage(views.LoginProps{
 			Email:     input.Email,
 			Errors:    errors,
 			CSRFToken: csrfToken,
@@ -81,7 +81,7 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) {
 	// Attempt login
 	_, err := c.authService.Login(r.Context(), w, r, input)
 	if err != nil {
-		response.Render(w, r, views.LoginPage(views.LoginProps{
+		web.NewResponse(w, r).Render(views.LoginPage(views.LoginProps{
 			Email:     input.Email,
 			Error:     err.Error(),
 			CSRFToken: csrfToken,
@@ -111,7 +111,7 @@ func (c *Controller) ShowRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.Render(w, r, views.RegisterPage(views.RegisterProps{
+	web.NewResponse(w, r).Render(views.RegisterPage(views.RegisterProps{
 		CSRFToken: middleware.GetCSRFToken(r.Context()),
 	}))
 }
@@ -121,7 +121,7 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 	csrfToken := middleware.GetCSRFToken(r.Context())
 
 	if err := r.ParseForm(); err != nil {
-		response.Render(w, r, views.RegisterPage(views.RegisterProps{
+		web.NewResponse(w, r).Render(views.RegisterPage(views.RegisterProps{
 			Error:     "Invalid form data",
 			CSRFToken: csrfToken,
 		}))
@@ -153,7 +153,7 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(errors) > 0 {
-		response.Render(w, r, views.RegisterPage(views.RegisterProps{
+		web.NewResponse(w, r).Render(views.RegisterPage(views.RegisterProps{
 			Name:      input.Name,
 			Email:     input.Email,
 			Errors:    errors,
@@ -167,7 +167,7 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if err == auth.ErrEmailExists {
 			errors["email"] = "This email is already registered"
-			response.Render(w, r, views.RegisterPage(views.RegisterProps{
+			web.NewResponse(w, r).Render(views.RegisterPage(views.RegisterProps{
 				Name:      input.Name,
 				Email:     input.Email,
 				Errors:    errors,
@@ -175,7 +175,7 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) {
 			}))
 			return
 		}
-		response.Render(w, r, views.RegisterPage(views.RegisterProps{
+		web.NewResponse(w, r).Render(views.RegisterPage(views.RegisterProps{
 			Name:      input.Name,
 			Email:     input.Email,
 			Error:     "Failed to create account. Please try again.",

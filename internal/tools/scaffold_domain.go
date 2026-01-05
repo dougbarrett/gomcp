@@ -52,6 +52,19 @@ func scaffoldDomain(registry *Registry, input types.ScaffoldDomainInput) (types.
 		return types.NewErrorResult(err.Error()), nil
 	}
 
+	// Check for reserved domain names that conflict with auth scaffolding
+	if utils.ToPackageName(input.DomainName) == "user" {
+		// Check if User model exists (created by scaffold_project with_auth)
+		userModelPath := filepath.Join(registry.WorkingDir, "internal", "models", "user.go")
+		if utils.FileExists(userModelPath) {
+			return types.NewErrorResult(
+				"Cannot scaffold 'user' domain: A User model already exists (likely from scaffold_project with_auth). " +
+					"The auth system uses a specialized User model with PasswordHash, Active, and Role fields. " +
+					"To add user-related features, extend the existing auth service instead.",
+			), nil
+		}
+	}
+
 	if len(input.Fields) == 0 {
 		return types.NewErrorResult("at least one field is required"), nil
 	}
