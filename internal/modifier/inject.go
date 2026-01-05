@@ -14,18 +14,20 @@ const MarkerPrefix = "// MCP:"
 
 // Common marker names
 const (
-	MarkerModelsStart      = "MCP:MODELS:START"
-	MarkerModelsEnd        = "MCP:MODELS:END"
-	MarkerReposStart       = "MCP:REPOS:START"
-	MarkerReposEnd         = "MCP:REPOS:END"
-	MarkerServicesStart    = "MCP:SERVICES:START"
-	MarkerServicesEnd      = "MCP:SERVICES:END"
-	MarkerControllersStart = "MCP:CONTROLLERS:START"
-	MarkerControllersEnd   = "MCP:CONTROLLERS:END"
-	MarkerRoutesStart      = "MCP:ROUTES:START"
-	MarkerRoutesEnd        = "MCP:ROUTES:END"
-	MarkerImportsStart     = "MCP:IMPORTS:START"
-	MarkerImportsEnd       = "MCP:IMPORTS:END"
+	MarkerModelsStart         = "MCP:MODELS:START"
+	MarkerModelsEnd           = "MCP:MODELS:END"
+	MarkerReposStart          = "MCP:REPOS:START"
+	MarkerReposEnd            = "MCP:REPOS:END"
+	MarkerServicesStart       = "MCP:SERVICES:START"
+	MarkerServicesEnd         = "MCP:SERVICES:END"
+	MarkerControllersStart    = "MCP:CONTROLLERS:START"
+	MarkerControllersEnd      = "MCP:CONTROLLERS:END"
+	MarkerRoutesStart         = "MCP:ROUTES:START"
+	MarkerRoutesEnd           = "MCP:ROUTES:END"
+	MarkerImportsStart        = "MCP:IMPORTS:START"
+	MarkerImportsEnd          = "MCP:IMPORTS:END"
+	MarkerRelationshipsStart  = "MCP:RELATIONSHIPS:START"
+	MarkerRelationshipsEnd    = "MCP:RELATIONSHIPS:END"
 )
 
 // Injector handles code injection into files using marker comments.
@@ -295,4 +297,10 @@ func (i *Injector) InjectRoute(domainName string) error {
 	urlPath := utils.ToURLPath(domainName)
 	code := fmt.Sprintf(`router.Route("%s", %s.RegisterRoutes)`, urlPath, varName)
 	return i.InjectBetweenMarkers(MarkerRoutesStart, MarkerRoutesEnd, code)
+}
+
+// InjectRelationship adds a relationship field to a model struct.
+// This is used to inject inverse relationships when scaffolding related domains.
+func (i *Injector) InjectRelationship(fieldCode string) error {
+	return i.InjectBetweenMarkers(MarkerRelationshipsStart, MarkerRelationshipsEnd, fieldCode)
 }

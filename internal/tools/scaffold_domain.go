@@ -208,6 +208,11 @@ func scaffoldDomain(registry *Registry, input types.ScaffoldDomainInput) (types.
 				result.FilesUpdated = append(result.FilesUpdated, "cmd/web/main.go")
 			}
 		}
+
+		// Inject inverse relationships into related models
+		if len(input.Relationships) > 0 {
+			injectInverseRelationships(registry.WorkingDir, input.DomainName, input.Relationships, &result.FilesUpdated)
+		}
 	}
 	nextSteps := []string{
 		"go mod tidy",
@@ -231,6 +236,89 @@ func scaffoldDomain(registry *Registry, input types.ScaffoldDomainInput) (types.
 		FilesUpdated: result.FilesUpdated,
 		NextSteps:    nextSteps,
 	}, nil
+}
+
+// injectInverseRelationships injects inverse relationship fields into related models.
+// For example, if Order has belongs_to: User, this will add Orders []Order to User model.
+func injectInverseRelationships(workingDir string, domainName string, relationships []types.RelationshipDef, filesUpdated *[]string) {
+	for _, rel := range relationships {
+		var inverseFieldCode string
+		var inverseModelPath string
+
+		relatedPkgName := utils.ToPackageName(rel.Model)
+		inverseModelPath = filepath.Join(workingDir, "internal", "models", relatedPkgName+".go")
+
+		// Check if the related model file exists
+		if !utils.FileExists(inverseModelPath) {
+			continue
+		}
+
+		// Check if the model has the relationship markers
+		injector, err := modifier.NewInjector(inverseModelPath)
+		if err != nil {
+			continue
+		}
+
+		if !injector.HasMarker(modifier.MarkerRelationshipsStart) {
+			continue
+		}
+
+		// Determine the inverse relationship based on the relationship type
+		modelName := utils.ToModelName(domainName)
+		switch rel.Type {
+		case "belongs_to":
+			// belongs_to -> has_many (e.g., Order belongs_to User -> User has_many Orders)
+			fieldName := utils.Pluralize(modelName)
+			foreignKey := modelName + "ID"
+			inverseFieldCode = fmt.Sprintf(`%s []%s `+"`"+`gorm:"foreignKey:%s" json:"%s,omitempty"`+"`",
+				fieldName, modelName, foreignKey, utils.ToSnakeCase(fieldName))
+
+		case "has_one":
+			// has_one -> belongs_to (e.g., User has_one Profile -> Profile belongs_to User)
+			// The inverse side needs the foreign key pointing back
+			inverseFieldCode = fmt.Sprintf(`%sID uint `+"`"+`json:"%s_id,omitempty"`+"`"+`
+	%s *%s `+"`"+`gorm:"foreignKey:%sID" json:"%s,omitempty"`+"`",
+				modelName, utils.ToSnakeCase(modelName),
+				modelName, modelName, modelName, utils.ToSnakeCase(modelName))
+
+		case "has_many":
+			// has_many -> belongs_to (e.g., User has_many Posts -> Post belongs_to User)
+			// The inverse side (the "many" side) needs the foreign key pointing back
+			inverseFieldCode = fmt.Sprintf(`%sID uint `+"`"+`json:"%s_id,omitempty"`+"`"+`
+	%s *%s `+"`"+`gorm:"foreignKey:%sID" json:"%s,omitempty"`+"`",
+				modelName, utils.ToSnakeCase(modelName),
+				modelName, modelName, modelName, utils.ToSnakeCase(modelName))
+
+		case "many_to_many":
+			// many_to_many -> many_to_many (bidirectional)
+			fieldName := utils.Pluralize(modelName)
+			joinTable := rel.JoinTable
+			if joinTable == "" {
+				// Default join table name (alphabetical order)
+				names := []string{utils.ToSnakeCase(utils.Pluralize(domainName)), utils.ToSnakeCase(utils.Pluralize(rel.Model))}
+				if names[0] > names[1] {
+					names[0], names[1] = names[1], names[0]
+				}
+				joinTable = names[0] + "_" + names[1]
+			}
+			inverseFieldCode = fmt.Sprintf(`%s []%s `+"`"+`gorm:"many2many:%s" json:"%s,omitempty"`+"`",
+				fieldName, modelName, joinTable, utils.ToSnakeCase(fieldName))
+
+		default:
+			continue
+		}
+
+		// Inject the inverse relationship
+		if err := injector.InjectRelationship(inverseFieldCode); err != nil {
+			continue
+		}
+
+		if err := injector.Save(); err != nil {
+			continue
+		}
+
+		*filesUpdated = append(*filesUpdated, filepath.Join("internal", "models", relatedPkgName+".go"))
+	}
 }
 
 // injectDomainWiring injects the domain wiring into main.go.
