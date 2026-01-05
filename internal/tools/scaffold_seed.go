@@ -96,6 +96,11 @@ func scaffoldSeed(registry *Registry, input types.ScaffoldSeedInput) (types.Scaf
 	// Get result
 	result := gen.Result()
 
+	// Check for conflicts
+	if conflictResult := CheckForConflicts(result); conflictResult != nil {
+		return *conflictResult, nil
+	}
+
 	nextSteps := []string{
 		"go mod tidy",
 		fmt.Sprintf("Register the seeder in cmd/seed/main.go"),

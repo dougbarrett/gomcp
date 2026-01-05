@@ -287,7 +287,9 @@ func TestTemplateValidation_ConfigTemplates(t *testing.T) {
 	projectRegistry := NewRegistry(projectDir)
 
 	// Scaffold configs
-	configTypes := []string{"page", "menu", "app", "messages"}
+	// Note: "menu" and "app" configs are already created by scaffoldProject,
+	// so we only scaffold "page" and "messages" here to avoid conflicts.
+	configTypes := []string{"page", "messages"}
 	for _, configType := range configTypes {
 		configInput := types.ScaffoldConfigInput{
 			ConfigType: configType,

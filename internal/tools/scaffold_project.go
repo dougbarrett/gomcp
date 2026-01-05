@@ -184,6 +184,12 @@ func scaffoldProject(registry *Registry, input types.ScaffoldProjectInput) (type
 
 	// Prepare result
 	result := gen.Result()
+
+	// Check for conflicts
+	if conflictResult := CheckForConflicts(result); conflictResult != nil {
+		return *conflictResult, nil
+	}
+
 	var nextSteps []string
 	if useCurrentDir {
 		nextSteps = []string{

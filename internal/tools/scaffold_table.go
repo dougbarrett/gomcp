@@ -97,6 +97,11 @@ func scaffoldTable(registry *Registry, input types.ScaffoldTableInput) (types.Sc
 	// Get result
 	result := gen.Result()
 
+	// Check for conflicts
+	if conflictResult := CheckForConflicts(result); conflictResult != nil {
+		return *conflictResult, nil
+	}
+
 	nextSteps := []string{
 		"templ generate",
 		fmt.Sprintf("Import the table in internal/web/%s/%s.go", pkgName, pkgName),

@@ -74,6 +74,11 @@ func scaffoldComponent(registry *Registry, input types.ScaffoldComponentInput) (
 	// Get result
 	result := gen.Result()
 
+	// Check for conflicts
+	if conflictResult := CheckForConflicts(result); conflictResult != nil {
+		return *conflictResult, nil
+	}
+
 	nextSteps := []string{
 		"templ generate",
 		"Import the component where needed",

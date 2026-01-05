@@ -77,6 +77,11 @@ func scaffoldModal(registry *Registry, input types.ScaffoldModalInput) (types.Sc
 	// Get result
 	result := gen.Result()
 
+	// Check for conflicts
+	if conflictResult := CheckForConflicts(result); conflictResult != nil {
+		return *conflictResult, nil
+	}
+
 	nextSteps := []string{
 		"templ generate",
 		"Import the modal component where needed",

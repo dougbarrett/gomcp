@@ -10,6 +10,16 @@ import (
 	"github.com/dbb1dev/go-mcp/internal/utils"
 )
 
+// FileConflict represents a file that would be overwritten.
+type FileConflict struct {
+	// Path is the relative file path.
+	Path string
+	// Description explains the purpose of this file.
+	Description string
+	// ProposedContent is the content that would be written.
+	ProposedContent string
+}
+
 // Generator handles template-based file generation.
 type Generator struct {
 	// fs is the embedded filesystem containing templates.
@@ -18,10 +28,14 @@ type Generator struct {
 	basePath string
 	// dryRun if true, no files are written.
 	dryRun bool
+	// forceOverwrite if true, allows overwriting existing files.
+	forceOverwrite bool
 	// filesCreated tracks created files.
 	filesCreated []string
 	// filesUpdated tracks updated files.
 	filesUpdated []string
+	// conflicts tracks files that would be overwritten.
+	conflicts []FileConflict
 }
 
 // GeneratorResult contains the results of generation.
@@ -30,6 +44,10 @@ type GeneratorResult struct {
 	FilesCreated []string
 	// FilesUpdated is the list of updated files.
 	FilesUpdated []string
+	// Conflicts is the list of files that would be overwritten.
+	Conflicts []FileConflict
+	// HasConflicts is true if there are any conflicts.
+	HasConflicts bool
 }
 
 // NewGenerator creates a new Generator.
@@ -39,7 +57,13 @@ func NewGenerator(fs embed.FS, basePath string) *Generator {
 		basePath:     basePath,
 		filesCreated: make([]string, 0),
 		filesUpdated: make([]string, 0),
+		conflicts:    make([]FileConflict, 0),
 	}
+}
+
+// SetForceOverwrite sets whether to allow overwriting existing files.
+func (g *Generator) SetForceOverwrite(force bool) {
+	g.forceOverwrite = force
 }
 
 // SetDryRun sets the dry run mode.
@@ -73,6 +97,11 @@ func (g *Generator) EnsureDir(relPath string) error {
 // outputPath is the path relative to basePath.
 // data is the template data.
 func (g *Generator) GenerateFile(templatePath, outputPath string, data any) error {
+	return g.GenerateFileWithDescription(templatePath, outputPath, data, "")
+}
+
+// GenerateFileWithDescription generates a file from a template with a description for conflict reporting.
+func (g *Generator) GenerateFileWithDescription(templatePath, outputPath string, data any, description string) error {
 	fullOutputPath := filepath.Join(g.basePath, outputPath)
 
 	// Check if file exists
@@ -82,6 +111,20 @@ func (g *Generator) GenerateFile(templatePath, outputPath string, data any) erro
 	content, err := ExecuteTemplate(g.fs, templatePath, data)
 	if err != nil {
 		return fmt.Errorf("failed to execute template %s: %w", templatePath, err)
+	}
+
+	// If file exists and we're not forcing overwrite, record as conflict
+	if fileExists && !g.forceOverwrite {
+		desc := description
+		if desc == "" {
+			desc = inferFileDescription(outputPath)
+		}
+		g.conflicts = append(g.conflicts, FileConflict{
+			Path:            outputPath,
+			Description:     desc,
+			ProposedContent: content,
+		})
+		return nil
 	}
 
 	if g.dryRun {
@@ -113,6 +156,38 @@ func (g *Generator) GenerateFile(templatePath, outputPath string, data any) erro
 	return nil
 }
 
+// inferFileDescription infers a description based on the file path.
+func inferFileDescription(path string) string {
+	if strings.Contains(path, "/models/") {
+		return "Model definition with struct fields and GORM tags"
+	}
+	if strings.Contains(path, "/repository/") {
+		return "Repository layer with database CRUD operations"
+	}
+	if strings.Contains(path, "/services/") {
+		if strings.HasSuffix(path, "dto.go") {
+			return "Data Transfer Objects for service layer"
+		}
+		return "Service layer with business logic"
+	}
+	if strings.Contains(path, "/web/") && strings.Contains(path, "/views/") {
+		return "Templ view template for UI rendering"
+	}
+	if strings.Contains(path, "/web/") && !strings.Contains(path, "/views/") {
+		return "HTTP controller with route handlers"
+	}
+	if strings.Contains(path, "/middleware/") {
+		return "HTTP middleware"
+	}
+	if strings.Contains(path, "/config/") {
+		return "Configuration file"
+	}
+	if strings.HasSuffix(path, "_seeder.go") {
+		return "Database seeder for test data"
+	}
+	return "Generated source file"
+}
+
 // GenerateFileIfNotExists generates a file only if it doesn't exist.
 func (g *Generator) GenerateFileIfNotExists(templatePath, outputPath string, data any) error {
 	fullOutputPath := filepath.Join(g.basePath, outputPath)
@@ -126,10 +201,29 @@ func (g *Generator) GenerateFileIfNotExists(templatePath, outputPath string, dat
 
 // GenerateFileFromString generates a file from a string content.
 func (g *Generator) GenerateFileFromString(outputPath, content string) error {
+	return g.GenerateFileFromStringWithDescription(outputPath, content, "")
+}
+
+// GenerateFileFromStringWithDescription generates a file from string content with a description.
+func (g *Generator) GenerateFileFromStringWithDescription(outputPath, content, description string) error {
 	fullOutputPath := filepath.Join(g.basePath, outputPath)
 
 	// Check if file exists
 	fileExists := utils.FileExists(fullOutputPath)
+
+	// If file exists and we're not forcing overwrite, record as conflict
+	if fileExists && !g.forceOverwrite {
+		desc := description
+		if desc == "" {
+			desc = inferFileDescription(outputPath)
+		}
+		g.conflicts = append(g.conflicts, FileConflict{
+			Path:            outputPath,
+			Description:     desc,
+			ProposedContent: content,
+		})
+		return nil
+	}
 
 	if g.dryRun {
 		if fileExists {
@@ -165,13 +259,26 @@ func (g *Generator) Result() GeneratorResult {
 	return GeneratorResult{
 		FilesCreated: g.filesCreated,
 		FilesUpdated: g.filesUpdated,
+		Conflicts:    g.conflicts,
+		HasConflicts: len(g.conflicts) > 0,
 	}
+}
+
+// HasConflicts returns true if there are any file conflicts.
+func (g *Generator) HasConflicts() bool {
+	return len(g.conflicts) > 0
+}
+
+// Conflicts returns the list of file conflicts.
+func (g *Generator) Conflicts() []FileConflict {
+	return g.conflicts
 }
 
 // Reset clears the tracked files.
 func (g *Generator) Reset() {
 	g.filesCreated = make([]string, 0)
 	g.filesUpdated = make([]string, 0)
+	g.conflicts = make([]FileConflict, 0)
 }
 
 // FullPath returns the full path for a relative path.
@@ -198,6 +305,16 @@ func (g *Generator) ReadFile(relPath string) (string, error) {
 func (g *Generator) WriteFile(relPath, content string) error {
 	fullPath := g.FullPath(relPath)
 	fileExists := utils.FileExists(fullPath)
+
+	// If file exists and we're not forcing overwrite, record as conflict
+	if fileExists && !g.forceOverwrite {
+		g.conflicts = append(g.conflicts, FileConflict{
+			Path:            relPath,
+			Description:     inferFileDescription(relPath),
+			ProposedContent: content,
+		})
+		return nil
+	}
 
 	if g.dryRun {
 		if fileExists {

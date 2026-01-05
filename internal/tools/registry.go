@@ -6,6 +6,7 @@ import (
 
 	"github.com/dbb1dev/go-mcp/internal/generator"
 	"github.com/dbb1dev/go-mcp/internal/templates"
+	"github.com/dbb1dev/go-mcp/internal/types"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -32,6 +33,26 @@ func (r *Registry) NewGenerator(projectPath string) *generator.Generator {
 		basePath = r.WorkingDir
 	}
 	return generator.NewGenerator(templates.FS, basePath)
+}
+
+// CheckForConflicts checks if the generator has conflicts and returns a conflict result if so.
+// Returns nil if there are no conflicts.
+func CheckForConflicts(result generator.GeneratorResult) *types.ScaffoldResult {
+	if !result.HasConflicts {
+		return nil
+	}
+
+	conflicts := make([]types.FileConflict, len(result.Conflicts))
+	for i, c := range result.Conflicts {
+		conflicts[i] = types.FileConflict{
+			Path:            c.Path,
+			Description:     c.Description,
+			ProposedContent: c.ProposedContent,
+		}
+	}
+
+	conflictResult := types.NewConflictResult(conflicts)
+	return &conflictResult
 }
 
 // RegisterAll registers all scaffolding tools with the server.

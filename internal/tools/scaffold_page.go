@@ -97,6 +97,11 @@ func scaffoldPage(registry *Registry, input types.ScaffoldPageInput) (types.Scaf
 	// Get result
 	result := gen.Result()
 
+	// Check for conflicts
+	if conflictResult := CheckForConflicts(result); conflictResult != nil {
+		return *conflictResult, nil
+	}
+
 	nextSteps := []string{
 		"templ generate",
 		fmt.Sprintf("Add route handler for '%s' in your router", input.Route),

@@ -150,6 +150,11 @@ func scaffoldDomain(registry *Registry, input types.ScaffoldDomainInput) (types.
 	// Prepare result
 	result := gen.Result()
 
+	// Check for conflicts - if any files would be overwritten, return conflict result
+	if conflictResult := CheckForConflicts(result); conflictResult != nil {
+		return *conflictResult, nil
+	}
+
 	// Inject into main.go if not dry run
 	if !input.DryRun {
 		mainGoPath := filepath.Join(registry.WorkingDir, "cmd", "web", "main.go")

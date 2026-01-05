@@ -84,6 +84,11 @@ func scaffoldConfig(registry *Registry, input types.ScaffoldConfigInput) (types.
 
 	result := gen.Result()
 
+	// Check for conflicts
+	if conflictResult := CheckForConflicts(result); conflictResult != nil {
+		return *conflictResult, nil
+	}
+
 	if input.DryRun {
 		return types.ScaffoldResult{
 			Success:      true,

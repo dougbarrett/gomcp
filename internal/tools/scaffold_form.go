@@ -96,6 +96,11 @@ func scaffoldForm(registry *Registry, input types.ScaffoldFormInput) (types.Scaf
 	// Get result
 	result := gen.Result()
 
+	// Check for conflicts
+	if conflictResult := CheckForConflicts(result); conflictResult != nil {
+		return *conflictResult, nil
+	}
+
 	nextSteps := []string{
 		"templ generate",
 		fmt.Sprintf("Import the form in internal/web/%s/%s.go", pkgName, pkgName),

@@ -97,6 +97,11 @@ func scaffoldView(registry *Registry, input types.ScaffoldViewInput) (types.Scaf
 	// Get result
 	result := gen.Result()
 
+	// Check for conflicts
+	if conflictResult := CheckForConflicts(result); conflictResult != nil {
+		return *conflictResult, nil
+	}
+
 	nextSteps := []string{
 		"templ generate",
 		fmt.Sprintf("Import the view in internal/web/%s/%s.go", pkgName, pkgName),

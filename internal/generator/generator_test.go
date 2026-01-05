@@ -176,7 +176,7 @@ func TestGenerator_GenerateFileFromString(t *testing.T) {
 	}
 }
 
-// TestGenerator_GenerateFileFromString_Update tests file update tracking.
+// TestGenerator_GenerateFileFromString_Update tests file update tracking with force overwrite.
 func TestGenerator_GenerateFileFromString_Update(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "generator-test-*")
 	if err != nil {
@@ -194,6 +194,7 @@ func TestGenerator_GenerateFileFromString_Update(t *testing.T) {
 	}
 
 	gen.Reset()
+	gen.SetForceOverwrite(true) // Enable force overwrite for update test
 
 	// Now update it
 	err = gen.GenerateFileFromString(outputPath, "updated content")
@@ -217,6 +218,59 @@ func TestGenerator_GenerateFileFromString_Update(t *testing.T) {
 	}
 	if string(data) != "updated content" {
 		t.Errorf("Content = %q, want %q", string(data), "updated content")
+	}
+}
+
+// TestGenerator_GenerateFileFromString_Conflict tests conflict detection.
+func TestGenerator_GenerateFileFromString_Conflict(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "generator-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	gen := NewGenerator(testFS, tmpDir)
+
+	// Create a file first
+	outputPath := "existing.txt"
+	err = gen.GenerateFileFromString(outputPath, "original content")
+	if err != nil {
+		t.Fatalf("Failed to create initial file: %v", err)
+	}
+
+	gen.Reset()
+	// Don't set force overwrite - should detect conflict
+
+	// Try to update it - should record as conflict
+	err = gen.GenerateFileFromString(outputPath, "updated content")
+	if err != nil {
+		t.Fatalf("Failed to detect conflict: %v", err)
+	}
+
+	result := gen.Result()
+	if !result.HasConflicts {
+		t.Error("Expected conflict to be detected")
+	}
+	if len(result.Conflicts) != 1 {
+		t.Errorf("Expected 1 conflict, got %d", len(result.Conflicts))
+	}
+	if len(result.FilesUpdated) != 0 {
+		t.Errorf("FilesUpdated should be empty when conflict detected, got %d", len(result.FilesUpdated))
+	}
+
+	// Verify original content is preserved
+	fullPath := filepath.Join(tmpDir, outputPath)
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+	if string(data) != "original content" {
+		t.Errorf("Content = %q, want %q (original should be preserved)", string(data), "original content")
+	}
+
+	// Verify conflict contains proposed content
+	if result.Conflicts[0].ProposedContent != "updated content" {
+		t.Errorf("Conflict ProposedContent = %q, want %q", result.Conflicts[0].ProposedContent, "updated content")
 	}
 }
 
@@ -352,8 +406,9 @@ func TestGenerator_Summary(t *testing.T) {
 		t.Error("Summary should list file1.txt")
 	}
 
-	// Updated files
+	// Updated files (with force overwrite)
 	gen.Reset()
+	gen.SetForceOverwrite(true)
 	gen.GenerateFileFromString("file1.txt", "updated")
 
 	summary = gen.Summary()
@@ -371,6 +426,7 @@ func TestGenerator_ListGeneratedFiles(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	gen := NewGenerator(testFS, tmpDir)
+	gen.SetForceOverwrite(true) // Enable overwrite to test update tracking
 
 	// Create and update files
 	gen.GenerateFileFromString("new1.txt", "content")
