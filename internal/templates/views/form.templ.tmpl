@@ -147,6 +147,7 @@ templ [[.ModelName]]FormContent(props [[.ModelName]]FormProps) {
 				@components.Checkbox("[[.JSONName]]", "[[.JSONName]]", "true", props.Item != nil && props.Item.[[.Name]], false, nil)
 			</div>
 			[[- else if eq .FormType "select"]]
+			[[- $fieldName := .Name]]
 			@components.Select(components.SelectProps{
 				ID:   "[[.JSONName]]",
 				Name: "[[.JSONName]]",
@@ -156,7 +157,20 @@ templ [[.ModelName]]FormContent(props [[.ModelName]]FormProps) {
 				Error: props.Errors["[[.JSONName]]"],
 			}) {
 				<option value="">Select [[.Label | toLower]]</option>
-				<!-- Add your options here -->
+				[[- if .HasOptions]]
+				[[- range .Options]]
+				<option
+					value="[[.]]"
+					if props.Item != nil && props.Item.[[$fieldName]] == "[[.]]" {
+						selected
+					}
+				>
+					[[. | toTitle]]
+				</option>
+				[[- end]]
+				[[- else]]
+				<!-- Add your options here or specify options in scaffold_domain -->
+				[[- end]]
 			}
 			[[- else if eq .FormType "number"]]
 			@components.Input(components.InputProps{

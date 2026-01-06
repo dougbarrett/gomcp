@@ -53,6 +53,10 @@ type FieldData struct {
 	Required bool
 	// Label is the display label.
 	Label string
+	// Options is a list of options for select fields.
+	Options []string
+	// HasOptions indicates if the field has predefined options.
+	HasOptions bool
 }
 
 // NewFieldData creates FieldData from a FieldDef.
@@ -73,14 +77,16 @@ func NewFieldData(field types.FieldDef) FieldData {
 	}
 
 	return FieldData{
-		Name:      field.Name,
-		Type:      field.Type,
-		GORMTags:  field.GORMTags,
-		JSONName:  jsonTag,
-		Omitempty: !field.Required,
-		FormType:  formType,
-		Required:  field.Required,
-		Label:     label,
+		Name:       field.Name,
+		Type:       field.Type,
+		GORMTags:   field.GORMTags,
+		JSONName:   jsonTag,
+		Omitempty:  !field.Required,
+		FormType:   formType,
+		Required:   field.Required,
+		Label:      label,
+		Options:    field.Options,
+		HasOptions: len(field.Options) > 0,
 	}
 }
 

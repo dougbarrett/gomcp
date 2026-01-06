@@ -35,6 +35,8 @@ type FieldDef struct {
 	Required bool `json:"required,omitempty"`
 	// Label is the display label for forms (defaults to Name with spaces).
 	Label string `json:"label,omitempty"`
+	// Options is a list of options for select fields (e.g., ["draft", "published", "archived"]).
+	Options []string `json:"options,omitempty"`
 }
 
 // RelationshipDef defines a model relationship.

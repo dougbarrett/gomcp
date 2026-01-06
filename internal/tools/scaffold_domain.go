@@ -53,6 +53,17 @@ Form style options (form_style parameter):
 - "modal" (default): Forms displayed in popup modal overlays
 - "page": Forms displayed as full page navigation (like user management)
 
+Form type options (form_type parameter on fields):
+- "input" (default): Standard text input
+- "textarea": Multi-line text area
+- "select": Dropdown select (use options: ["opt1", "opt2"] to specify choices)
+- "checkbox": Boolean checkbox
+- "number": Numeric input
+- "email": Email input with validation
+- "password": Password input (masked)
+- "date": Date picker
+- "datetime": Date and time picker
+
 Examples:
 
 1. Simple public domain (blog posts):
@@ -86,6 +97,17 @@ Examples:
      fields: [
        {name: "Name", type: "string"},
        {name: "Slug", type: "string", gorm_tags: "uniqueIndex"}
+     ]
+   }
+
+4. Domain with select dropdown (discounts with status):
+   scaffold_domain: {
+     domain_name: "discount",
+     fields: [
+       {name: "Name", type: "string"},
+       {name: "Amount", type: "float64", form_type: "number"},
+       {name: "DiscountType", type: "string", form_type: "select", options: ["percentage", "fixed"]},
+       {name: "Status", type: "string", form_type: "select", options: ["draft", "active", "expired"]}
      ]
    }
 
