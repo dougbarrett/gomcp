@@ -944,6 +944,215 @@ func TestCategories(t *testing.T) {
 	}
 }
 
+// TestFormBooleanCheckboxRendering verifies the form template generates the correct
+// hidden field + checkbox pattern for boolean fields. The hidden field ensures "false"
+// is sent when the checkbox is unchecked.
+func TestFormBooleanCheckboxRendering(t *testing.T) {
+	viewData := struct {
+		ModulePath        string
+		DomainName        string
+		ModelName         string
+		PackageName       string
+		VariableName      string
+		URLPath           string
+		URLPathSegment    string
+		ViewType          string
+		ViewName          string
+		Fields            []generator.FieldData
+		Columns           []generator.ColumnData
+		Relationships     []generator.RelationshipData
+		WithPagination    bool
+		WithSearch        bool
+		WithFilters       bool
+		WithSorting       bool
+		WithBulkActions   bool
+		WithSoftDelete    bool
+		RowActions        []generator.RowActionData
+		EmptyStateMessage string
+		SubmitURL         string
+		Method            string
+		SuccessRedirect   string
+		FormStyle         string
+	}{
+		ModulePath:     "github.com/test/testproject",
+		DomainName:     "discount",
+		ModelName:      "Discount",
+		PackageName:    "discount",
+		VariableName:   "discount",
+		URLPath:        "/discounts",
+		URLPathSegment: "discounts",
+		ViewType:       "form",
+		ViewName:       "DiscountForm",
+		Fields: []generator.FieldData{
+			{Name: "Name", Type: "string", JSONName: "name", Required: true, Label: "Name", FormType: "input"},
+			{Name: "Active", Type: "bool", JSONName: "active", Required: false, Label: "Active", FormType: "checkbox"},
+		},
+		Columns:           []generator.ColumnData{},
+		Relationships:     []generator.RelationshipData{},
+		WithPagination:    false,
+		WithSearch:        false,
+		WithFilters:       false,
+		WithSorting:       false,
+		WithBulkActions:   false,
+		WithSoftDelete:    false,
+		RowActions:        []generator.RowActionData{},
+		EmptyStateMessage: "",
+		SubmitURL:         "/discounts",
+		Method:            "POST",
+		SuccessRedirect:   "/discounts",
+		FormStyle:         "modal",
+	}
+
+	content, err := FS.ReadFile("views/form.templ.tmpl")
+	if err != nil {
+		t.Fatalf("Failed to read form template: %v", err)
+	}
+
+	tmpl, err := parseTemplate("form.templ.tmpl", string(content))
+	if err != nil {
+		t.Fatalf("Failed to parse form template: %v", err)
+	}
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, viewData)
+	if err != nil {
+		t.Fatalf("Failed to execute form template: %v", err)
+	}
+
+	output := buf.String()
+
+	// Test 1: Hidden field should be present before checkbox
+	t.Run("Hidden field pattern for unchecked state", func(t *testing.T) {
+		if !strings.Contains(output, `type="hidden" name="active" value="false"`) {
+			t.Error("Form should include hidden field with value=\"false\" for checkbox unchecked state")
+		}
+	})
+
+	// Test 2: Checkbox should use the Checkbox component with value="true"
+	t.Run("Checkbox component with true value", func(t *testing.T) {
+		if !strings.Contains(output, `@components.Checkbox("active"`) {
+			t.Error("Form should use the Checkbox component for boolean fields")
+		}
+	})
+
+	// Test 3: Form should have a comment explaining the hidden field pattern
+	t.Run("Comment explaining hidden field", func(t *testing.T) {
+		if !strings.Contains(output, "Hidden field for unchecked state") {
+			t.Error("Form should have a comment explaining the hidden field pattern")
+		}
+	})
+}
+
+// TestControllerBooleanCheckboxHandling verifies the controller template generates correct
+// code for handling boolean checkbox form values. Checkboxes use a hidden field pattern
+// where hidden="false" is always sent, and checkbox="true" is sent only when checked.
+// The controller must check all form values, not just the first one.
+func TestControllerBooleanCheckboxHandling(t *testing.T) {
+	domainData := struct {
+		ModulePath           string
+		DomainName           string
+		ModelName            string
+		PackageName          string
+		VariableName         string
+		TableName            string
+		URLPath              string
+		URLPathSegment       string
+		Fields               []generator.FieldData
+		Relationships        []generator.RelationshipData
+		HasRelationships     bool
+		PreloadRelationships []generator.RelationshipData
+		WithSoftDelete       bool
+		WithCrudViews        bool
+		WithPagination       bool
+		WithSearch           bool
+		Layout               string
+		RouteGroup           string
+	}{
+		ModulePath:     "github.com/test/testproject",
+		DomainName:     "discount",
+		ModelName:      "Discount",
+		PackageName:    "discount",
+		VariableName:   "discount",
+		TableName:      "discounts",
+		URLPath:        "/discounts",
+		URLPathSegment: "discounts",
+		Fields: []generator.FieldData{
+			{Name: "Name", Type: "string", JSONName: "name", Required: true, Label: "Name", FormType: "input"},
+			{Name: "Active", Type: "bool", JSONName: "active", Required: false, Label: "Active", FormType: "checkbox"},
+			{Name: "Featured", Type: "bool", JSONName: "featured", Required: false, Label: "Featured", FormType: "checkbox"},
+		},
+		Relationships:        []generator.RelationshipData{},
+		HasRelationships:     false,
+		PreloadRelationships: []generator.RelationshipData{},
+		WithSoftDelete:       true,
+		WithCrudViews:        true,
+		WithPagination:       true,
+		WithSearch:           true,
+		Layout:               "dashboard",
+		RouteGroup:           "public",
+	}
+
+	content, err := FS.ReadFile("domain/controller.go.tmpl")
+	if err != nil {
+		t.Fatalf("Failed to read controller template: %v", err)
+	}
+
+	tmpl, err := parseTemplate("controller.go.tmpl", string(content))
+	if err != nil {
+		t.Fatalf("Failed to parse controller template: %v", err)
+	}
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, domainData)
+	if err != nil {
+		t.Fatalf("Failed to execute controller template: %v", err)
+	}
+
+	output := buf.String()
+
+	// Test 1: Create handler should iterate over form values for boolean fields
+	// The pattern should be: r.Form["fieldname"] to get all values
+	t.Run("Create handler uses r.Form for boolean fields", func(t *testing.T) {
+		// Check for Active field - should use r.Form["active"]
+		if !strings.Contains(output, `r.Form["active"]`) {
+			t.Error("Create handler should use r.Form[\"active\"] to check all form values for checkbox")
+		}
+		// Check for Featured field - should use r.Form["featured"]
+		if !strings.Contains(output, `r.Form["featured"]`) {
+			t.Error("Create handler should use r.Form[\"featured\"] to check all form values for checkbox")
+		}
+		// Should NOT use r.FormValue for boolean fields in Create
+		if strings.Contains(output, `r.FormValue("active") == "true"`) {
+			t.Error("Create handler should NOT use r.FormValue for boolean checkbox fields (misses checked state due to hidden field)")
+		}
+	})
+
+	// Test 2: Update handler should also iterate over form values for boolean fields
+	t.Run("Update handler uses r.Form for boolean fields", func(t *testing.T) {
+		// The Update handler should have a comment about checkbox handling
+		if !strings.Contains(output, "check all form values since hidden field") {
+			t.Error("Update handler should have a comment explaining checkbox handling")
+		}
+	})
+
+	// Test 3: Generated code should check for both "true" and "on" values
+	t.Run("Checks for both true and on values", func(t *testing.T) {
+		if !strings.Contains(output, `v == "true"`) {
+			t.Error("Boolean handling should check for \"true\" value")
+		}
+		if !strings.Contains(output, `v == "on"`) {
+			t.Error("Boolean handling should check for \"on\" value (for native HTML checkbox)")
+		}
+	})
+
+	// Test 4: Non-boolean fields should still use r.FormValue
+	t.Run("Non-boolean fields use r.FormValue", func(t *testing.T) {
+		if !strings.Contains(output, `r.FormValue("name")`) {
+			t.Error("Non-boolean string fields should use r.FormValue")
+		}
+	})
+}
+
 // TestTemplateDelimiters verifies templates use correct delimiters.
 func TestTemplateDelimiters(t *testing.T) {
 	dirs := []string{

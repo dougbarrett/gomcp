@@ -266,7 +266,7 @@ func (c *Controller) Create(w http.ResponseWriter, r *http.Request) {
 	[[- else if eq .Type "float64"]]
 		[[.Name]]: func() float64 { v, _ := strconv.ParseFloat(r.FormValue("[[.JSONName]]"), 64); return v }(),
 	[[- else if eq .Type "bool"]]
-		[[.Name]]: r.FormValue("[[.JSONName]]") == "true" || r.FormValue("[[.JSONName]]") == "on",
+		[[.Name]]: func() bool { for _, v := range r.Form["[[.JSONName]]"] { if v == "true" || v == "on" { return true } }; return false }(),
 	[[- else if eq .Type "time.Time"]]
 		[[.Name]]: func() time.Time { v, _ := time.Parse("2006-01-02T15:04", r.FormValue("[[.JSONName]]")); return v }(),
 	[[- else if eq .Type "*time.Time"]]
@@ -452,9 +452,15 @@ func (c *Controller) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	[[- else if eq .Type "bool"]]
-	// For checkboxes, explicit handling: form sends "true"/"on" when checked
+	// For checkboxes: check all form values since hidden field sends "false" first
 	{
-		boolVal := r.FormValue("[[.JSONName]]") == "true" || r.FormValue("[[.JSONName]]") == "on"
+		boolVal := false
+		for _, v := range r.Form["[[.JSONName]]"] {
+			if v == "true" || v == "on" {
+				boolVal = true
+				break
+			}
+		}
 		input.[[.Name]] = &boolVal
 	}
 	[[- else if eq .Type "time.Time"]]
