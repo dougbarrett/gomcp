@@ -788,3 +788,192 @@ func main() {
 		t.Error("Injected code should preserve indentation")
 	}
 }
+
+// TestInjector_InjectNavItem_Authenticated tests nav item injection for authenticated routes.
+func TestInjector_InjectNavItem_Authenticated(t *testing.T) {
+	content := `package views
+
+templ SidebarNav() {
+	<nav>
+		@navItem("/dashboard", "home", "Dashboard", true)
+		// MCP:NAV_ITEMS:START
+		// MCP:NAV_ITEMS:END
+	</nav>
+}
+`
+	injector := NewInjectorFromContent(content)
+
+	err := injector.InjectNavItem("product", "authenticated", "box")
+	if err != nil {
+		t.Fatalf("InjectNavItem() error = %v", err)
+	}
+
+	result := injector.Content()
+	expectedNavItem := `@navItem("/products", "box", "Products", false)`
+	if !strings.Contains(result, expectedNavItem) {
+		t.Errorf("Nav item should be injected.\nExpected to contain: %s\nActual content:\n%s", expectedNavItem, result)
+	}
+}
+
+// TestInjector_InjectNavItem_Admin tests nav item injection for admin routes.
+func TestInjector_InjectNavItem_Admin(t *testing.T) {
+	content := `package views
+
+templ SidebarNav() {
+	<nav>
+		// MCP:NAV_ITEMS_ADMIN:START
+		// MCP:NAV_ITEMS_ADMIN:END
+	</nav>
+}
+`
+	injector := NewInjectorFromContent(content)
+
+	err := injector.InjectNavItem("category", "admin", "folder")
+	if err != nil {
+		t.Fatalf("InjectNavItem() error = %v", err)
+	}
+
+	result := injector.Content()
+	expectedNavItem := `@navItem("/categories", "folder", "Categories", false)`
+	if !strings.Contains(result, expectedNavItem) {
+		t.Errorf("Admin nav item should be injected.\nExpected to contain: %s\nActual content:\n%s", expectedNavItem, result)
+	}
+}
+
+// TestInjector_InjectNavItem_DefaultIcon tests that default icon is used when not specified.
+func TestInjector_InjectNavItem_DefaultIcon(t *testing.T) {
+	content := `package views
+
+templ SidebarNav() {
+	<nav>
+		// MCP:NAV_ITEMS:START
+		// MCP:NAV_ITEMS:END
+	</nav>
+}
+`
+	injector := NewInjectorFromContent(content)
+
+	err := injector.InjectNavItem("order", "authenticated", "")
+	if err != nil {
+		t.Fatalf("InjectNavItem() error = %v", err)
+	}
+
+	result := injector.Content()
+	// Default icon should be "folder"
+	expectedNavItem := `@navItem("/orders", "folder", "Orders", false)`
+	if !strings.Contains(result, expectedNavItem) {
+		t.Errorf("Nav item with default icon should be injected.\nExpected to contain: %s\nActual content:\n%s", expectedNavItem, result)
+	}
+}
+
+// TestInjector_InjectNavItem_MissingMarkers tests error when markers are missing.
+func TestInjector_InjectNavItem_MissingMarkers(t *testing.T) {
+	content := `package views
+
+templ SidebarNav() {
+	<nav>
+		@navItem("/dashboard", "home", "Dashboard", true)
+	</nav>
+}
+`
+	injector := NewInjectorFromContent(content)
+
+	err := injector.InjectNavItem("product", "authenticated", "box")
+	if err == nil {
+		t.Error("InjectNavItem() should error when markers are missing")
+	}
+	if !strings.Contains(err.Error(), "navigation markers not found") {
+		t.Errorf("Error should mention missing markers: %v", err)
+	}
+}
+
+// TestInjector_InjectNavItem_Duplicate tests that duplicate nav items are skipped.
+func TestInjector_InjectNavItem_Duplicate(t *testing.T) {
+	content := `package views
+
+templ SidebarNav() {
+	<nav>
+		// MCP:NAV_ITEMS:START
+		@navItem("/products", "box", "Products", false)
+		// MCP:NAV_ITEMS:END
+	</nav>
+}
+`
+	injector := NewInjectorFromContent(content)
+
+	err := injector.InjectNavItem("product", "authenticated", "box")
+	if err != nil {
+		t.Fatalf("InjectNavItem() error = %v", err)
+	}
+
+	result := injector.Content()
+	count := strings.Count(result, `@navItem("/products"`)
+	if count != 1 {
+		t.Errorf("Nav item should appear once, found %d times", count)
+	}
+}
+
+// TestNavItemMarkerConstants tests that nav item marker constants are properly defined.
+func TestNavItemMarkerConstants(t *testing.T) {
+	markers := []string{
+		MarkerNavItemsStart, MarkerNavItemsEnd,
+		MarkerNavItemsAdminStart, MarkerNavItemsAdminEnd,
+	}
+
+	for _, marker := range markers {
+		if !strings.HasPrefix(marker, "MCP:NAV_ITEMS") {
+			t.Errorf("Nav marker %q should start with 'MCP:NAV_ITEMS'", marker)
+		}
+		if !strings.HasSuffix(marker, ":START") && !strings.HasSuffix(marker, ":END") {
+			t.Errorf("Nav marker %q should end with :START or :END", marker)
+		}
+	}
+}
+
+// TestInjector_InjectControllerWithRelations tests controller injection with related services.
+func TestInjector_InjectControllerWithRelations(t *testing.T) {
+	content := `package main
+
+	// MCP:CONTROLLERS:START
+	// MCP:CONTROLLERS:END
+
+func main() {}
+`
+	injector := NewInjectorFromContent(content)
+
+	// Test with related domains
+	err := injector.InjectControllerWithRelations("order", []string{"User", "Product"})
+	if err != nil {
+		t.Fatalf("InjectControllerWithRelations() error = %v", err)
+	}
+
+	result := injector.Content()
+	expectedController := `orderController := orderctrl.NewController(orderService, userService, productService)`
+	if !strings.Contains(result, expectedController) {
+		t.Errorf("Controller with relations should be injected.\nExpected to contain: %s\nActual content:\n%s", expectedController, result)
+	}
+}
+
+// TestInjector_InjectControllerWithRelations_NoRelations tests controller injection without related services.
+func TestInjector_InjectControllerWithRelations_NoRelations(t *testing.T) {
+	content := `package main
+
+	// MCP:CONTROLLERS:START
+	// MCP:CONTROLLERS:END
+
+func main() {}
+`
+	injector := NewInjectorFromContent(content)
+
+	// Test with no related domains
+	err := injector.InjectControllerWithRelations("product", nil)
+	if err != nil {
+		t.Fatalf("InjectControllerWithRelations() error = %v", err)
+	}
+
+	result := injector.Content()
+	expectedController := `productController := productctrl.NewController(productService)`
+	if !strings.Contains(result, expectedController) {
+		t.Errorf("Controller without relations should be injected.\nExpected to contain: %s\nActual content:\n%s", expectedController, result)
+	}
+}

@@ -182,6 +182,7 @@ func buildPageData(input types.ScaffoldPageInput, modulePath string) generator.P
 		WithPagination:    false,
 		WithSearch:        false,
 		EmptyStateMessage: "",
+		FormStyle:         "modal", // Default to modal for standalone pages
 	}
 }
 

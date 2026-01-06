@@ -152,6 +152,8 @@ type DomainData struct {
 	Layout string
 	// RouteGroup specifies the middleware context: public, authenticated, admin. Defaults to "public".
 	RouteGroup string
+	// FormStyle specifies how forms are displayed: modal or page. Defaults to "modal".
+	FormStyle string
 }
 
 // NewDomainData creates DomainData from ScaffoldDomainInput and module path.
@@ -180,6 +182,9 @@ func NewDomainData(input types.ScaffoldDomainInput, modulePath string) DomainDat
 		routeGroup = "public"
 	}
 
+	// Default form style to "modal"
+	formStyle := input.GetFormStyle()
+
 	urlPath := utils.ToURLPath(input.DomainName)
 	return DomainData{
 		ModulePath:           modulePath,
@@ -200,6 +205,7 @@ func NewDomainData(input types.ScaffoldDomainInput, modulePath string) DomainDat
 		WithSearch:           withCrudViews, // Enable search when CRUD views are generated
 		Layout:               layout,
 		RouteGroup:           routeGroup,
+		FormStyle:            formStyle,
 	}
 }
 
@@ -291,6 +297,8 @@ type ViewData struct {
 	SuccessRedirect string
 	// Layout specifies the view layout: dashboard, base, auth, none. Defaults to "dashboard".
 	Layout string
+	// FormStyle specifies how forms are displayed: modal or page. Defaults to "modal".
+	FormStyle string
 }
 
 // FormData is the template data for form scaffolding.
@@ -325,6 +333,8 @@ type FormData struct {
 	IsCreate bool
 	// IsEdit is true for edit forms.
 	IsEdit bool
+	// FormStyle specifies how forms are displayed: modal or page. Defaults to "modal".
+	FormStyle string
 }
 
 // NewFormData creates FormData from ScaffoldFormInput.
@@ -349,6 +359,7 @@ func NewFormData(input types.ScaffoldFormInput, modulePath string) FormData {
 		Method:         method,
 		IsCreate:       input.Action == "create",
 		IsEdit:         input.Action == "edit",
+		FormStyle:      "modal", // Default to modal for standalone forms
 	}
 }
 
@@ -531,6 +542,8 @@ type PageData struct {
 	WithSearch bool
 	// EmptyStateMessage for template compatibility.
 	EmptyStateMessage string
+	// FormStyle specifies how forms are displayed: modal or page. Defaults to "modal".
+	FormStyle string
 }
 
 // SectionData is the template data for a page section.
@@ -737,6 +750,9 @@ func NewRelationshipData(rel types.RelationshipDef, domainName string) Relations
 		}
 	}
 
+	// belongs_to relationships are preloaded by default (for show views)
+	preload := rel.Preload || rel.Type == "belongs_to"
+
 	return RelationshipData{
 		Type:            rel.Type,
 		Model:           rel.Model,
@@ -745,7 +761,7 @@ func NewRelationshipData(rel types.RelationshipDef, domainName string) Relations
 		References:      references,
 		JoinTable:       rel.JoinTable,
 		OnDelete:        onDelete,
-		Preload:         rel.Preload,
+		Preload:         preload,
 		IsBelongsTo:     rel.Type == "belongs_to",
 		IsHasOne:        rel.Type == "has_one",
 		IsHasMany:       rel.Type == "has_many",

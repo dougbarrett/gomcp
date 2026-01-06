@@ -861,8 +861,10 @@ func TestNewRelationshipData(t *testing.T) {
 			if data.IsManyToMany != tt.wantIsManyToMany {
 				t.Errorf("IsManyToMany = %v, want %v", data.IsManyToMany, tt.wantIsManyToMany)
 			}
-			if data.Preload != tt.input.Preload {
-				t.Errorf("Preload = %v, want %v", data.Preload, tt.input.Preload)
+			// belongs_to relationships are preloaded by default, even if input.Preload is false
+			wantPreload := tt.input.Preload || tt.wantIsBelongsTo
+			if data.Preload != wantPreload {
+				t.Errorf("Preload = %v, want %v", data.Preload, wantPreload)
 			}
 
 			// Check FK field

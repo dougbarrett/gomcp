@@ -231,6 +231,7 @@ func TestViewTemplatesExecute(t *testing.T) {
 		SubmitURL         string
 		Method            string
 		SuccessRedirect   string
+		FormStyle         string
 	}{
 		ModulePath:     "github.com/test/testproject",
 		DomainName:     "product",
@@ -265,6 +266,7 @@ func TestViewTemplatesExecute(t *testing.T) {
 		SubmitURL:         "/products",
 		Method:            "POST",
 		SuccessRedirect:   "/products",
+		FormStyle:         "modal",
 	}
 
 	templates := []string{

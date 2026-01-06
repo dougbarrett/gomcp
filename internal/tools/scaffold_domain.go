@@ -44,6 +44,10 @@ Route group options (route_group parameter):
 - "authenticated": Requires user login (RequireAuth middleware)
 - "admin": Requires admin role (RequireAuth + RequireAdmin middleware)
 
+Form style options (form_style parameter):
+- "modal" (default): Forms displayed in popup modal overlays
+- "page": Forms displayed as full page navigation (like user management)
+
 Examples:
 
 1. Simple public domain (blog posts):
@@ -243,18 +247,23 @@ func scaffoldDomain(registry *Registry, input types.ScaffoldDomainInput) (types.
 		return *conflictResult, nil
 	}
 
-	// Inject into main.go and database.go if not dry run
+	// Inject into main.go, database.go, and base_layout.templ if not dry run
 	if !input.DryRun {
 		mainGoPath := filepath.Join(registry.WorkingDir, "cmd", "web", "main.go")
 		databaseGoPath := filepath.Join(registry.WorkingDir, "internal", "database", "database.go")
+		layoutPath := filepath.Join(registry.WorkingDir, "internal", "web", "layouts", "base_layout.templ")
 		if utils.FileExists(mainGoPath) {
-			if err := injectDomainWiring(mainGoPath, databaseGoPath, modulePath, pkgName, input.DomainName, data.RouteGroup); err != nil {
+			if err := injectDomainWiring(mainGoPath, databaseGoPath, modulePath, pkgName, input.DomainName, data.RouteGroup, input.Relationships, data.WithCrudViews); err != nil {
 				// Log warning but don't fail
 				fmt.Printf("Warning: could not inject DI wiring: %v\n", err)
 			} else {
 				result.FilesUpdated = append(result.FilesUpdated, "cmd/web/main.go")
 				if utils.FileExists(databaseGoPath) {
 					result.FilesUpdated = append(result.FilesUpdated, "internal/database/database.go")
+				}
+				// Track layout update for authenticated/admin routes
+				if (data.RouteGroup == "authenticated" || data.RouteGroup == "admin") && utils.FileExists(layoutPath) {
+					result.FilesUpdated = append(result.FilesUpdated, "internal/web/layouts/base_layout.templ")
 				}
 			}
 		}
@@ -398,8 +407,8 @@ func injectInverseRelationships(workingDir string, domainName string, relationsh
 	}
 }
 
-// injectDomainWiring injects the domain wiring into main.go and database.go.
-func injectDomainWiring(mainGoPath, databaseGoPath, modulePath, pkgName, domainName, routeGroup string) error {
+// injectDomainWiring injects the domain wiring into main.go, database.go, and base_layout.templ.
+func injectDomainWiring(mainGoPath, databaseGoPath, modulePath, pkgName, domainName, routeGroup string, relationships []types.RelationshipDef, withCrudViews bool) error {
 	// Inject into main.go
 	mainInjector, err := modifier.NewInjector(mainGoPath)
 	if err != nil {
@@ -435,8 +444,18 @@ func injectDomainWiring(mainGoPath, databaseGoPath, modulePath, pkgName, domainN
 		return err
 	}
 
-	// Inject controller
-	if err := mainInjector.InjectController(domainName); err != nil {
+	// Collect belongs_to relationships for controller injection
+	var relatedDomains []string
+	if withCrudViews {
+		for _, rel := range relationships {
+			if rel.Type == "belongs_to" {
+				relatedDomains = append(relatedDomains, rel.Model)
+			}
+		}
+	}
+
+	// Inject controller with related services if needed
+	if err := mainInjector.InjectControllerWithRelations(domainName, relatedDomains); err != nil {
 		return err
 	}
 
@@ -463,6 +482,23 @@ func injectDomainWiring(mainGoPath, databaseGoPath, modulePath, pkgName, domainN
 
 		if err := dbInjector.Save(); err != nil {
 			return err
+		}
+	}
+
+	// Inject navigation item into base_layout.templ for authenticated/admin routes
+	if routeGroup == "authenticated" || routeGroup == "admin" {
+		// Get directory of main.go to find base_layout.templ
+		baseDir := filepath.Dir(filepath.Dir(mainGoPath)) // cmd/web -> cmd -> project root
+		layoutPath := filepath.Join(baseDir, "internal", "web", "layouts", "base_layout.templ")
+
+		if utils.FileExists(layoutPath) {
+			navInjector, err := modifier.NewInjector(layoutPath)
+			if err == nil {
+				// Use default "folder" icon - domains can customize later
+				if err := navInjector.InjectNavItem(domainName, routeGroup, "folder"); err == nil {
+					_ = navInjector.Save()
+				}
+			}
 		}
 	}
 

@@ -29,12 +29,17 @@ const (
 	MarkerRelationshipsStart  = "MCP:RELATIONSHIPS:START"
 	MarkerRelationshipsEnd    = "MCP:RELATIONSHIPS:END"
 	// Route group markers
-	MarkerRoutesPublicStart       = "MCP:ROUTES:PUBLIC:START"
-	MarkerRoutesPublicEnd         = "MCP:ROUTES:PUBLIC:END"
+	MarkerRoutesPublicStart        = "MCP:ROUTES:PUBLIC:START"
+	MarkerRoutesPublicEnd          = "MCP:ROUTES:PUBLIC:END"
 	MarkerRoutesAuthenticatedStart = "MCP:ROUTES:AUTHENTICATED:START"
 	MarkerRoutesAuthenticatedEnd   = "MCP:ROUTES:AUTHENTICATED:END"
-	MarkerRoutesAdminStart        = "MCP:ROUTES:ADMIN:START"
-	MarkerRoutesAdminEnd          = "MCP:ROUTES:ADMIN:END"
+	MarkerRoutesAdminStart         = "MCP:ROUTES:ADMIN:START"
+	MarkerRoutesAdminEnd           = "MCP:ROUTES:ADMIN:END"
+	// Navigation item markers (in base_layout.templ)
+	MarkerNavItemsStart      = "MCP:NAV_ITEMS:START"
+	MarkerNavItemsEnd        = "MCP:NAV_ITEMS:END"
+	MarkerNavItemsAdminStart = "MCP:NAV_ITEMS_ADMIN:START"
+	MarkerNavItemsAdminEnd   = "MCP:NAV_ITEMS_ADMIN:END"
 )
 
 // Injector handles code injection into files using marker comments.
@@ -289,10 +294,25 @@ func (i *Injector) InjectService(domainName string) error {
 
 // InjectController adds a controller instantiation.
 func (i *Injector) InjectController(domainName string) error {
+	return i.InjectControllerWithRelations(domainName, nil)
+}
+
+// InjectControllerWithRelations adds a controller instantiation with related services.
+// relatedDomains is a list of domain names for belongs_to relationships that need their
+// services injected into the controller.
+func (i *Injector) InjectControllerWithRelations(domainName string, relatedDomains []string) error {
 	varName := utils.ToControllerVariableName(domainName)
 	serviceVarName := utils.ToServiceVariableName(domainName)
 	pkgAlias := utils.ToControllerImportAlias(domainName)
-	code := fmt.Sprintf(`%s := %s.NewController(%s)`, varName, pkgAlias, serviceVarName)
+
+	// Build constructor arguments
+	args := serviceVarName
+	for _, relDomain := range relatedDomains {
+		relServiceVarName := utils.ToServiceVariableName(relDomain)
+		args += ", " + relServiceVarName
+	}
+
+	code := fmt.Sprintf(`%s := %s.NewController(%s)`, varName, pkgAlias, args)
 	return i.InjectBetweenMarkers(MarkerControllersStart, MarkerControllersEnd, code)
 }
 
@@ -346,4 +366,40 @@ func (i *Injector) InjectRouteWithGroup(domainName, routeGroup string) error {
 // This is used to inject inverse relationships when scaffolding related domains.
 func (i *Injector) InjectRelationship(fieldCode string) error {
 	return i.InjectBetweenMarkers(MarkerRelationshipsStart, MarkerRelationshipsEnd, fieldCode)
+}
+
+// InjectNavItem adds a navigation item to the sidebar in base_layout.templ.
+// routeGroup determines which nav section to add to: "authenticated" or "admin".
+// icon should be a valid icon name (e.g., "folder", "list", "file-text").
+func (i *Injector) InjectNavItem(domainName, routeGroup, icon string) error {
+	urlPath := utils.ToURLPath(domainName)
+	label := utils.ToLabel(domainName)
+	// Pluralize the label for nav items (e.g., "Product" -> "Products")
+	label = utils.Pluralize(label)
+
+	// Default icon if not provided
+	if icon == "" {
+		icon = "folder"
+	}
+
+	// Generate the navItem templ call
+	code := fmt.Sprintf(`@navItem("%s", "%s", "%s", false)`, urlPath, icon, label)
+
+	// Determine which markers to use based on route group
+	var startMarker, endMarker string
+	switch routeGroup {
+	case "admin":
+		startMarker = MarkerNavItemsAdminStart
+		endMarker = MarkerNavItemsAdminEnd
+	default: // "authenticated" or empty
+		startMarker = MarkerNavItemsStart
+		endMarker = MarkerNavItemsEnd
+	}
+
+	// Check if markers exist
+	if !i.HasMarker(startMarker) || !i.HasMarker(endMarker) {
+		return fmt.Errorf("navigation markers not found: %s, %s", startMarker, endMarker)
+	}
+
+	return i.InjectBetweenMarkers(startMarker, endMarker, code)
 }

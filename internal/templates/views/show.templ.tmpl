@@ -42,6 +42,19 @@ templ [[.ModelName]]Show(props [[.ModelName]]ShowProps) {
 				}
 			</div>
 			<div class="flex items-center gap-3">
+				[[- if eq .FormStyle "page"]]
+				@components.Button(components.ButtonProps{
+					Variant: "outline",
+					Attributes: templ.Attributes{
+						"hx-get":      fmt.Sprintf("%s/%d/edit", props.getBasePath(), props.Item.ID),
+						"hx-target":   "#main-content",
+						"hx-push-url": "true",
+					},
+				}) {
+					@components.Icon("pencil", "h-4 w-4 mr-2")
+					Edit
+				}
+				[[- else]]
 				@components.Button(components.ButtonProps{
 					Variant: "outline",
 					Attributes: templ.Attributes{
@@ -53,6 +66,7 @@ templ [[.ModelName]]Show(props [[.ModelName]]ShowProps) {
 					@components.Icon("pencil", "h-4 w-4 mr-2")
 					Edit
 				}
+				[[- end]]
 				@components.Button(components.ButtonProps{
 					Variant: "destructive",
 					Attributes: templ.Attributes{
@@ -128,6 +142,20 @@ templ [[.ModelName]]Show(props [[.ModelName]]ShowProps) {
 							[[- end]]
 						</dd>
 					</div>
+					[[- end]]
+					[[- range .Relationships]]
+					[[- if .IsBelongsTo]]
+					<div>
+						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">[[.Model | toLabel]]</dt>
+						<dd class="mt-1 text-gray-900 dark:text-white">
+							if props.Item.[[.Model]] != nil {
+								{ props.Item.[[.Model]].Name }
+							} else {
+								<span class="text-gray-400">-</span>
+							}
+						</dd>
+					</div>
+					[[- end]]
 					[[- end]]
 					<div>
 						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Created</dt>

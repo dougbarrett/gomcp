@@ -292,5 +292,6 @@ func buildViewData(input types.ScaffoldViewInput, modulePath string) generator.V
 		Method:            method,
 		SuccessRedirect:   successRedirect,
 		Layout:            layout,
+		FormStyle:         "modal", // Default to modal for standalone views
 	}
 }

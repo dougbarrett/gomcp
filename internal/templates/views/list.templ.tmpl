@@ -56,6 +56,19 @@ templ [[.ModelName]]List(props [[.ModelName]]ListProps) {
 					</div>
 				</div>
 				[[- end]]
+				[[- if eq .FormStyle "page"]]
+				@components.Button(components.ButtonProps{
+					Variant: "default",
+					Attributes: templ.Attributes{
+						"hx-get":      props.getBasePath() + "/new",
+						"hx-target":   "#main-content",
+						"hx-push-url": "true",
+					},
+				}) {
+					@components.Icon("plus", "h-4 w-4 mr-2")
+					Add [[.ModelName]]
+				}
+				[[- else]]
 				@components.Button(components.ButtonProps{
 					Variant: "default",
 					Attributes: templ.Attributes{
@@ -67,6 +80,7 @@ templ [[.ModelName]]List(props [[.ModelName]]ListProps) {
 					@components.Icon("plus", "h-4 w-4 mr-2")
 					Add [[.ModelName]]
 				}
+				[[- end]]
 			</div>
 		</div>
 
@@ -110,6 +124,19 @@ templ [[.ModelName]]Card(item models.[[.ModelName]], basePath string) {
 					[[- end]]
 				</h3>
 				<div class="flex items-center gap-1">
+					[[- if eq .FormStyle "page"]]
+					@components.Button(components.ButtonProps{
+						Variant: "ghost",
+						Size:    "sm",
+						Attributes: templ.Attributes{
+							"hx-get":      fmt.Sprintf("%s/%d/edit", basePath, item.ID),
+							"hx-target":   "#main-content",
+							"hx-push-url": "true",
+						},
+					}) {
+						@components.Icon("pencil", "h-4 w-4")
+					}
+					[[- else]]
 					@components.Button(components.ButtonProps{
 						Variant: "ghost",
 						Size:    "sm",
@@ -121,6 +148,7 @@ templ [[.ModelName]]Card(item models.[[.ModelName]], basePath string) {
 					}) {
 						@components.Icon("pencil", "h-4 w-4")
 					}
+					[[- end]]
 					@components.Button(components.ButtonProps{
 						Variant: "ghost",
 						Size:    "sm",
@@ -215,6 +243,19 @@ templ [[.ModelName]]EmptyState(basePath string) {
 			Get started by creating a new [[.ModelName | toLower]].
 		</p>
 		<div class="mt-6">
+			[[- if eq .FormStyle "page"]]
+			@components.Button(components.ButtonProps{
+				Variant: "default",
+				Attributes: templ.Attributes{
+					"hx-get":      basePath + "/new",
+					"hx-target":   "#main-content",
+					"hx-push-url": "true",
+				},
+			}) {
+				@components.Icon("plus", "h-4 w-4 mr-2")
+				Add [[.ModelName]]
+			}
+			[[- else]]
 			@components.Button(components.ButtonProps{
 				Variant: "default",
 				Attributes: templ.Attributes{
@@ -226,6 +267,7 @@ templ [[.ModelName]]EmptyState(basePath string) {
 				@components.Icon("plus", "h-4 w-4 mr-2")
 				Add [[.ModelName]]
 			}
+			[[- end]]
 		</div>
 	</div>
 }

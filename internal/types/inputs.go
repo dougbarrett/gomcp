@@ -71,6 +71,9 @@ type ScaffoldDomainInput struct {
 	Layout string `json:"layout,omitempty"`
 	// RouteGroup specifies the middleware context: public, authenticated, admin. Defaults to "public".
 	RouteGroup string `json:"route_group,omitempty"`
+	// FormStyle specifies how forms are displayed: modal (default) or page.
+	// Modal shows forms in a popup overlay, page uses full page navigation.
+	FormStyle string `json:"form_style,omitempty"`
 	// DryRun previews changes without writing files.
 	DryRun bool `json:"dry_run,omitempty"`
 }
@@ -89,6 +92,14 @@ func (s ScaffoldDomainInput) GetWithSoftDelete() bool {
 		return true
 	}
 	return *s.WithSoftDelete
+}
+
+// GetFormStyle returns the FormStyle value with default "modal".
+func (s ScaffoldDomainInput) GetFormStyle() string {
+	if s.FormStyle == "" {
+		return "modal"
+	}
+	return s.FormStyle
 }
 
 // MethodDef defines a service or repository method.

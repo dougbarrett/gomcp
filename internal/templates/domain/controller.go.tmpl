@@ -16,6 +16,13 @@ import (
 	[[- end]]
 	"[[.ModulePath]]/internal/web/middleware"
 	[[- end]]
+	[[- if and .WithCrudViews (hasBelongsTo .Relationships)]]
+	[[- range .Relationships]]
+	[[- if .IsBelongsTo]]
+	[[.Model | toPackageName]]svc "[[$.ModulePath]]/internal/services/[[.Model | toPackageName]]"
+	[[- end]]
+	[[- end]]
+	[[- end]]
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 )
@@ -23,12 +30,32 @@ import (
 // Controller handles HTTP requests for [[pluralize .ModelName]].
 type Controller struct {
 	service [[.PackageName]]svc.Service
+	[[- if and .WithCrudViews (hasBelongsTo .Relationships)]]
+	[[- range .Relationships]]
+	[[- if .IsBelongsTo]]
+	[[.Model | toVariableName]]Service [[.Model | toPackageName]]svc.Service
+	[[- end]]
+	[[- end]]
+	[[- end]]
 }
 
 // NewController creates a new [[.ModelName]] controller.
+[[- if and .WithCrudViews (hasBelongsTo .Relationships)]]
+func NewController(service [[.PackageName]]svc.Service[[range .Relationships]][[if .IsBelongsTo]], [[.Model | toVariableName]]Service [[.Model | toPackageName]]svc.Service[[end]][[end]]) *Controller {
+	return &Controller{
+		service: service,
+		[[- range .Relationships]]
+		[[- if .IsBelongsTo]]
+		[[.Model | toVariableName]]Service: [[.Model | toVariableName]]Service,
+		[[- end]]
+		[[- end]]
+	}
+}
+[[- else]]
 func NewController(service [[.PackageName]]svc.Service) *Controller {
 	return &Controller{service: service}
 }
+[[- end]]
 
 // RegisterRoutes registers the [[.ModelName]] routes on the given router.
 // Mount this under any path: router.Route("/admin/[[.URLPathSegment]]", ctrl.RegisterRoutes)
@@ -152,15 +179,14 @@ func (c *Controller) New(w http.ResponseWriter, r *http.Request) {
 	[[- if .WithCrudViews]]
 	[[- if hasBelongsTo .Relationships]]
 
-	// TODO: Fetch related records for select dropdowns
-	// Example:
+	// Fetch related records for select dropdowns
 	[[- range .Relationships]]
 	[[- if .IsBelongsTo]]
-	// [[.Model | toVariableName | pluralize]], err := c.service.Get[[.Model | pluralize]](r.Context())
-	// if err != nil {
-	//     res.Error(http.StatusInternalServerError, "Failed to load [[.Model | pluralize | toLower]]")
-	//     return
-	// }
+	[[.Model | toVariableName]]Result, err := c.[[.Model | toVariableName]]Service.List(r.Context(), [[.Model | toPackageName]]svc.List[[.Model]]Filter{PageSize: 1000})
+	if err != nil {
+		res.Error(http.StatusInternalServerError, "Failed to load [[.Model | pluralize | toLower]]")
+		return
+	}
 	[[- end]]
 	[[- end]]
 
@@ -169,10 +195,9 @@ func (c *Controller) New(w http.ResponseWriter, r *http.Request) {
 		Errors:    nil,
 		IsEdit:    false,
 		CSRFToken: middleware.GetCSRFToken(r.Context()),
-		// TODO: Pass related records to form
 		[[- range .Relationships]]
 		[[- if .IsBelongsTo]]
-		// [[.Model]]Options: [[.Model | toVariableName | pluralize]],
+		[[.Model]]Options: [[.Model | toVariableName]]Result.Items,
 		[[- end]]
 		[[- end]]
 	}
@@ -314,14 +339,14 @@ func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
 
 	[[- if .WithCrudViews]]
 	[[- if hasBelongsTo .Relationships]]
-	// TODO: Fetch related records for select dropdowns
+	// Fetch related records for select dropdowns
 	[[- range .Relationships]]
 	[[- if .IsBelongsTo]]
-	// [[.Model | toVariableName | pluralize]], err := c.service.Get[[.Model | pluralize]](r.Context())
-	// if err != nil {
-	//     res.Error(http.StatusInternalServerError, "Failed to load [[.Model | pluralize | toLower]]")
-	//     return
-	// }
+	[[.Model | toVariableName]]Result, err := c.[[.Model | toVariableName]]Service.List(r.Context(), [[.Model | toPackageName]]svc.List[[.Model]]Filter{PageSize: 1000})
+	if err != nil {
+		res.Error(http.StatusInternalServerError, "Failed to load [[.Model | pluralize | toLower]]")
+		return
+	}
 	[[- end]]
 	[[- end]]
 
@@ -330,10 +355,9 @@ func (c *Controller) Edit(w http.ResponseWriter, r *http.Request) {
 		Errors:    nil,
 		IsEdit:    true,
 		CSRFToken: middleware.GetCSRFToken(r.Context()),
-		// TODO: Pass related records to form
 		[[- range .Relationships]]
 		[[- if .IsBelongsTo]]
-		// [[.Model]]Options: [[.Model | toVariableName | pluralize]],
+		[[.Model]]Options: [[.Model | toVariableName]]Result.Items,
 		[[- end]]
 		[[- end]]
 	}
