@@ -557,3 +557,42 @@ type ScaffoldServiceForRepoInput struct {
 	// DryRun previews changes without writing files.
 	DryRun bool `json:"dry_run,omitempty"`
 }
+
+// AnalyzeDomainInput is the input for the analyze_domain tool.
+type AnalyzeDomainInput struct {
+	// Domain is the domain name to analyze (e.g., "order").
+	// If empty, analyzes all domains with metadata.
+	Domain string `json:"domain,omitempty"`
+	// Layers filters which layers to analyze: model, repository, service, controller, views.
+	// If empty, analyzes all layers.
+	Layers []string `json:"layers,omitempty"`
+	// ShowUnchanged includes files with no differences in the output.
+	ShowUnchanged bool `json:"show_unchanged,omitempty"`
+}
+
+// AnalyzeDomainResult is the output from the analyze_domain tool.
+type AnalyzeDomainResult struct {
+	Success       bool                  `json:"success"`
+	Message       string                `json:"message"`
+	Domains       []DomainAnalysis      `json:"domains,omitempty"`
+	SuggestedTool *ToolHint             `json:"suggested_tool,omitempty"`
+}
+
+// DomainAnalysis contains analysis results for a single domain.
+type DomainAnalysis struct {
+	Domain           string         `json:"domain"`
+	ScaffoldedAt     string         `json:"scaffolded_at"`
+	ScaffolderVersion string        `json:"scaffolder_version"`
+	CurrentVersion   string         `json:"current_version"`
+	HasChanges       bool           `json:"has_changes"`
+	Files            []FileAnalysis `json:"files,omitempty"`
+}
+
+// FileAnalysis contains diff information for a single file.
+type FileAnalysis struct {
+	Path       string `json:"path"`
+	Status     string `json:"status"` // "unchanged", "modified", "missing", "new"
+	Diff       string `json:"diff,omitempty"`
+	LinesAdded int    `json:"lines_added,omitempty"`
+	LinesRemoved int  `json:"lines_removed,omitempty"`
+}

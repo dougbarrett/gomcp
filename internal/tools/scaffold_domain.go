@@ -6,11 +6,16 @@ import (
 	"path/filepath"
 
 	"github.com/dbb1dev/go-mcp/internal/generator"
+	"github.com/dbb1dev/go-mcp/internal/metadata"
 	"github.com/dbb1dev/go-mcp/internal/modifier"
 	"github.com/dbb1dev/go-mcp/internal/types"
 	"github.com/dbb1dev/go-mcp/internal/utils"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+// ScaffolderVersion is the current version of the scaffolding tools.
+// Used for tracking which version generated the code for future upgrades.
+const ScaffolderVersion = "0.1.0"
 
 // RegisterScaffoldDomain registers the scaffold_domain tool.
 func RegisterScaffoldDomain(server *mcp.Server, registry *Registry) {
@@ -310,6 +315,15 @@ func scaffoldDomain(registry *Registry, input types.ScaffoldDomainInput) (types.
 			NextSteps:      nextSteps,
 			SuggestedTools: suggestedTools,
 		}, nil
+	}
+
+	// Save scaffold metadata for future sync/upgrade capabilities
+	metaStore := metadata.NewStore(registry.WorkingDir)
+	if err := metaStore.SaveDomain(input.DomainName, input, ScaffolderVersion); err != nil {
+		// Log warning but don't fail - metadata is optional
+		fmt.Printf("Warning: could not save scaffold metadata: %v\n", err)
+	} else {
+		result.FilesUpdated = append(result.FilesUpdated, ".mcp/scaffold-metadata.json")
 	}
 
 	return types.ScaffoldResult{

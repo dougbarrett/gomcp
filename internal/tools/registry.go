@@ -79,6 +79,7 @@ func (r *Registry) RegisterAll(server *mcp.Server) {
 	RegisterScaffoldConfig(server, r)
 	RegisterScaffoldSeed(server, r)
 	RegisterListDomains(server, r)
+	RegisterAnalyzeDomain(server, r)
 	RegisterUpdateDIWiring(server, r)
 
 	// Phase 6: Extend tools for custom logic

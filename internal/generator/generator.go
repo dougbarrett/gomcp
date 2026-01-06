@@ -30,12 +30,16 @@ type Generator struct {
 	dryRun bool
 	// forceOverwrite if true, allows overwriting existing files.
 	forceOverwrite bool
+	// storeContent if true, stores generated content for later retrieval (used for analysis).
+	storeContent bool
 	// filesCreated tracks created files.
 	filesCreated []string
 	// filesUpdated tracks updated files.
 	filesUpdated []string
 	// conflicts tracks files that would be overwritten.
 	conflicts []FileConflict
+	// generatedContent stores generated file content when storeContent is true.
+	generatedContent map[string]string
 }
 
 // GeneratorResult contains the results of generation.
@@ -76,6 +80,24 @@ func (g *Generator) IsDryRun() bool {
 	return g.dryRun
 }
 
+// SetStoreContent sets whether to store generated content for later retrieval.
+// This is useful for analysis/comparison without writing files.
+func (g *Generator) SetStoreContent(store bool) {
+	g.storeContent = store
+	if store && g.generatedContent == nil {
+		g.generatedContent = make(map[string]string)
+	}
+}
+
+// GetFileContent retrieves the generated content for a file path.
+// Only works if SetStoreContent(true) was called before generation.
+func (g *Generator) GetFileContent(outputPath string) string {
+	if g.generatedContent == nil {
+		return ""
+	}
+	return g.generatedContent[outputPath]
+}
+
 // BasePath returns the base path for generation.
 func (g *Generator) BasePath() string {
 	return g.basePath
@@ -111,6 +133,14 @@ func (g *Generator) GenerateFileWithDescription(templatePath, outputPath string,
 	content, err := ExecuteTemplate(g.fs, templatePath, data)
 	if err != nil {
 		return fmt.Errorf("failed to execute template %s: %w", templatePath, err)
+	}
+
+	// Store content for later retrieval if enabled
+	if g.storeContent {
+		if g.generatedContent == nil {
+			g.generatedContent = make(map[string]string)
+		}
+		g.generatedContent[outputPath] = content
 	}
 
 	// If file exists and we're not forcing overwrite, record as conflict
