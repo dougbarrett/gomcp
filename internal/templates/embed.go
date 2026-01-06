@@ -11,18 +11,19 @@ import (
 // FS is the embedded filesystem containing all template files.
 // Templates use [[ ]] delimiters instead of {{ }} to avoid conflicts with Go templates.
 //
-//go:embed project/*.tmpl domain/*.tmpl views/*.tmpl components/*.tmpl config/*.tmpl seed/*.tmpl auth/*.tmpl usermgmt/*.tmpl usermgmt/views/*.tmpl
+//go:embed project/*.tmpl domain/*.tmpl views/*.tmpl components/*.tmpl config/*.tmpl seed/*.tmpl auth/*.tmpl usermgmt/*.tmpl usermgmt/views/*.tmpl wizard/*.tmpl
 var FS embed.FS
 
 // Template directories:
 // - project/    : Project scaffolding templates (go.mod, main.go, config, etc.)
 // - domain/     : Domain layer templates (model, repository, service, controller, dto)
 // - views/      : View templates (list, show, form, table, partials)
-// - components/ : Component templates (card, modal, form_field)
+// - components/ : Component templates (card, modal, form_field, wizard)
 // - config/     : Configuration templates (page.toml)
 // - seed/       : Seeder templates (seeder.go)
 // - auth/       : Authentication templates (user_model, middleware, service, controller, views)
 // - usermgmt/   : User management templates (service, controller, views)
+// - wizard/     : Wizard templates (controller, views, draft model/repo/service)
 
 // Categories of templates available.
 var Categories = []string{
@@ -34,6 +35,7 @@ var Categories = []string{
 	"seed",
 	"auth",
 	"usermgmt",
+	"wizard",
 }
 
 // ReadTemplate reads a template file by path and returns its contents.

@@ -824,3 +824,179 @@ func NewRelationshipDataList(rels []types.RelationshipDef, domainName string) []
 	}
 	return result
 }
+
+// WizardStepData is the template data for a wizard step.
+type WizardStepData struct {
+	// Number is the step number (1-based).
+	Number int
+	// Name is the step display name.
+	Name string
+	// Type is the step type: form, select, has_many, summary.
+	Type string
+	// Fields is the list of fields for this step.
+	Fields []FieldData
+	// FieldNames is the list of field names (from input).
+	FieldNames []string
+	// ChildDomain is the related domain for has_many steps.
+	ChildDomain string
+	// ChildModelName is the model name for the child domain.
+	ChildModelName string
+	// HasManyMode is how items are added: select_existing or create_inline.
+	HasManyMode string
+	// Searchable enables search functionality.
+	Searchable bool
+	// IsFirst is true if this is the first step.
+	IsFirst bool
+	// IsLast is true if this is the last step.
+	IsLast bool
+	// IsSummary is true if this is a summary step.
+	IsSummary bool
+	// IsForm is true if this is a form step.
+	IsForm bool
+	// IsSelect is true if this is a select step.
+	IsSelect bool
+	// IsHasMany is true if this is a has_many step.
+	IsHasMany bool
+}
+
+// WizardData is the template data for wizard scaffolding.
+type WizardData struct {
+	// ModulePath is the Go module path.
+	ModulePath string
+	// WizardName is the wizard identifier (e.g., "create_order").
+	WizardName string
+	// WizardNamePascal is the wizard name in PascalCase.
+	WizardNamePascal string
+	// Domain is the target domain.
+	Domain string
+	// ModelName is the domain model name in PascalCase.
+	ModelName string
+	// PackageName is the domain package name.
+	PackageName string
+	// VariableName is the variable name (camelCase).
+	VariableName string
+	// URLPath is the base URL path.
+	URLPath string
+	// URLPathSegment is the URL path without leading slash.
+	URLPathSegment string
+	// Steps is the list of wizard steps.
+	Steps []WizardStepData
+	// TotalSteps is the total number of steps.
+	TotalSteps int
+
+	// Standard scaffolding options (same as DomainData)
+	// Layout is the view layout: dashboard, base, auth, none.
+	Layout string
+	// RouteGroup is the middleware context: public, authenticated, admin.
+	RouteGroup string
+	// FormStyle is how form steps are displayed: modal or page.
+	FormStyle string
+
+	// SuccessRedirect is the URL after completion.
+	SuccessRedirect string
+	// WithDrafts enables database draft persistence.
+	WithDrafts bool
+
+	// Feature flags based on step types
+	// HasSelectSteps is true if any step is a select type.
+	HasSelectSteps bool
+	// HasHasManySteps is true if any step is a has_many type.
+	HasHasManySteps bool
+	// HasSummaryStep is true if any step is a summary type.
+	HasSummaryStep bool
+	// HasFormSteps is true if any step is a form type.
+	HasFormSteps bool
+}
+
+// NewWizardData creates WizardData from a ScaffoldWizardInput.
+func NewWizardData(input types.ScaffoldWizardInput, modulePath string) WizardData {
+	packageName := utils.ToPackageName(input.Domain)
+	modelName := utils.ToModelName(input.Domain)
+	variableName := utils.ToVariableName(input.Domain)
+	urlPath := "/" + utils.ToURLPath(input.Domain)
+	urlPathSegment := utils.ToURLPath(input.Domain)
+
+	// Process steps
+	steps := make([]WizardStepData, len(input.Steps))
+	hasSelectSteps := false
+	hasHasManySteps := false
+	hasSummaryStep := false
+	hasFormSteps := false
+
+	for i, step := range input.Steps {
+		stepType := step.Type
+		if stepType == "" {
+			stepType = "form"
+		}
+
+		// Set feature flags
+		switch stepType {
+		case "select":
+			hasSelectSteps = true
+		case "has_many":
+			hasHasManySteps = true
+		case "summary":
+			hasSummaryStep = true
+		case "form":
+			hasFormSteps = true
+		}
+
+		// Process has_many mode
+		hasManyMode := step.HasManyMode
+		if hasManyMode == "" {
+			hasManyMode = "select_existing"
+		}
+
+		steps[i] = WizardStepData{
+			Number:         i + 1,
+			Name:           step.Name,
+			Type:           stepType,
+			FieldNames:     step.Fields,
+			ChildDomain:    step.ChildDomain,
+			ChildModelName: utils.ToModelName(step.ChildDomain),
+			HasManyMode:    hasManyMode,
+			Searchable:     step.Searchable,
+			IsFirst:        i == 0,
+			IsLast:         i == len(input.Steps)-1,
+			IsSummary:      stepType == "summary",
+			IsForm:         stepType == "form",
+			IsSelect:       stepType == "select",
+			IsHasMany:      stepType == "has_many",
+		}
+	}
+
+	// Determine success redirect
+	successRedirect := input.SuccessRedirect
+	if successRedirect == "" {
+		successRedirect = urlPath
+	}
+
+	return WizardData{
+		ModulePath:       modulePath,
+		WizardName:       input.WizardName,
+		WizardNamePascal: utils.ToPascalCase(input.WizardName),
+		Domain:           input.Domain,
+		ModelName:        modelName,
+		PackageName:      packageName,
+		VariableName:     variableName,
+		URLPath:          urlPath,
+		URLPathSegment:   urlPathSegment,
+		Steps:            steps,
+		TotalSteps:       len(input.Steps),
+		Layout:           input.GetLayout(),
+		RouteGroup:       input.GetRouteGroup(),
+		FormStyle:        input.GetFormStyle(),
+		SuccessRedirect:  successRedirect,
+		WithDrafts:       input.GetWithDrafts(),
+		HasSelectSteps:   hasSelectSteps,
+		HasHasManySteps:  hasHasManySteps,
+		HasSummaryStep:   hasSummaryStep,
+		HasFormSteps:     hasFormSteps,
+	}
+}
+
+// WizardDraftData is the template data for wizard draft model/service/repo.
+type WizardDraftData struct {
+	// ModulePath is the Go module path.
+	ModulePath string
+}

@@ -1,0 +1,228 @@
+package views
+
+import (
+	"fmt"
+
+	"[[.WizardData.ModulePath]]/internal/models"
+	"[[.WizardData.ModulePath]]/internal/web/components"
+)
+
+// [[.WizardData.WizardNamePascal]]Step[[.Step.Number]]Props contains props for step [[.Step.Number]].
+type [[.WizardData.WizardNamePascal]]Step[[.Step.Number]]Props struct {
+	CurrentStep int
+	TotalSteps  int
+	CSRFToken   string
+	Errors      map[string]string
+	[[- if .WizardData.WithDrafts]]
+	DraftID     string
+	StepData    map[string]interface{}
+	[[- end]]
+	// AvailableItems contains items that can be selected (for select_existing mode).
+	AvailableItems []models.[[.Step.ChildModelName]]
+	// SelectedItems contains currently selected items with quantities.
+	SelectedItems  [][[.WizardData.WizardNamePascal]]SelectedItem
+	[[- if .Step.Searchable]]
+	SearchQuery    string
+	[[- end]]
+}
+
+// [[.WizardData.WizardNamePascal]]SelectedItem represents a selected item with quantity.
+type [[.WizardData.WizardNamePascal]]SelectedItem struct {
+	ID       uint
+	Name     string
+	Quantity int
+}
+
+// [[.WizardData.WizardNamePascal]]Step[[.Step.Number]] renders the has_many step [[.Step.Number]]: [[.Step.Name]].
+templ [[.WizardData.WizardNamePascal]]Step[[.Step.Number]](props [[.WizardData.WizardNamePascal]]Step[[.Step.Number]]Props) {
+	@[[.WizardData.WizardNamePascal]]WizardLayout([[.WizardData.WizardNamePascal]]WizardProps{
+		CurrentStep: props.CurrentStep,
+		TotalSteps:  props.TotalSteps,
+		CSRFToken:   props.CSRFToken,
+		[[- if .WizardData.WithDrafts]]
+		DraftID:     props.DraftID,
+		[[- end]]
+	}) {
+		<div class="space-y-6">
+			<div>
+				<h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+					[[.Step.Name]]
+				</h2>
+				<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+					[[- if eq .Step.HasManyMode "select_existing"]]
+					Select items from the list below and specify quantities.
+					[[- else]]
+					Add items inline below.
+					[[- end]]
+				</p>
+			</div>
+
+			[[- if eq .Step.HasManyMode "select_existing"]]
+			<!-- Select Existing Mode -->
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<!-- Available Items -->
+				<div class="space-y-4">
+					<h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Available Items</h3>
+
+					[[- if .Step.Searchable]]
+					<div class="relative">
+						@components.Input(components.InputProps{
+							ID:          "search",
+							Name:        "search",
+							Type:        "text",
+							Placeholder: "Search items...",
+							Value:       props.SearchQuery,
+							Attributes: templ.Attributes{
+								"hx-get":      fmt.Sprintf("[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[.Step.Number]]?search=%s[[if .WizardData.WithDrafts]]&draft_id=%s[[end]]", props.SearchQuery[[if .WizardData.WithDrafts]], props.DraftID[[end]]),
+								"hx-trigger":  "keyup changed delay:300ms",
+								"hx-target":   "#available-items",
+								"hx-swap":     "innerHTML",
+							},
+						})
+					</div>
+					[[- end]]
+
+					<div id="available-items" class="space-y-2 max-h-96 overflow-y-auto">
+						if len(props.AvailableItems) == 0 {
+							<p class="text-sm text-gray-500 dark:text-gray-400 p-4 text-center">
+								No items available.
+							</p>
+						} else {
+							for _, item := range props.AvailableItems {
+								<div class="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+									<div>
+										<span class="text-sm font-medium text-gray-900 dark:text-white">
+											{ fmt.Sprintf("Item %d", item.ID) }
+										</span>
+										<!-- TODO: Customize display based on your model fields -->
+									</div>
+									<button
+										type="button"
+										class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+										_={ fmt.Sprintf("on click add { id: %d, quantity: 1 } to selectedItems then trigger update-selection", item.ID) }
+									>
+										Add
+									</button>
+								</div>
+							}
+						}
+					</div>
+				</div>
+
+				<!-- Selected Items -->
+				<div class="space-y-4">
+					<h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Selected Items</h3>
+					<div id="selected-items" class="space-y-2 max-h-96 overflow-y-auto">
+						if len(props.SelectedItems) == 0 {
+							<p class="text-sm text-gray-500 dark:text-gray-400 p-4 text-center">
+								No items selected yet. Add items from the left.
+							</p>
+						} else {
+							for _, item := range props.SelectedItems {
+								<div class="flex items-center justify-between p-3 border rounded-lg bg-blue-50 dark:bg-blue-900/20">
+									<div>
+										<span class="text-sm font-medium text-gray-900 dark:text-white">
+											{ item.Name }
+										</span>
+									</div>
+									<div class="flex items-center gap-2">
+										<input
+											type="number"
+											name={ fmt.Sprintf("item_%d_qty", item.ID) }
+											value={ fmt.Sprintf("%d", item.Quantity) }
+											min="1"
+											class="w-16 px-2 py-1 text-sm border rounded"
+										/>
+										<button
+											type="button"
+											class="text-red-600 hover:text-red-800"
+											_="on click remove me.closest('div.flex')"
+										>
+											@components.Icon("x", "h-4 w-4")
+										</button>
+									</div>
+								</div>
+							}
+						}
+					</div>
+				</div>
+			</div>
+			[[- else]]
+			<!-- Create Inline Mode -->
+			<div class="space-y-4">
+				<div id="inline-items" class="space-y-4">
+					<!-- Inline item forms will be added here -->
+					<div class="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
+						<p class="text-sm text-gray-500 dark:text-gray-400">
+							Click "Add Item" to add new items inline.
+						</p>
+					</div>
+				</div>
+				<button
+					type="button"
+					class="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+					_="on click append inline-item-template to #inline-items"
+				>
+					@components.Icon("plus", "h-4 w-4")
+					<span>Add Item</span>
+				</button>
+			</div>
+
+			<!-- Template for inline items -->
+			<template id="inline-item-template">
+				<div class="p-4 border rounded-lg space-y-3">
+					<div class="flex items-center justify-between">
+						<span class="text-sm font-medium text-gray-700 dark:text-gray-300">New Item</span>
+						<button
+							type="button"
+							class="text-red-600 hover:text-red-800"
+							_="on click remove me.closest('div.p-4')"
+						>
+							@components.Icon("x", "h-4 w-4")
+						</button>
+					</div>
+					<!-- TODO: Add form fields for the child model -->
+					<div class="text-sm text-gray-500">
+						Configure child model fields in scaffold_wizard
+					</div>
+				</div>
+			</template>
+			[[- end]]
+
+			<form
+				method="POST"
+				action={ templ.SafeURL(fmt.Sprintf("[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[.Step.Number]]")) }
+				hx-post={ fmt.Sprintf("[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[.Step.Number]]") }
+				hx-target="#main-content"
+				hx-swap="innerHTML"
+				class="space-y-4"
+			>
+				<input type="hidden" name="csrf_token" value={ props.CSRFToken }/>
+				[[- if .WizardData.WithDrafts]]
+				<input type="hidden" name="draft_id" value={ props.DraftID }/>
+				[[- end]]
+				<!-- Selected items will be serialized here -->
+				<input type="hidden" name="selected_items" id="selected-items-input" value=""/>
+
+				@components.FormError(props.Errors["items"])
+
+				@components.WizardNav(components.WizardNavProps{
+					[[- if not .Step.IsFirst]]
+					ShowPrev:   true,
+					[[- if .WizardData.WithDrafts]]
+					PrevURL:    fmt.Sprintf("[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[sub .Step.Number 1]]?draft_id=%s", props.DraftID),
+					[[- else]]
+					PrevURL:    "[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[sub .Step.Number 1]]",
+					[[- end]]
+					[[- end]]
+					[[- if .Step.IsLast]]
+					ShowSubmit: true,
+					SubmitLabel: "Review & Submit",
+					[[- else]]
+					ShowNext:   true,
+					[[- end]]
+				})
+			</form>
+		</div>
+	}
+}

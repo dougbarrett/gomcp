@@ -115,6 +115,36 @@ func TestScaffoldComponent(t *testing.T) {
 		}
 	})
 
+	t.Run("generates wizard component", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
+
+		input := types.ScaffoldComponentInput{
+			ComponentName: "OrderWizard",
+			ComponentType: "wizard",
+		}
+		result, err := scaffoldComponent(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.Success {
+			t.Errorf("expected success, got failure: %s", result.Message)
+		}
+
+		expectedPath := filepath.Join(tmpDir, "internal", "web", "components", "order_wizard.templ")
+		if !fileExists(expectedPath) {
+			t.Errorf("expected file to be created at %s", expectedPath)
+		}
+
+		content := readFile(t, expectedPath)
+		if !strings.Contains(content, "WizardSteps") {
+			t.Error("expected wizard component to contain WizardSteps")
+		}
+		if !strings.Contains(content, "WizardNav") {
+			t.Error("expected wizard component to contain WizardNav")
+		}
+	})
+
 	t.Run("generates custom component defaults to card", func(t *testing.T) {
 		registry, tmpDir := testRegistry(t)
 		setupGoMod(t, tmpDir, "github.com/test/myapp")
@@ -224,6 +254,7 @@ func TestGetComponentTemplatePath(t *testing.T) {
 		{"card", "components/card.templ.tmpl"},
 		{"modal", "components/card.templ.tmpl"}, // modal falls back to card; use scaffold_modal for full modal support
 		{"form_field", "components/form_field.templ.tmpl"},
+		{"wizard", "components/wizard.templ.tmpl"},
 		{"custom", "components/card.templ.tmpl"},
 		{"unknown", "components/card.templ.tmpl"},
 		{"", "components/card.templ.tmpl"},

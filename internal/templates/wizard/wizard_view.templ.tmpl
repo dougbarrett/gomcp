@@ -1,0 +1,76 @@
+package views
+
+import (
+	"fmt"
+
+	"[[.ModulePath]]/internal/web/components"
+)
+
+// [[.WizardNamePascal]]WizardProps contains common wizard properties.
+type [[.WizardNamePascal]]WizardProps struct {
+	CurrentStep int
+	TotalSteps  int
+	CSRFToken   string
+	[[- if .WithDrafts]]
+	DraftID     string
+	[[- end]]
+}
+
+// [[.WizardNamePascal]]Steps returns the step configuration for the wizard.
+func [[.WizardNamePascal]]Steps(currentStep int[[if .WithDrafts]], draftID string[[end]]) []components.WizardStepProps {
+	return []components.WizardStepProps{
+		[[- range $i, $step := .Steps]]
+		{
+			Number:    [[add $i 1]],
+			Title:     "[[.Name]]",
+			Status:    get[[$.WizardNamePascal]]StepStatus([[add $i 1]], currentStep),
+			Clickable: [[add $i 1]] < currentStep,
+			[[- if $.WithDrafts]]
+			URL:       fmt.Sprintf("[[$.URLPath]]/wizard/[[$.WizardName]]/step/[[add $i 1]]?draft_id=%s", draftID),
+			[[- else]]
+			URL:       "[[$.URLPath]]/wizard/[[$.WizardName]]/step/[[add $i 1]]",
+			[[- end]]
+		},
+		[[- end]]
+	}
+}
+
+// get[[.WizardNamePascal]]StepStatus returns the status for a step.
+func get[[.WizardNamePascal]]StepStatus(stepNumber, currentStep int) string {
+	if stepNumber < currentStep {
+		return "completed"
+	} else if stepNumber == currentStep {
+		return "active"
+	}
+	return "pending"
+}
+
+// [[.WizardNamePascal]]WizardLayout wraps wizard step content with the progress indicator.
+templ [[.WizardNamePascal]]WizardLayout(props [[.WizardNamePascal]]WizardProps) {
+	@components.Wizard(components.WizardProps{
+		Title:       "[[.ModelName]] Wizard",
+		Description: "Complete the steps below to create a new [[.ModelName | toLower]].",
+		CurrentStep: props.CurrentStep,
+		TotalSteps:  props.TotalSteps,
+	}) {
+		@components.WizardSteps([[.WizardNamePascal]]Steps(props.CurrentStep[[if .WithDrafts]], props.DraftID[[end]]))
+		@components.WizardStepContent() {
+			{ children... }
+		}
+	}
+}
+
+// [[.WizardNamePascal]]WizardCard wraps wizard step content in a card layout.
+templ [[.WizardNamePascal]]WizardCard(props [[.WizardNamePascal]]WizardProps) {
+	@components.WizardCard(components.WizardProps{
+		Title:       "[[.ModelName]] Wizard",
+		Description: "Complete the steps below to create a new [[.ModelName | toLower]].",
+		CurrentStep: props.CurrentStep,
+		TotalSteps:  props.TotalSteps,
+	}) {
+		@components.WizardSteps([[.WizardNamePascal]]Steps(props.CurrentStep[[if .WithDrafts]], props.DraftID[[end]]))
+		@components.WizardStepContent() {
+			{ children... }
+		}
+	}
+}

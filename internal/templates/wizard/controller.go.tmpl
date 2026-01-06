@@ -1,0 +1,249 @@
+package [[.PackageName]]
+
+import (
+	"fmt"
+	"net/http"
+	"strconv"
+
+	"[[.ModulePath]]/internal/services/[[.PackageName]]"
+	[[- if .WithDrafts]]
+	"[[.ModulePath]]/internal/services/wizarddraft"
+	[[- end]]
+	"[[.ModulePath]]/internal/web"
+	"[[.ModulePath]]/internal/web/[[.PackageName]]/views"
+	"github.com/go-chi/chi/v5"
+)
+
+// [[.WizardNamePascal]]WizardController handles the [[.WizardName]] wizard flow.
+type [[.WizardNamePascal]]WizardController struct {
+	service [[.PackageName]].Service
+	[[- if .WithDrafts]]
+	draftService wizarddraft.Service
+	[[- end]]
+}
+
+// New[[.WizardNamePascal]]WizardController creates a new wizard controller.
+func New[[.WizardNamePascal]]WizardController(service [[.PackageName]].Service[[if .WithDrafts]], draftService wizarddraft.Service[[end]]) *[[.WizardNamePascal]]WizardController {
+	return &[[.WizardNamePascal]]WizardController{
+		service: service,
+		[[- if .WithDrafts]]
+		draftService: draftService,
+		[[- end]]
+	}
+}
+
+// RegisterRoutes registers wizard routes.
+func (c *[[.WizardNamePascal]]WizardController) RegisterRoutes(r chi.Router) {
+	r.Route("/wizard/[[.WizardName]]", func(r chi.Router) {
+		r.Get("/new", c.Start)
+		[[- if .WithDrafts]]
+		r.Get("/{draftID}", c.Resume)
+		[[- end]]
+		[[- range $i, $step := .Steps]]
+		r.Get("/step/[[add $i 1]]", c.Step[[add $i 1]])
+		r.Post("/step/[[add $i 1]]", c.Step[[add $i 1]]Submit)
+		[[- end]]
+		r.Post("/submit", c.Submit)
+	})
+}
+
+// Start begins a new wizard flow.
+func (c *[[.WizardNamePascal]]WizardController) Start(w http.ResponseWriter, r *http.Request) {
+	resp := web.NewResponse(w, r)
+
+	[[- if .WithDrafts]]
+	// Create a new draft
+	draft, err := c.draftService.CreateOrUpdate(r.Context(), "[[.WizardName]]", "[[.Domain]]", nil, map[string]interface{}{}, 1)
+	if err != nil {
+		resp.Error(http.StatusInternalServerError, "Failed to create wizard draft")
+		return
+	}
+
+	// Redirect to first step with draft ID
+	resp.HXRedirect(fmt.Sprintf("[[.URLPath]]/wizard/[[.WizardName]]/%d/step/1", draft.ID))
+	[[- else]]
+	// Redirect to first step
+	resp.HXRedirect("[[.URLPath]]/wizard/[[.WizardName]]/step/1")
+	[[- end]]
+}
+
+[[- if .WithDrafts]]
+
+// Resume continues a wizard from a saved draft.
+func (c *[[.WizardNamePascal]]WizardController) Resume(w http.ResponseWriter, r *http.Request) {
+	resp := web.NewResponse(w, r)
+
+	draftID, err := strconv.ParseUint(chi.URLParam(r, "draftID"), 10, 64)
+	if err != nil {
+		resp.Error(http.StatusBadRequest, "Invalid draft ID")
+		return
+	}
+
+	draft, err := c.draftService.GetByID(r.Context(), uint(draftID))
+	if err != nil {
+		resp.Error(http.StatusNotFound, "Draft not found")
+		return
+	}
+
+	// Redirect to the current step
+	resp.HXRedirect(fmt.Sprintf("[[.URLPath]]/wizard/[[.WizardName]]/%d/step/%d", draft.ID, draft.CurrentStep))
+}
+[[- end]]
+
+[[- range $i, $step := .Steps]]
+
+// Step[[add $i 1]] renders step [[add $i 1]]: [[.Name]].
+func (c *[[$.WizardNamePascal]]WizardController) Step[[add $i 1]](w http.ResponseWriter, r *http.Request) {
+	resp := web.NewResponse(w, r)
+
+	[[- if $.WithDrafts]]
+	// Get draft data
+	draftID := r.URL.Query().Get("draft_id")
+	var stepData map[string]interface{}
+	if draftID != "" {
+		id, _ := strconv.ParseUint(draftID, 10, 64)
+		data, err := c.draftService.GetStepData(r.Context(), uint(id))
+		if err == nil {
+			stepData = data
+		}
+	}
+	[[- end]]
+
+	props := views.[[$.WizardNamePascal]]Step[[add $i 1]]Props{
+		CurrentStep: [[add $i 1]],
+		TotalSteps:  [[$.TotalSteps]],
+		CSRFToken:   resp.CSRFToken(),
+		[[- if $.WithDrafts]]
+		DraftID:     draftID,
+		StepData:    stepData,
+		[[- end]]
+	}
+
+	[[- if eq .Type "select"]]
+	// Load options for selection
+	// TODO: Customize this to load appropriate options
+	// options, _ := c.service.List(r.Context(), nil)
+	// props.Options = options
+	[[- end]]
+
+	[[- if eq .Type "has_many"]]
+	// Load available items for has_many selection
+	// TODO: Customize this to load appropriate items
+	// items, _ := c.childService.List(r.Context(), nil)
+	// props.AvailableItems = items
+	[[- end]]
+
+	resp.Component(views.[[$.WizardNamePascal]]Step[[add $i 1]](props))
+}
+
+// Step[[add $i 1]]Submit handles step [[add $i 1]] form submission.
+func (c *[[$.WizardNamePascal]]WizardController) Step[[add $i 1]]Submit(w http.ResponseWriter, r *http.Request) {
+	resp := web.NewResponse(w, r)
+
+	if err := r.ParseForm(); err != nil {
+		resp.Error(http.StatusBadRequest, "Invalid form data")
+		return
+	}
+
+	[[- if $.WithDrafts]]
+	// Get or create draft
+	draftID := r.FormValue("draft_id")
+	var draft *models.WizardDraft
+	if draftID != "" {
+		id, _ := strconv.ParseUint(draftID, 10, 64)
+		draft, _ = c.draftService.GetByID(r.Context(), uint(id))
+	}
+
+	// Update step data
+	stepData := make(map[string]interface{})
+	if draft != nil {
+		stepData, _ = c.draftService.GetStepData(r.Context(), draft.ID)
+	}
+
+	// Collect form data for this step
+	[[- range .FieldNames]]
+	stepData["[[.]]"] = r.FormValue("[[.]]")
+	[[- end]]
+
+	// Save draft
+	nextStep := [[add $i 2]]
+	if [[add $i 1]] == [[$.TotalSteps]] {
+		nextStep = [[$.TotalSteps]]
+	}
+	draft, err := c.draftService.CreateOrUpdate(r.Context(), "[[$.WizardName]]", "[[$.Domain]]", nil, stepData, nextStep)
+	if err != nil {
+		resp.Error(http.StatusInternalServerError, "Failed to save wizard progress")
+		return
+	}
+
+	// Redirect to next step
+	[[- if .IsLast]]
+	resp.HXRedirect(fmt.Sprintf("[[$.URLPath]]/wizard/[[$.WizardName]]?draft_id=%d&step=submit", draft.ID))
+	[[- else]]
+	resp.HXRedirect(fmt.Sprintf("[[$.URLPath]]/wizard/[[$.WizardName]]/step/[[add $i 2]]?draft_id=%d", draft.ID))
+	[[- end]]
+	[[- else]]
+	// Store form data in session or pass via URL
+	[[- if .IsLast]]
+	resp.HXRedirect("[[$.URLPath]]/wizard/[[$.WizardName]]/submit")
+	[[- else]]
+	resp.HXRedirect("[[$.URLPath]]/wizard/[[$.WizardName]]/step/[[add $i 2]]")
+	[[- end]]
+	[[- end]]
+}
+[[- end]]
+
+// Submit completes the wizard and creates the [[.ModelName]].
+func (c *[[.WizardNamePascal]]WizardController) Submit(w http.ResponseWriter, r *http.Request) {
+	resp := web.NewResponse(w, r)
+
+	if err := r.ParseForm(); err != nil {
+		resp.Error(http.StatusBadRequest, "Invalid form data")
+		return
+	}
+
+	[[- if .WithDrafts]]
+	// Get draft data
+	draftID := r.FormValue("draft_id")
+	if draftID == "" {
+		resp.Error(http.StatusBadRequest, "Draft ID required")
+		return
+	}
+
+	id, _ := strconv.ParseUint(draftID, 10, 64)
+	stepData, err := c.draftService.GetStepData(r.Context(), uint(id))
+	if err != nil {
+		resp.Error(http.StatusNotFound, "Draft not found")
+		return
+	}
+
+	// Create the [[.ModelName]] from collected data
+	dto := [[.PackageName]].Create[[.ModelName]]DTO{
+		// TODO: Map stepData fields to DTO
+		// Example: Name: stepData["name"].(string),
+	}
+
+	_, err = c.service.Create(r.Context(), dto)
+	if err != nil {
+		resp.Error(http.StatusInternalServerError, "Failed to create [[.ModelName | toLower]]")
+		return
+	}
+
+	// Delete the draft after successful creation
+	_ = c.draftService.Delete(r.Context(), uint(id))
+	[[- else]]
+	// Create the [[.ModelName]] from form data
+	dto := [[.PackageName]].Create[[.ModelName]]DTO{
+		// TODO: Map form fields to DTO
+	}
+
+	_, err := c.service.Create(r.Context(), dto)
+	if err != nil {
+		resp.Error(http.StatusInternalServerError, "Failed to create [[.ModelName | toLower]]")
+		return
+	}
+	[[- end]]
+
+	// Redirect to success page
+	resp.HXRedirect("[[.SuccessRedirect]]")
+}

@@ -931,6 +931,7 @@ func TestCategories(t *testing.T) {
 		"seed",
 		"auth",
 		"usermgmt",
+		"wizard",
 	}
 
 	if len(Categories) != len(expectedCategories) {

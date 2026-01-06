@@ -1,0 +1,102 @@
+package wizarddraft
+
+import (
+	"context"
+	"encoding/json"
+
+	"[[.ModulePath]]/internal/models"
+)
+
+// Service defines the interface for wizard draft business logic.
+type Service interface {
+	CreateOrUpdate(ctx context.Context, wizardName, domain string, userID *uint, stepData map[string]interface{}, currentStep int) (*models.WizardDraft, error)
+	GetByID(ctx context.Context, id uint) (*models.WizardDraft, error)
+	GetStepData(ctx context.Context, id uint) (map[string]interface{}, error)
+	Delete(ctx context.Context, id uint) error
+	FindExisting(ctx context.Context, wizardName, domain string, userID *uint) (*models.WizardDraft, error)
+	CleanupExpired(ctx context.Context, olderThanDays int) (int64, error)
+}
+
+// service implements Service.
+type service struct {
+	repo Repository
+}
+
+// NewService creates a new wizard draft service.
+func NewService(repo Repository) Service {
+	return &service{repo: repo}
+}
+
+// CreateOrUpdate creates a new draft or updates an existing one.
+func (s *service) CreateOrUpdate(ctx context.Context, wizardName, domain string, userID *uint, stepData map[string]interface{}, currentStep int) (*models.WizardDraft, error) {
+	// Try to find existing draft
+	existing, err := s.repo.FindByWizardAndUser(ctx, wizardName, domain, userID)
+	if err == nil && existing != nil {
+		// Update existing draft
+		dataJSON, err := json.Marshal(stepData)
+		if err != nil {
+			return nil, err
+		}
+		existing.StepData = string(dataJSON)
+		existing.CurrentStep = currentStep
+		if err := s.repo.Update(ctx, existing); err != nil {
+			return nil, err
+		}
+		return existing, nil
+	}
+
+	// Create new draft
+	dataJSON, err := json.Marshal(stepData)
+	if err != nil {
+		return nil, err
+	}
+
+	draft := &models.WizardDraft{
+		WizardName:  wizardName,
+		Domain:      domain,
+		UserID:      userID,
+		StepData:    string(dataJSON),
+		CurrentStep: currentStep,
+	}
+
+	if err := s.repo.Create(ctx, draft); err != nil {
+		return nil, err
+	}
+
+	return draft, nil
+}
+
+// GetByID retrieves a wizard draft by ID.
+func (s *service) GetByID(ctx context.Context, id uint) (*models.WizardDraft, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
+// GetStepData retrieves and decodes the step data for a draft.
+func (s *service) GetStepData(ctx context.Context, id uint) (map[string]interface{}, error) {
+	draft, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var stepData map[string]interface{}
+	if err := json.Unmarshal([]byte(draft.StepData), &stepData); err != nil {
+		return nil, err
+	}
+
+	return stepData, nil
+}
+
+// Delete removes a wizard draft.
+func (s *service) Delete(ctx context.Context, id uint) error {
+	return s.repo.Delete(ctx, id)
+}
+
+// FindExisting finds an existing draft for a wizard and user.
+func (s *service) FindExisting(ctx context.Context, wizardName, domain string, userID *uint) (*models.WizardDraft, error) {
+	return s.repo.FindByWizardAndUser(ctx, wizardName, domain, userID)
+}
+
+// CleanupExpired removes drafts older than the specified days.
+func (s *service) CleanupExpired(ctx context.Context, olderThanDays int) (int64, error) {
+	return s.repo.DeleteExpired(ctx, olderThanDays)
+}

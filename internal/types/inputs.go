@@ -595,9 +595,81 @@ type DomainAnalysis struct {
 
 // FileAnalysis contains diff information for a single file.
 type FileAnalysis struct {
-	Path       string `json:"path"`
-	Status     string `json:"status"` // "unchanged", "modified", "missing", "new"
-	Diff       string `json:"diff,omitempty"`
-	LinesAdded int    `json:"lines_added,omitempty"`
-	LinesRemoved int  `json:"lines_removed,omitempty"`
+	Path         string `json:"path"`
+	Status       string `json:"status"` // "unchanged", "modified", "missing", "new"
+	Diff         string `json:"diff,omitempty"`
+	LinesAdded   int    `json:"lines_added,omitempty"`
+	LinesRemoved int    `json:"lines_removed,omitempty"`
+}
+
+// WizardStepDef defines a step in a multi-step wizard.
+type WizardStepDef struct {
+	// Name is the step display name.
+	Name string `json:"name"`
+	// Fields are the domain fields to include in this step.
+	Fields []string `json:"fields,omitempty"`
+	// Type is the step type: form (default), select, has_many, or summary.
+	Type string `json:"type,omitempty"`
+	// ChildDomain is the related domain for has_many steps (e.g., "orderitem").
+	ChildDomain string `json:"child_domain,omitempty"`
+	// HasManyMode is how items are added: select_existing (default) or create_inline.
+	HasManyMode string `json:"has_many_mode,omitempty"`
+	// Searchable enables search functionality for select steps.
+	Searchable bool `json:"searchable,omitempty"`
+	// ValidationRules contains per-field validation rules.
+	ValidationRules map[string]string `json:"validation_rules,omitempty"`
+}
+
+// ScaffoldWizardInput is the input for the scaffold_wizard tool.
+type ScaffoldWizardInput struct {
+	// WizardName is the wizard identifier (e.g., "create_order").
+	WizardName string `json:"wizard_name"`
+	// Domain is the target domain (e.g., "order").
+	Domain string `json:"domain"`
+	// Steps defines each wizard step.
+	Steps []WizardStepDef `json:"steps"`
+	// Layout specifies the view layout: dashboard, base, auth, none. Defaults to "dashboard".
+	Layout string `json:"layout,omitempty"`
+	// RouteGroup specifies the middleware context: public, authenticated, admin. Defaults to "public".
+	RouteGroup string `json:"route_group,omitempty"`
+	// FormStyle specifies how form steps are displayed: modal or page. Defaults to "page".
+	FormStyle string `json:"form_style,omitempty"`
+	// SuccessRedirect is the URL after completion. Defaults to "/{domain}".
+	SuccessRedirect string `json:"success_redirect,omitempty"`
+	// WithDrafts enables database draft persistence for wizard progress. Defaults to true.
+	WithDrafts *bool `json:"with_drafts,omitempty"`
+	// DryRun previews changes without writing files.
+	DryRun bool `json:"dry_run,omitempty"`
+}
+
+// GetWithDrafts returns the WithDrafts value with default true.
+func (s ScaffoldWizardInput) GetWithDrafts() bool {
+	if s.WithDrafts == nil {
+		return true
+	}
+	return *s.WithDrafts
+}
+
+// GetLayout returns the Layout value with default "dashboard".
+func (s ScaffoldWizardInput) GetLayout() string {
+	if s.Layout == "" {
+		return "dashboard"
+	}
+	return s.Layout
+}
+
+// GetRouteGroup returns the RouteGroup value with default "public".
+func (s ScaffoldWizardInput) GetRouteGroup() string {
+	if s.RouteGroup == "" {
+		return "public"
+	}
+	return s.RouteGroup
+}
+
+// GetFormStyle returns the FormStyle value with default "page".
+func (s ScaffoldWizardInput) GetFormStyle() string {
+	if s.FormStyle == "" {
+		return "page"
+	}
+	return s.FormStyle
 }

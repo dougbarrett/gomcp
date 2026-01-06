@@ -17,14 +17,22 @@ func RegisterScaffoldComponent(server *mcp.Server, registry *Registry) {
 		Name: "scaffold_component",
 		Description: `Create reusable templ components with Tailwind CSS styling.
 
-Component types: card, modal, dropdown, form_field, table, custom
+Component types: card, modal, dropdown, form_field, table, wizard, custom
 
 Features:
 - Props with types and defaults
 - Optional HTMX attributes (with_htmx: true)
 - Alpine.js state integration (alpine_state)
 
+The "wizard" type generates a complete set of wizard components including:
+- WizardSteps: Horizontal/vertical clickable step indicators
+- WizardNav: Previous/Next/Submit navigation buttons
+- WizardSummary: Review/summary display with edit links
+- WizardProgress: Simple "Step X of Y" indicator
+- Wizard/WizardCard: Container components
+
 Use scaffold_modal for full modal dialogs, scaffold_form for forms.
+Use scaffold_wizard for complete multi-step wizard flows.
 Run 'templ generate' after creating components.`,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input types.ScaffoldComponentInput) (*mcp.CallToolResult, types.ScaffoldResult, error) {
 		result, err := scaffoldComponent(registry, input)
@@ -125,6 +133,8 @@ func getComponentTemplatePath(componentType string) string {
 		return "components/card.templ.tmpl"
 	case "form_field":
 		return "components/form_field.templ.tmpl"
+	case "wizard":
+		return "components/wizard.templ.tmpl"
 	default:
 		// Default to card for modal, custom, and unknown types
 		// Note: For full modal support, use scaffold_modal tool

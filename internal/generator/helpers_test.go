@@ -32,6 +32,8 @@ func TestTemplateFuncMap(t *testing.T) {
 		"first", "last", "len", "empty",
 		// Index helpers
 		"isFirst", "isLast", "inc", "dec",
+		// Arithmetic helpers
+		"add", "sub", "mul", "div", "mod",
 		// Code generation helpers
 		"goType", "formComponent", "inputType", "fakerFunc", "gormTag",
 		// Comment helpers

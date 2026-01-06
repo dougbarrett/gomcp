@@ -1,0 +1,132 @@
+package views
+
+import (
+	"fmt"
+
+	"[[.WizardData.ModulePath]]/internal/models"
+	"[[.WizardData.ModulePath]]/internal/web/components"
+)
+
+// [[.WizardData.WizardNamePascal]]Step[[.Step.Number]]Props contains props for step [[.Step.Number]].
+type [[.WizardData.WizardNamePascal]]Step[[.Step.Number]]Props struct {
+	CurrentStep int
+	TotalSteps  int
+	CSRFToken   string
+	Errors      map[string]string
+	[[- if .WizardData.WithDrafts]]
+	DraftID     string
+	StepData    map[string]interface{}
+	[[- end]]
+	// Options contains the available items to select from.
+	// TODO: Change this to the appropriate model type.
+	Options     []models.[[.WizardData.ModelName]]
+	[[- if .Step.Searchable]]
+	SearchQuery string
+	[[- end]]
+}
+
+// [[.WizardData.WizardNamePascal]]Step[[.Step.Number]] renders the selection step [[.Step.Number]]: [[.Step.Name]].
+templ [[.WizardData.WizardNamePascal]]Step[[.Step.Number]](props [[.WizardData.WizardNamePascal]]Step[[.Step.Number]]Props) {
+	@[[.WizardData.WizardNamePascal]]WizardLayout([[.WizardData.WizardNamePascal]]WizardProps{
+		CurrentStep: props.CurrentStep,
+		TotalSteps:  props.TotalSteps,
+		CSRFToken:   props.CSRFToken,
+		[[- if .WizardData.WithDrafts]]
+		DraftID:     props.DraftID,
+		[[- end]]
+	}) {
+		<div class="space-y-6">
+			<div>
+				<h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+					[[.Step.Name]]
+				</h2>
+				<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+					Select an option below to continue.
+				</p>
+			</div>
+
+			[[- if .Step.Searchable]]
+			<!-- Search Input -->
+			<div class="relative">
+				@components.Input(components.InputProps{
+					ID:          "search",
+					Name:        "search",
+					Type:        "text",
+					Placeholder: "Search...",
+					Value:       props.SearchQuery,
+					Attributes: templ.Attributes{
+						"hx-get":      fmt.Sprintf("[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[.Step.Number]]?search=%s[[if .WizardData.WithDrafts]]&draft_id=%s[[end]]", props.SearchQuery[[if .WizardData.WithDrafts]], props.DraftID[[end]]),
+						"hx-trigger":  "keyup changed delay:300ms",
+						"hx-target":   "#selection-list",
+						"hx-swap":     "innerHTML",
+					},
+				})
+			</div>
+			[[- end]]
+
+			<form
+				method="POST"
+				action={ templ.SafeURL(fmt.Sprintf("[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[.Step.Number]]")) }
+				hx-post={ fmt.Sprintf("[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[.Step.Number]]") }
+				hx-target="#main-content"
+				hx-swap="innerHTML"
+				class="space-y-4"
+			>
+				<input type="hidden" name="csrf_token" value={ props.CSRFToken }/>
+				[[- if .WizardData.WithDrafts]]
+				<input type="hidden" name="draft_id" value={ props.DraftID }/>
+				[[- end]]
+
+				<!-- Selection List -->
+				<div id="selection-list" class="space-y-2">
+					if len(props.Options) == 0 {
+						@components.WizardEmpty("No options available", "Please add some items first.")
+					} else {
+						for _, option := range props.Options {
+							<label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+								<input
+									type="radio"
+									name="selected_id"
+									value={ fmt.Sprintf("%d", option.ID) }
+									[[- if .WizardData.WithDrafts]]
+									if props.StepData != nil {
+										if selectedID, ok := props.StepData["selected_id"].(string); ok && selectedID == fmt.Sprintf("%d", option.ID) {
+											checked
+										}
+									}
+									[[- end]]
+									class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+								/>
+								<div class="ml-3">
+									<span class="text-sm font-medium text-gray-900 dark:text-white">
+										{ fmt.Sprintf("%d", option.ID) }
+									</span>
+									<!-- TODO: Customize display based on your model fields -->
+								</div>
+							</label>
+						}
+					}
+				</div>
+
+				@components.FormError(props.Errors["selected_id"])
+
+				@components.WizardNav(components.WizardNavProps{
+					[[- if not .Step.IsFirst]]
+					ShowPrev:   true,
+					[[- if .WizardData.WithDrafts]]
+					PrevURL:    fmt.Sprintf("[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[sub .Step.Number 1]]?draft_id=%s", props.DraftID),
+					[[- else]]
+					PrevURL:    "[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[sub .Step.Number 1]]",
+					[[- end]]
+					[[- end]]
+					[[- if .Step.IsLast]]
+					ShowSubmit: true,
+					SubmitLabel: "Review & Submit",
+					[[- else]]
+					ShowNext:   true,
+					[[- end]]
+				})
+			</form>
+		</div>
+	}
+}

@@ -1,0 +1,405 @@
+package components
+
+import "fmt"
+
+// Note: This component is in the same package as common.templ, so it can
+// use Icon, Button, Badge, Card, etc. directly without import.
+
+// WizardProps contains properties for the wizard container.
+type WizardProps struct {
+	Title       string
+	Description string
+	CurrentStep int
+	TotalSteps  int
+	Class       string
+}
+
+// WizardStepProps contains properties for individual wizard steps.
+type WizardStepProps struct {
+	Number      int
+	Title       string
+	Description string
+	Status      string // "pending", "active", "completed"
+	Clickable   bool
+	URL         string // For clickable steps
+}
+
+// WizardNavProps contains properties for wizard navigation.
+type WizardNavProps struct {
+	ShowPrev    bool
+	ShowNext    bool
+	ShowSubmit  bool
+	PrevURL     string
+	NextURL     string
+	SubmitURL   string
+	PrevLabel   string // Default: "Previous"
+	NextLabel   string // Default: "Next"
+	SubmitLabel string // Default: "Submit"
+	CSRFToken   string
+	Attributes  templ.Attributes
+}
+
+// SummaryItem represents an item in the wizard summary.
+type SummaryItem struct {
+	Label string
+	Value string
+	EditURL string // Optional URL to edit this value
+}
+
+// WizardProgress renders a simple "Step X of Y" progress indicator.
+templ WizardProgress(current int, total int) {
+	<div class="text-sm text-gray-500 dark:text-gray-400">
+		Step { fmt.Sprintf("%d", current) } of { fmt.Sprintf("%d", total) }
+	</div>
+}
+
+// WizardSteps renders a horizontal step indicator with clickable completed steps.
+templ WizardSteps(steps []WizardStepProps) {
+	<nav aria-label="Progress" class="py-4">
+		<ol class="flex items-center">
+			for i, step := range steps {
+				<li class={templ.KV("flex-1", i < len(steps)-1)}>
+					<div class={templ.KV("flex items-center", true), templ.KV("", i < len(steps)-1)}>
+						if step.Status == "completed" {
+							if step.Clickable && step.URL != "" {
+								<a
+									href="#"
+									hx-get={ step.URL }
+									hx-target="#main-content"
+									hx-push-url="true"
+									class="group flex items-center cursor-pointer"
+								>
+									<span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 group-hover:bg-blue-800">
+										@Icon("check", "h-5 w-5 text-white")
+									</span>
+									<span class="ml-3 text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600">
+										{ step.Title }
+									</span>
+								</a>
+							} else {
+								<div class="flex items-center">
+									<span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-600">
+										@Icon("check", "h-5 w-5 text-white")
+									</span>
+									<span class="ml-3 text-sm font-medium text-gray-900 dark:text-white">
+										{ step.Title }
+									</span>
+								</div>
+							}
+						} else if step.Status == "active" {
+							<div class="flex items-center" aria-current="step">
+								<span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-blue-600 bg-white dark:bg-gray-800">
+									<span class="text-blue-600 font-semibold">{ fmt.Sprintf("%d", step.Number) }</span>
+								</span>
+								<span class="ml-3 text-sm font-medium text-blue-600">
+									{ step.Title }
+								</span>
+							</div>
+						} else {
+							<div class="flex items-center">
+								<span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+									<span class="text-gray-500 dark:text-gray-400">{ fmt.Sprintf("%d", step.Number) }</span>
+								</span>
+								<span class="ml-3 text-sm font-medium text-gray-500 dark:text-gray-400">
+									{ step.Title }
+								</span>
+							</div>
+						}
+						// Connector line between steps
+						if i < len(steps)-1 {
+							<div class="hidden sm:block flex-1 mx-4">
+								<div
+									class={
+										"h-0.5",
+										templ.KV("bg-blue-600", step.Status == "completed"),
+										templ.KV("bg-gray-300 dark:bg-gray-600", step.Status != "completed"),
+									}
+								></div>
+							</div>
+						}
+					</div>
+				</li>
+			}
+		</ol>
+	</nav>
+}
+
+// WizardStepsVertical renders a vertical step indicator with clickable completed steps.
+templ WizardStepsVertical(steps []WizardStepProps) {
+	<nav aria-label="Progress" class="py-4">
+		<ol class="space-y-4">
+			for i, step := range steps {
+				<li class="relative flex gap-x-4">
+					// Vertical connector line
+					if i < len(steps)-1 {
+						<div
+							class={
+								"absolute left-5 top-10 -ml-px h-full w-0.5",
+								templ.KV("bg-blue-600", step.Status == "completed"),
+								templ.KV("bg-gray-300 dark:bg-gray-600", step.Status != "completed"),
+							}
+						></div>
+					}
+					<div class="relative flex items-start">
+						if step.Status == "completed" {
+							if step.Clickable && step.URL != "" {
+								<a
+									href="#"
+									hx-get={ step.URL }
+									hx-target="#main-content"
+									hx-push-url="true"
+									class="group flex cursor-pointer"
+								>
+									<span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 group-hover:bg-blue-800">
+										@Icon("check", "h-5 w-5 text-white")
+									</span>
+									<div class="ml-3">
+										<p class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600">
+											{ step.Title }
+										</p>
+										if step.Description != "" {
+											<p class="text-sm text-gray-500 dark:text-gray-400">
+												{ step.Description }
+											</p>
+										}
+									</div>
+								</a>
+							} else {
+								<div class="flex">
+									<span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-600">
+										@Icon("check", "h-5 w-5 text-white")
+									</span>
+									<div class="ml-3">
+										<p class="text-sm font-medium text-gray-900 dark:text-white">
+											{ step.Title }
+										</p>
+										if step.Description != "" {
+											<p class="text-sm text-gray-500 dark:text-gray-400">
+												{ step.Description }
+											</p>
+										}
+									</div>
+								</div>
+							}
+						} else if step.Status == "active" {
+							<div class="flex" aria-current="step">
+								<span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-blue-600 bg-white dark:bg-gray-800">
+									<span class="text-blue-600 font-semibold">{ fmt.Sprintf("%d", step.Number) }</span>
+								</span>
+								<div class="ml-3">
+									<p class="text-sm font-medium text-blue-600">
+										{ step.Title }
+									</p>
+									if step.Description != "" {
+										<p class="text-sm text-gray-500 dark:text-gray-400">
+											{ step.Description }
+										</p>
+									}
+								</div>
+							</div>
+						} else {
+							<div class="flex">
+								<span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+									<span class="text-gray-500 dark:text-gray-400">{ fmt.Sprintf("%d", step.Number) }</span>
+								</span>
+								<div class="ml-3">
+									<p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+										{ step.Title }
+									</p>
+									if step.Description != "" {
+										<p class="text-sm text-gray-500 dark:text-gray-400">
+											{ step.Description }
+										</p>
+									}
+								</div>
+							</div>
+						}
+					</div>
+				</li>
+			}
+		</ol>
+	</nav>
+}
+
+// WizardStepContent renders the content wrapper for the current step.
+templ WizardStepContent() {
+	<div class="py-6">
+		{ children... }
+	</div>
+}
+
+// WizardNav renders the navigation buttons for the wizard.
+templ WizardNav(props WizardNavProps) {
+	<div class="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-gray-700">
+		<div>
+			if props.ShowPrev {
+				@Button(ButtonProps{
+					Variant: "outline",
+					Attributes: templ.Attributes{
+						"hx-get":      props.PrevURL,
+						"hx-target":   "#main-content",
+						"hx-push-url": "true",
+					},
+				}) {
+					@Icon("arrow-left", "h-4 w-4 mr-2")
+					if props.PrevLabel != "" {
+						{ props.PrevLabel }
+					} else {
+						Previous
+					}
+				}
+			}
+		</div>
+		<div class="flex gap-3">
+			if props.ShowNext {
+				@Button(ButtonProps{
+					Type:       "submit",
+					Variant:    "default",
+					Attributes: props.Attributes,
+				}) {
+					if props.NextLabel != "" {
+						{ props.NextLabel }
+					} else {
+						Next
+					}
+					@Icon("arrow-right", "h-4 w-4 ml-2")
+				}
+			}
+			if props.ShowSubmit {
+				@Button(ButtonProps{
+					Type:       "submit",
+					Variant:    "default",
+					Attributes: props.Attributes,
+				}) {
+					if props.SubmitLabel != "" {
+						{ props.SubmitLabel }
+					} else {
+						Submit
+					}
+					@Icon("check", "h-4 w-4 ml-2")
+				}
+			}
+		</div>
+	</div>
+}
+
+// WizardSummary renders a summary/review section with editable items.
+templ WizardSummary(items []SummaryItem) {
+	<div class="space-y-4">
+		for _, item := range items {
+			<div class="flex justify-between items-start py-3 border-b border-gray-200 dark:border-gray-700 last:border-0">
+				<div>
+					<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+						{ item.Label }
+					</dt>
+					<dd class="mt-1 text-sm text-gray-900 dark:text-white">
+						{ item.Value }
+					</dd>
+				</div>
+				if item.EditURL != "" {
+					<a
+						href="#"
+						hx-get={ item.EditURL }
+						hx-target="#main-content"
+						hx-push-url="true"
+						class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+					>
+						Edit
+					</a>
+				}
+			</div>
+		}
+	</div>
+}
+
+// WizardSummaryCard renders a summary/review section inside a card.
+templ WizardSummaryCard(title string, items []SummaryItem) {
+	@Card(CardProps{}) {
+		@CardHeader("") {
+			<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+				{ title }
+			</h3>
+		}
+		@CardContent("") {
+			@WizardSummary(items)
+		}
+	}
+}
+
+// Wizard renders the main wizard container with header and progress.
+templ Wizard(props WizardProps) {
+	<div class={ "space-y-6", props.Class }>
+		<!-- Wizard Header -->
+		<div class="space-y-2">
+			if props.Title != "" {
+				<h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+					{ props.Title }
+				</h1>
+			}
+			if props.Description != "" {
+				<p class="text-gray-500 dark:text-gray-400">
+					{ props.Description }
+				</p>
+			}
+			if props.TotalSteps > 0 {
+				<div class="flex items-center justify-between">
+					@WizardProgress(props.CurrentStep, props.TotalSteps)
+				</div>
+			}
+		</div>
+		{ children... }
+	</div>
+}
+
+// WizardCard renders the wizard container inside a card.
+templ WizardCard(props WizardProps) {
+	@Card(CardProps{Class: props.Class}) {
+		@CardHeader("") {
+			<div class="space-y-2">
+				if props.Title != "" {
+					<h1 class="text-xl font-bold text-gray-900 dark:text-white">
+						{ props.Title }
+					</h1>
+				}
+				if props.Description != "" {
+					<p class="text-sm text-gray-500 dark:text-gray-400">
+						{ props.Description }
+					</p>
+				}
+				if props.TotalSteps > 0 {
+					@WizardProgress(props.CurrentStep, props.TotalSteps)
+				}
+			</div>
+		}
+		@CardContent("") {
+			{ children... }
+		}
+	}
+}
+
+// WizardLoading renders a loading state for wizard content.
+templ WizardLoading() {
+	<div class="flex items-center justify-center py-12">
+		<div class="flex items-center gap-3">
+			<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+			<span class="text-gray-600 dark:text-gray-400">Loading...</span>
+		</div>
+	</div>
+}
+
+// WizardEmpty renders an empty state for wizard content.
+templ WizardEmpty(title string, description string) {
+	<div class="text-center py-12">
+		<div class="mx-auto h-12 w-12 text-gray-400">
+			@Icon("inbox", "h-12 w-12")
+		</div>
+		<h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
+			{ title }
+		</h3>
+		if description != "" {
+			<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+				{ description }
+			</p>
+		}
+	</div>
+}

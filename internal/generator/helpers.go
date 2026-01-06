@@ -163,6 +163,13 @@ func TemplateFuncMap() template.FuncMap {
 		"inc":     func(i int) int { return i + 1 },
 		"dec":     func(i int) int { return i - 1 },
 
+		// Arithmetic helpers
+		"add": func(a, b int) int { return a + b },
+		"sub": func(a, b int) int { return a - b },
+		"mul": func(a, b int) int { return a * b },
+		"div": func(a, b int) int { return a / b },
+		"mod": func(a, b int) int { return a % b },
+
 		// Code generation helpers
 		"goType": func(t string) string {
 			// Map common type names to Go types

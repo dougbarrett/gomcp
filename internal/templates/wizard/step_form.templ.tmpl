@@ -1,0 +1,100 @@
+package views
+
+import (
+	"fmt"
+
+	"[[.WizardData.ModulePath]]/internal/web/components"
+)
+
+// [[.WizardData.WizardNamePascal]]Step[[.Step.Number]]Props contains props for step [[.Step.Number]].
+type [[.WizardData.WizardNamePascal]]Step[[.Step.Number]]Props struct {
+	CurrentStep int
+	TotalSteps  int
+	CSRFToken   string
+	Errors      map[string]string
+	[[- if .WizardData.WithDrafts]]
+	DraftID     string
+	StepData    map[string]interface{}
+	[[- end]]
+}
+
+// [[.WizardData.WizardNamePascal]]Step[[.Step.Number]] renders the form for step [[.Step.Number]]: [[.Step.Name]].
+templ [[.WizardData.WizardNamePascal]]Step[[.Step.Number]](props [[.WizardData.WizardNamePascal]]Step[[.Step.Number]]Props) {
+	@[[.WizardData.WizardNamePascal]]WizardLayout([[.WizardData.WizardNamePascal]]WizardProps{
+		CurrentStep: props.CurrentStep,
+		TotalSteps:  props.TotalSteps,
+		CSRFToken:   props.CSRFToken,
+		[[- if .WizardData.WithDrafts]]
+		DraftID:     props.DraftID,
+		[[- end]]
+	}) {
+		<div class="space-y-6">
+			<div>
+				<h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+					[[.Step.Name]]
+				</h2>
+				<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+					Fill in the details below to continue.
+				</p>
+			</div>
+
+			<form
+				method="POST"
+				action={ templ.SafeURL(fmt.Sprintf("[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[.Step.Number]]")) }
+				hx-post={ fmt.Sprintf("[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[.Step.Number]]") }
+				hx-target="#main-content"
+				hx-swap="innerHTML"
+				class="space-y-4"
+			>
+				<input type="hidden" name="csrf_token" value={ props.CSRFToken }/>
+				[[- if .WizardData.WithDrafts]]
+				<input type="hidden" name="draft_id" value={ props.DraftID }/>
+				[[- end]]
+
+				[[- range .Step.FieldNames]]
+				<div class="space-y-2">
+					@components.Label("[[.]]", true) {
+						[[. | toLabel]]
+					}
+					@components.Input(components.InputProps{
+						ID:          "[[.]]",
+						Name:        "[[.]]",
+						Type:        "text",
+						Placeholder: "Enter [[. | toLabel | toLower]]",
+						Required:    true,
+						[[- if $.WizardData.WithDrafts]]
+						Value:       func() string { if props.StepData != nil { if v, ok := props.StepData["[[.]]"].(string); ok { return v } }; return "" }(),
+						[[- end]]
+						Error:       props.Errors["[[.]]"],
+					})
+					@components.FormError(props.Errors["[[.]]"])
+				</div>
+				[[- end]]
+
+				[[- if empty .Step.FieldNames]]
+				<div class="text-sm text-gray-500 dark:text-gray-400">
+					<!-- Add form fields here by specifying fields in scaffold_wizard -->
+					<p>No fields configured for this step. Edit the wizard definition to add fields.</p>
+				</div>
+				[[- end]]
+
+				@components.WizardNav(components.WizardNavProps{
+					[[- if not .Step.IsFirst]]
+					ShowPrev:   true,
+					[[- if .WizardData.WithDrafts]]
+					PrevURL:    fmt.Sprintf("[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[sub .Step.Number 1]]?draft_id=%s", props.DraftID),
+					[[- else]]
+					PrevURL:    "[[.WizardData.URLPath]]/wizard/[[.WizardData.WizardName]]/step/[[sub .Step.Number 1]]",
+					[[- end]]
+					[[- end]]
+					[[- if .Step.IsLast]]
+					ShowSubmit: true,
+					SubmitLabel: "Review & Submit",
+					[[- else]]
+					ShowNext:   true,
+					[[- end]]
+				})
+			</form>
+		</div>
+	}
+}
