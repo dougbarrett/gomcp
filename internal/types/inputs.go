@@ -55,6 +55,9 @@ type RelationshipDef struct {
 	OnDelete string `json:"on_delete,omitempty"`
 	// Preload indicates if the relationship should be preloaded by default.
 	Preload bool `json:"preload,omitempty"`
+	// DisplayField is the field to use when displaying the related model in dropdowns/views.
+	// Defaults to "Name". Examples: "Title", "Email", "OrderNumber".
+	DisplayField string `json:"display_field,omitempty"`
 }
 
 // ScaffoldDomainInput is the input for the scaffold_domain tool.

@@ -32,6 +32,9 @@ Generates ALL layers at once following clean architecture:
 
 Supports relationships: belongs_to, has_one, has_many, many_to_many
 
+Relationship options:
+- display_field: Field to show in dropdowns/views (defaults to "Name"). Use when the related model doesn't have a "Name" field. Examples: "Title", "Email", "OrderNumber"
+
 Supported field types:
 - Scalars: string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool
 - Time: time.Time, *time.Time (nullable)
@@ -108,6 +111,18 @@ Examples:
        {name: "Amount", type: "float64", form_type: "number"},
        {name: "DiscountType", type: "string", form_type: "select", options: ["percentage", "fixed"]},
        {name: "Status", type: "string", form_type: "select", options: ["draft", "active", "expired"]}
+     ]
+   }
+
+5. Domain with belongs_to using display_field (articles with categories):
+   scaffold_domain: {
+     domain_name: "article",
+     fields: [
+       {name: "Title", type: "string"},
+       {name: "Content", type: "string", form_type: "textarea"}
+     ],
+     relationships: [
+       {type: "belongs_to", model: "Category", display_field: "Title"}
      ]
    }
 

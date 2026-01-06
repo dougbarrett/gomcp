@@ -149,7 +149,7 @@ templ [[.ModelName]]Show(props [[.ModelName]]ShowProps) {
 						<dt class="text-sm font-medium text-gray-500 dark:text-gray-400">[[.Model | toLabel]]</dt>
 						<dd class="mt-1 text-gray-900 dark:text-white">
 							if props.Item.[[.Model]] != nil {
-								{ props.Item.[[.Model]].Name }
+								{ props.Item.[[.Model]].[[.DisplayField]] }
 							} else {
 								<span class="text-gray-400">-</span>
 							}

@@ -701,6 +701,8 @@ type RelationshipData struct {
 	GORMTag string
 	// ForeignKeyField is the FK field definition (for belongs_to).
 	ForeignKeyField *FieldData
+	// DisplayField is the field to display in dropdowns/views (defaults to "Name").
+	DisplayField string
 }
 
 // NewRelationshipData creates RelationshipData from a RelationshipDef.
@@ -763,6 +765,12 @@ func NewRelationshipData(rel types.RelationshipDef, domainName string) Relations
 	// belongs_to relationships are preloaded by default (for show views)
 	preload := rel.Preload || rel.Type == "belongs_to"
 
+	// Default display field to "Name"
+	displayField := rel.DisplayField
+	if displayField == "" {
+		displayField = "Name"
+	}
+
 	return RelationshipData{
 		Type:            rel.Type,
 		Model:           modelName,
@@ -778,6 +786,7 @@ func NewRelationshipData(rel types.RelationshipDef, domainName string) Relations
 		IsManyToMany:    rel.Type == "many_to_many",
 		GORMTag:         gormTag,
 		ForeignKeyField: fkField,
+		DisplayField:    displayField,
 	}
 }
 

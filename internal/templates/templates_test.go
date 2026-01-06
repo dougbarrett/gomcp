@@ -1282,6 +1282,179 @@ func TestControllerBooleanCheckboxHandling(t *testing.T) {
 	})
 }
 
+// TestBelongsToDisplayFieldRendering verifies the form and show templates use the
+// DisplayField property for belongs_to relationships instead of hardcoded "Name".
+func TestBelongsToDisplayFieldRendering(t *testing.T) {
+	fkField := generator.FieldData{Name: "CategoryID", Type: "uint", JSONName: "category_id"}
+	viewData := struct {
+		ModulePath        string
+		DomainName        string
+		ModelName         string
+		PackageName       string
+		VariableName      string
+		URLPath           string
+		URLPathSegment    string
+		ViewType          string
+		ViewName          string
+		Fields            []generator.FieldData
+		Columns           []generator.ColumnData
+		Relationships     []generator.RelationshipData
+		WithPagination    bool
+		WithSearch        bool
+		WithFilters       bool
+		WithSorting       bool
+		WithBulkActions   bool
+		WithSoftDelete    bool
+		RowActions        []generator.RowActionData
+		EmptyStateMessage string
+		SubmitURL         string
+		Method            string
+		SuccessRedirect   string
+		FormStyle         string
+	}{
+		ModulePath:     "github.com/test/testproject",
+		DomainName:     "product",
+		ModelName:      "Product",
+		PackageName:    "product",
+		VariableName:   "product",
+		URLPath:        "/products",
+		URLPathSegment: "products",
+		ViewType:       "form",
+		ViewName:       "ProductForm",
+		Fields: []generator.FieldData{
+			{Name: "Name", Type: "string", JSONName: "name", Required: true, Label: "Name", FormType: "input"},
+		},
+		Columns: []generator.ColumnData{},
+		Relationships: []generator.RelationshipData{
+			{
+				Type:            "belongs_to",
+				Model:           "Category",
+				FieldName:       "Category",
+				ForeignKey:      "CategoryID",
+				References:      "ID",
+				IsBelongsTo:     true,
+				GORMTag:         "foreignKey:CategoryID;references:ID",
+				Preload:         true,
+				ForeignKeyField: &fkField,
+				DisplayField:    "Title", // Custom display field instead of "Name"
+			},
+		},
+		WithPagination:    false,
+		WithSearch:        false,
+		WithFilters:       false,
+		WithSorting:       false,
+		WithBulkActions:   false,
+		WithSoftDelete:    false,
+		RowActions:        []generator.RowActionData{},
+		EmptyStateMessage: "",
+		SubmitURL:         "/products",
+		Method:            "POST",
+		SuccessRedirect:   "/products",
+		FormStyle:         "modal",
+	}
+
+	// Test form template uses DisplayField
+	t.Run("Form template uses DisplayField", func(t *testing.T) {
+		content, err := FS.ReadFile("views/form.templ.tmpl")
+		if err != nil {
+			t.Fatalf("Failed to read form template: %v", err)
+		}
+
+		tmpl, err := parseTemplate("form.templ.tmpl", string(content))
+		if err != nil {
+			t.Fatalf("Failed to parse form template: %v", err)
+		}
+
+		var buf bytes.Buffer
+		err = tmpl.Execute(&buf, viewData)
+		if err != nil {
+			t.Fatalf("Failed to execute form template: %v", err)
+		}
+
+		output := buf.String()
+
+		// Should use opt.Title (the DisplayField) instead of opt.Name
+		if !strings.Contains(output, "opt.Title") {
+			t.Error("Form template should use opt.Title (DisplayField) for belongs_to dropdown, not hardcoded opt.Name")
+		}
+		if strings.Contains(output, "opt.Name") {
+			t.Error("Form template should NOT use hardcoded opt.Name when DisplayField is set to Title")
+		}
+	})
+
+	// Test show template uses DisplayField
+	t.Run("Show template uses DisplayField", func(t *testing.T) {
+		content, err := FS.ReadFile("views/show.templ.tmpl")
+		if err != nil {
+			t.Fatalf("Failed to read show template: %v", err)
+		}
+
+		tmpl, err := parseTemplate("show.templ.tmpl", string(content))
+		if err != nil {
+			t.Fatalf("Failed to parse show template: %v", err)
+		}
+
+		var buf bytes.Buffer
+		err = tmpl.Execute(&buf, viewData)
+		if err != nil {
+			t.Fatalf("Failed to execute show template: %v", err)
+		}
+
+		output := buf.String()
+
+		// Should use props.Item.Category.Title (the DisplayField) instead of props.Item.Category.Name
+		if !strings.Contains(output, "props.Item.Category.Title") {
+			t.Error("Show template should use props.Item.Category.Title (DisplayField) for belongs_to display, not hardcoded .Name")
+		}
+		if strings.Contains(output, "props.Item.Category.Name") {
+			t.Error("Show template should NOT use hardcoded .Name when DisplayField is set to Title")
+		}
+	})
+
+	// Test with default DisplayField (should be "Name")
+	t.Run("Default DisplayField is Name", func(t *testing.T) {
+		defaultFKField := generator.FieldData{Name: "UserID", Type: "uint", JSONName: "user_id"}
+		viewDataDefault := viewData
+		viewDataDefault.Relationships = []generator.RelationshipData{
+			{
+				Type:            "belongs_to",
+				Model:           "User",
+				FieldName:       "User",
+				ForeignKey:      "UserID",
+				References:      "ID",
+				IsBelongsTo:     true,
+				GORMTag:         "foreignKey:UserID;references:ID",
+				Preload:         true,
+				ForeignKeyField: &defaultFKField,
+				DisplayField:    "Name", // Default value
+			},
+		}
+
+		content, err := FS.ReadFile("views/form.templ.tmpl")
+		if err != nil {
+			t.Fatalf("Failed to read form template: %v", err)
+		}
+
+		tmpl, err := parseTemplate("form.templ.tmpl", string(content))
+		if err != nil {
+			t.Fatalf("Failed to parse form template: %v", err)
+		}
+
+		var buf bytes.Buffer
+		err = tmpl.Execute(&buf, viewDataDefault)
+		if err != nil {
+			t.Fatalf("Failed to execute form template: %v", err)
+		}
+
+		output := buf.String()
+
+		// Should use opt.Name when DisplayField is "Name"
+		if !strings.Contains(output, "opt.Name") {
+			t.Error("Form template should use opt.Name when DisplayField is 'Name'")
+		}
+	})
+}
+
 // TestTemplateDelimiters verifies templates use correct delimiters.
 func TestTemplateDelimiters(t *testing.T) {
 	dirs := []string{
