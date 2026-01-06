@@ -886,6 +886,67 @@ func TestNewRelationshipData(t *testing.T) {
 	}
 }
 
+// TestNewRelationshipData_ModelNameNormalization tests that model names are normalized
+// to match how domain names are processed into model names.
+func TestNewRelationshipData_ModelNameNormalization(t *testing.T) {
+	tests := []struct {
+		name          string
+		inputModel    string
+		wantModel     string
+		wantFieldName string
+		wantFK        string
+	}{
+		{
+			name:          "lowercase single word becomes PascalCase",
+			inputModel:    "leadsource",
+			wantModel:     "Leadsource",
+			wantFieldName: "Leadsource",
+			wantFK:        "LeadsourceID",
+		},
+		{
+			name:          "snake_case becomes PascalCase",
+			inputModel:    "lead_source",
+			wantModel:     "LeadSource",
+			wantFieldName: "LeadSource",
+			wantFK:        "LeadSourceID",
+		},
+		{
+			name:          "PascalCase stays PascalCase",
+			inputModel:    "LeadSource",
+			wantModel:     "LeadSource",
+			wantFieldName: "LeadSource",
+			wantFK:        "LeadSourceID",
+		},
+		{
+			name:          "camelCase becomes PascalCase",
+			inputModel:    "leadSource",
+			wantModel:     "LeadSource",
+			wantFieldName: "LeadSource",
+			wantFK:        "LeadSourceID",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rel := types.RelationshipDef{
+				Type:  "belongs_to",
+				Model: tt.inputModel,
+			}
+			data := NewRelationshipData(rel, "client")
+
+			if data.Model != tt.wantModel {
+				t.Errorf("Model = %q, want %q", data.Model, tt.wantModel)
+			}
+			if data.FieldName != tt.wantFieldName {
+				t.Errorf("FieldName = %q, want %q", data.FieldName, tt.wantFieldName)
+			}
+			if data.ForeignKey != tt.wantFK {
+				t.Errorf("ForeignKey = %q, want %q", data.ForeignKey, tt.wantFK)
+			}
+		})
+	}
+}
+
 // TestNewRelationshipDataList tests creating list of RelationshipData.
 func TestNewRelationshipDataList(t *testing.T) {
 	rels := []types.RelationshipDef{

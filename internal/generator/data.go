@@ -699,7 +699,11 @@ type RelationshipData struct {
 
 // NewRelationshipData creates RelationshipData from a RelationshipDef.
 func NewRelationshipData(rel types.RelationshipDef, domainName string) RelationshipData {
-	fieldName := rel.Model
+	// Normalize model name to ensure consistency with scaffolded model names
+	// e.g., "leadsource" -> "Leadsource", "lead_source" -> "LeadSource"
+	modelName := utils.ToModelName(rel.Model)
+
+	fieldName := modelName
 	foreignKey := rel.ForeignKey
 	references := rel.References
 	onDelete := rel.OnDelete
@@ -717,7 +721,7 @@ func NewRelationshipData(rel types.RelationshipDef, domainName string) Relations
 	case "belongs_to":
 		// belongs_to: field name is singular (e.g., "User")
 		if foreignKey == "" {
-			foreignKey = rel.Model + "ID"
+			foreignKey = modelName + "ID"
 		}
 	case "has_one":
 		// has_one: field name is singular (e.g., "Profile")
@@ -726,13 +730,13 @@ func NewRelationshipData(rel types.RelationshipDef, domainName string) Relations
 		}
 	case "has_many":
 		// has_many: field name is plural (e.g., "Orders")
-		fieldName = utils.Pluralize(rel.Model)
+		fieldName = utils.Pluralize(modelName)
 		if foreignKey == "" {
 			foreignKey = utils.ToModelName(domainName) + "ID"
 		}
 	case "many_to_many":
 		// many_to_many: field name is plural (e.g., "Tags")
-		fieldName = utils.Pluralize(rel.Model)
+		fieldName = utils.Pluralize(modelName)
 	}
 
 	// Build GORM tag
@@ -755,7 +759,7 @@ func NewRelationshipData(rel types.RelationshipDef, domainName string) Relations
 
 	return RelationshipData{
 		Type:            rel.Type,
-		Model:           rel.Model,
+		Model:           modelName,
 		FieldName:       fieldName,
 		ForeignKey:      foreignKey,
 		References:      references,
