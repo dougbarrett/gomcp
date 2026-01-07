@@ -61,7 +61,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 04-01: Review wizard view templates against scaffold_view patterns
+- [x] 04-01: Review wizard view templates against scaffold_view patterns
 - [ ] 04-02: Apply consistency fixes to wizard view templates
 
 ### Phase 5: Draft System Review
@@ -116,7 +116,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Analysis | 2/2 | Complete | 2026-01-06 |
 | 2. Controller Template Fixes | 2/2 | Complete | 2026-01-06 |
 | 3. Service Template Fixes | 1/1 | Complete | 2026-01-06 |
-| 4. View Template Improvements | 0/2 | Not started | - |
+| 4. View Template Improvements | 1/2 | In progress | - |
 | 5. Draft System Review | 0/2 | Not started | - |
 | 6. Generator Logic Review | 0/2 | Not started | - |
 | 7. Test Coverage | 0/3 | Not started | - |
