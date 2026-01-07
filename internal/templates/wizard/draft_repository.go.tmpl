@@ -2,6 +2,7 @@ package wizarddraft
 
 import (
 	"context"
+	"time"
 
 	"[[.ModulePath]]/internal/models"
 	"gorm.io/gorm"
@@ -71,9 +72,10 @@ func (r *repository) FindByWizardAndUser(ctx context.Context, wizardName, domain
 
 // DeleteExpired permanently deletes drafts older than the specified days.
 func (r *repository) DeleteExpired(ctx context.Context, olderThanDays int) (int64, error) {
+	cutoff := time.Now().AddDate(0, 0, -olderThanDays)
 	result := r.db.WithContext(ctx).
 		Unscoped().
-		Where("created_at < NOW() - INTERVAL ? DAY", olderThanDays).
+		Where("created_at < ?", cutoff).
 		Delete(&models.WizardDraft{})
 	return result.RowsAffected, result.Error
 }
