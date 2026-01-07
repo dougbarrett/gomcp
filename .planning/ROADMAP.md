@@ -49,11 +49,10 @@ Plans:
 **Goal**: Fix Bug #cb94adf6 - wizard service missing repository import, ensure service template matches scaffold_service patterns
 **Depends on**: Phase 2
 **Research**: Unlikely (following existing patterns)
-**Plans**: TBD
+**Plans**: 1
 
 Plans:
-- [ ] 03-01: Fix repository import in wizarddraft service template
-- [ ] 03-02: Align service template with scaffold_service patterns
+- [ ] 03-01: Fix repository import and align with scaffold_service patterns (SVC-001, SVC-002)
 
 ### Phase 4: View Template Improvements
 **Goal**: Align wizard view templates with scaffold_view and scaffold_form patterns for consistency
@@ -116,7 +115,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Analysis | 2/2 | Complete | 2026-01-06 |
 | 2. Controller Template Fixes | 2/2 | Complete | 2026-01-06 |
-| 3. Service Template Fixes | 0/2 | Not started | - |
+| 3. Service Template Fixes | 0/1 | Not started | - |
 | 4. View Template Improvements | 0/2 | Not started | - |
 | 5. Draft System Review | 0/2 | Not started | - |
 | 6. Generator Logic Review | 0/2 | Not started | - |
