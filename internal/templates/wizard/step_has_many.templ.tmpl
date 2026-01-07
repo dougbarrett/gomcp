@@ -84,9 +84,7 @@ templ [[.WizardData.WizardNamePascal]]Step[[.Step.Number]](props [[.WizardData.W
 
 					<div id="available-items" class="space-y-2 max-h-96 overflow-y-auto">
 						if len(props.AvailableItems) == 0 {
-							<p class="text-sm text-gray-500 dark:text-gray-400 p-4 text-center">
-								No items available.
-							</p>
+							@components.WizardEmpty("No items available", "Please add some items first.")
 						} else {
 							for _, item := range props.AvailableItems {
 								<div class="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -114,9 +112,7 @@ templ [[.WizardData.WizardNamePascal]]Step[[.Step.Number]](props [[.WizardData.W
 					<h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Selected Items</h3>
 					<div id="selected-items" class="space-y-2 max-h-96 overflow-y-auto">
 						if len(props.SelectedItems) == 0 {
-							<p class="text-sm text-gray-500 dark:text-gray-400 p-4 text-center">
-								No items selected yet. Add items from the left.
-							</p>
+							@components.WizardEmpty("No items selected", "Add items from the available list.")
 						} else {
 							for _, item := range props.SelectedItems {
 								<div class="flex items-center justify-between p-3 border rounded-lg bg-blue-50 dark:bg-blue-900/20">
