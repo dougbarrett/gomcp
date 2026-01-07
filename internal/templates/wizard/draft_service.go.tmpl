@@ -3,9 +3,15 @@ package wizarddraft
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"[[.ModulePath]]/internal/models"
 	wizarddraftrepo "[[.ModulePath]]/internal/repository/wizarddraft"
+)
+
+var (
+	// ErrWizardDraftNotFound is returned when a wizard draft is not found.
+	ErrWizardDraftNotFound = errors.New("wizard draft not found")
 )
 
 // Service defines the interface for wizard draft business logic.
@@ -16,6 +22,8 @@ type Service interface {
 	Delete(ctx context.Context, id uint) error
 	FindExisting(ctx context.Context, wizardName, domain string, userID *uint) (*models.WizardDraft, error)
 	CleanupExpired(ctx context.Context, olderThanDays int) (int64, error)
+	// MCP:SERVICE_INTERFACE:START
+	// MCP:SERVICE_INTERFACE:END
 }
 
 // service implements Service.
@@ -101,3 +109,6 @@ func (s *service) FindExisting(ctx context.Context, wizardName, domain string, u
 func (s *service) CleanupExpired(ctx context.Context, olderThanDays int) (int64, error) {
 	return s.repo.DeleteExpired(ctx, olderThanDays)
 }
+
+// MCP:SERVICE_METHODS:START
+// MCP:SERVICE_METHODS:END
