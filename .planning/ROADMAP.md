@@ -15,7 +15,7 @@ None
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Analysis** (Complete) - Understand wizard templates vs other scaffold_* patterns
-- [ ] **Phase 2: Controller Template Fixes** - Fix Bug #a9479784 + align with patterns
+- [x] **Phase 2: Controller Template Fixes** (Complete) - Fix Bug #a9479784 + align with patterns
 - [ ] **Phase 3: Service Template Fixes** - Fix Bug #cb94adf6 + align with patterns
 - [ ] **Phase 4: View Template Improvements** - Align view templates with other patterns
 - [ ] **Phase 5: Draft System Review** - Review and improve draft save/resume functionality
@@ -43,7 +43,7 @@ Plans:
 
 Plans:
 - [x] 02-01: Add missing imports and render method (foundation fixes)
-- [ ] 02-02: Fix response method calls and URL construction
+- [x] 02-02: Fix response method calls and URL construction
 
 ### Phase 3: Service Template Fixes
 **Goal**: Fix Bug #cb94adf6 - wizard service missing repository import, ensure service template matches scaffold_service patterns
@@ -115,7 +115,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Analysis | 2/2 | Complete | 2026-01-06 |
-| 2. Controller Template Fixes | 1/2 | In progress | - |
+| 2. Controller Template Fixes | 2/2 | Complete | 2026-01-06 |
 | 3. Service Template Fixes | 0/2 | Not started | - |
 | 4. View Template Improvements | 0/2 | Not started | - |
 | 5. Draft System Review | 0/2 | Not started | - |
