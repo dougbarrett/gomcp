@@ -17,7 +17,7 @@ None
 - [x] **Phase 1: Analysis** (Complete) - Understand wizard templates vs other scaffold_* patterns
 - [x] **Phase 2: Controller Template Fixes** (Complete) - Fix Bug #a9479784 + align with patterns
 - [x] **Phase 3: Service Template Fixes** (Complete) - Fix Bug #cb94adf6 + align with patterns
-- [ ] **Phase 4: View Template Improvements** - Align view templates with other patterns
+- [x] **Phase 4: View Template Improvements** (Complete) - Align view templates with other patterns
 - [ ] **Phase 5: Draft System Review** - Review and improve draft save/resume functionality
 - [ ] **Phase 6: Generator Logic Review** - Review wizard generator code for issues
 - [ ] **Phase 7: Test Coverage** - Add/improve tests for wizard scaffolding
@@ -62,7 +62,7 @@ Plans:
 
 Plans:
 - [x] 04-01: Review wizard view templates against scaffold_view patterns
-- [ ] 04-02: Apply consistency fixes to wizard view templates
+- [x] 04-02: Apply consistency fixes to wizard view templates
 
 ### Phase 5: Draft System Review
 **Goal**: Review wizard draft persistence system for correctness and completeness
@@ -116,7 +116,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Analysis | 2/2 | Complete | 2026-01-06 |
 | 2. Controller Template Fixes | 2/2 | Complete | 2026-01-06 |
 | 3. Service Template Fixes | 1/1 | Complete | 2026-01-06 |
-| 4. View Template Improvements | 1/2 | In progress | - |
+| 4. View Template Improvements | 2/2 | Complete | 2026-01-07 |
 | 5. Draft System Review | 0/2 | Not started | - |
 | 6. Generator Logic Review | 0/2 | Not started | - |
 | 7. Test Coverage | 0/3 | Not started | - |
