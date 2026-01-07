@@ -366,4 +366,192 @@ Templates use these template functions:
 
 ---
 
+## Generator Logic
+
+### Source Files
+
+- **Generator:** `internal/tools/scaffold_wizard.go`
+- **Data Types:** `internal/generator/data.go`
+- **Input Types:** `internal/types/inputs.go`
+
+### Input Structure
+
+**ScaffoldWizardInput:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `wizard_name` | string | (required) | Wizard identifier (e.g., "create_order") |
+| `domain` | string | (required) | Target domain (e.g., "order") |
+| `steps` | []WizardStepDef | (required) | Step definitions |
+| `layout` | string | "dashboard" | View layout: dashboard, base, auth, none |
+| `route_group` | string | "public" | Middleware context: public, authenticated, admin |
+| `form_style` | string | "page" | How steps are displayed: page, modal |
+| `success_redirect` | string | "/{domain}" | Redirect URL after completion |
+| `with_drafts` | *bool | true | Enable draft persistence |
+| `dry_run` | bool | false | Preview without writing files |
+
+**WizardStepDef:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | string | (required) | Step display name |
+| `type` | string | "form" | Step type: form, select, has_many, summary |
+| `fields` | []string | [] | Field names for this step |
+| `child_domain` | string | "" | Related domain for has_many steps |
+| `has_many_mode` | string | "select_existing" | How items are added: select_existing, create_inline |
+| `searchable` | bool | false | Enable search for select/has_many steps |
+| `validation_rules` | map | {} | Per-field validation rules |
+
+### Input Validation
+
+The generator validates input in this order:
+
+1. **Required Fields:**
+   - `wizard_name` must be non-empty
+   - `domain` must be non-empty
+   - `steps` must have at least one step
+
+2. **Name Validation:**
+   - `wizard_name` validated via `utils.ValidateComponentName()`
+   - `domain` validated via `utils.ValidateDomainName()`
+
+3. **Step Validation:**
+   - Each step must have a `name`
+   - Step `type` must be: form, select, has_many, or summary (defaults to form)
+   - `has_many` steps require `child_domain`
+   - `has_many_mode` must be: select_existing or create_inline
+
+4. **Module Path:**
+   - Retrieved from go.mod via `utils.GetModulePath()`
+
+### Data Transformation
+
+**Input → WizardData transformation** (`generator.NewWizardData`):
+
+```
+ScaffoldWizardInput                 WizardData
+─────────────────────────────────────────────────────
+wizard_name        →  WizardName, WizardNamePascal
+domain             →  Domain, ModelName, PackageName, VariableName
+                      URLPath (/domain), URLPathSegment (domain)
+steps[]            →  Steps[] (with Number, IsFirst, IsLast flags)
+layout             →  Layout (default: "dashboard")
+route_group        →  RouteGroup (default: "public")
+form_style         →  FormStyle (default: "page")
+success_redirect   →  SuccessRedirect (default: /{domain})
+with_drafts        →  WithDrafts (default: true)
+```
+
+**Step Processing:**
+- Each step gets `Number` (1-indexed), `IsFirst`, `IsLast` flags
+- Step type defaults to "form" if empty
+- HasManyMode defaults to "select_existing" if empty
+- ChildModelName computed from ChildDomain via `utils.ToModelName()`
+
+**Feature Flags (derived from steps):**
+- `HasSelectSteps`: true if any step is type "select"
+- `HasHasManySteps`: true if any step is type "has_many"
+- `HasSummaryStep`: true if any step is type "summary"
+- `HasFormSteps`: true if any step is type "form"
+
+### Generation Flow
+
+1. **Create Directories:**
+   ```
+   internal/web/{pkgName}/
+   internal/web/{pkgName}/views/
+   ```
+   Plus if WithDrafts:
+   ```
+   internal/models/
+   internal/repository/wizarddraft/
+   internal/services/wizarddraft/
+   ```
+
+2. **Generate Controller:**
+   ```
+   wizard/controller.go.tmpl → internal/web/{pkgName}/wizard_{wizardName}.go
+   ```
+
+3. **Generate Wizard View:**
+   ```
+   wizard/wizard_view.templ.tmpl → internal/web/{pkgName}/views/wizard_{wizardName}.templ
+   ```
+
+4. **Generate Step Views (per step):**
+   ```
+   For each step:
+     - Determine template by step.Type (form/select/has_many/summary)
+     - Create stepData = { WizardData, Step }
+     - Generate: internal/web/{pkgName}/views/wizard_{wizardName}_step{N}.templ
+   ```
+
+5. **Generate Draft Infrastructure (if WithDrafts):**
+   ```
+   wizard/draft_model.go.tmpl      → internal/models/wizard_draft.go
+   wizard/draft_repository.go.tmpl → internal/repository/wizarddraft/wizarddraft.go
+   wizard/draft_service.go.tmpl    → internal/services/wizarddraft/wizarddraft.go
+   ```
+
+6. **Check for Conflicts:**
+   - Calls `CheckForConflicts(result)` to detect overwrites
+
+7. **Return Result:**
+   - Success message with file list
+   - Next steps for manual wiring
+
+### Post-Generation (Manual Steps)
+
+The generator outputs these next steps:
+
+1. `templ generate` - Compile templ files
+2. `go mod tidy` - Update dependencies
+3. Register wizard routes in `cmd/web/main.go`
+4. Add wizard link to domain views (e.g., "New with Wizard" button)
+5. (If drafts) Add `WizardDraft` to database AutoMigrate
+
+**Not Automated:**
+- Route registration in main.go (no DI wiring like scaffold_domain)
+- Link from existing domain views to wizard
+- Database migration for WizardDraft model
+
+### Comparison to scaffold_domain
+
+| Aspect | scaffold_wizard | scaffold_domain |
+|--------|-----------------|-----------------|
+| DI Wiring | Manual | Automatic via update_di_wiring |
+| Controller | Wizard-specific handlers | CRUD handlers |
+| Views | Step-based views | List/Show/Form views |
+| Routes | `/wizard/{name}/...` | `/{domain}/...` |
+| Draft Support | Built-in | N/A |
+| Service | Uses existing domain service | Generates new service |
+
+---
+
+## Summary: Key Issues for Phase 2+
+
+Based on this analysis, the following issues need attention in subsequent phases:
+
+### Bug #a9479784 (Controller Template)
+
+1. **Missing `models` import** - Line 151 uses `models.WizardDraft` without import
+2. **Non-existent `web.Response` methods:**
+   - `resp.HXRedirect()` - should be `resp.Redirect()` or similar
+   - `resp.Component()` - should be `resp.Render()` or similar
+   - `resp.CSRFToken()` - needs verification
+3. **Potential URL double slashes** - URLPath concatenation
+
+### Bug #cb94adf6 (Service Template)
+
+Need to verify during Phase 3 analysis - draft_service.go.tmpl appears correct, but the bug report mentions missing repository import.
+
+### Patterns to Align With
+
+- Check `scaffold_controller` templates for correct `web.Response` method usage
+- Check `scaffold_domain` for proper import patterns
+- Verify URL path construction patterns
+
+---
+
 *Document created: Phase 1, Plan 1 - Wizard Structure Analysis*
+*Updated with Generator Logic: Task 2*
