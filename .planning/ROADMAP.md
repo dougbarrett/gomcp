@@ -39,12 +39,11 @@ Plans:
 **Goal**: Fix Bug #a9479784 - controller using non-existent web.Response methods (HXRedirect, Component, CSRFToken), double slashes in URLs, missing models import
 **Depends on**: Phase 1
 **Research**: Unlikely (following existing patterns)
-**Plans**: TBD
+**Plans**: 2
 
 Plans:
-- [ ] 02-01: Fix response method calls (HXRedirect→Redirect, Component→Render)
-- [ ] 02-02: Fix CSRF token handling and URL double slashes
-- [ ] 02-03: Add missing imports and verify against scaffold_controller patterns
+- [ ] 02-01: Add missing imports and render method (foundation fixes)
+- [ ] 02-02: Fix response method calls and URL construction
 
 ### Phase 3: Service Template Fixes
 **Goal**: Fix Bug #cb94adf6 - wizard service missing repository import, ensure service template matches scaffold_service patterns
@@ -116,7 +115,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Analysis | 2/2 | Complete | 2026-01-06 |
-| 2. Controller Template Fixes | 0/3 | Not started | - |
+| 2. Controller Template Fixes | 0/2 | Planned | - |
 | 3. Service Template Fixes | 0/2 | Not started | - |
 | 4. View Template Improvements | 0/2 | Not started | - |
 | 5. Draft System Review | 0/2 | Not started | - |
