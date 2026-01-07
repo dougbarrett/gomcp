@@ -913,8 +913,8 @@ func NewWizardData(input types.ScaffoldWizardInput, modulePath string) WizardDat
 	packageName := utils.ToPackageName(input.Domain)
 	modelName := utils.ToModelName(input.Domain)
 	variableName := utils.ToVariableName(input.Domain)
-	urlPath := "/" + utils.ToURLPath(input.Domain)
-	urlPathSegment := utils.ToURLPath(input.Domain)
+	urlPath := utils.ToURLPath(input.Domain)
+	urlPathSegment := strings.TrimPrefix(urlPath, "/")
 
 	// Process steps
 	steps := make([]WizardStepData, len(input.Steps))
