@@ -72,10 +72,10 @@ func (c *[[.WizardNamePascal]]WizardController) Start(w http.ResponseWriter, r *
 	}
 
 	// Redirect to first step with draft ID
-	resp.HXRedirect(fmt.Sprintf("[[.URLPath]]/wizard/[[.WizardName]]/%d/step/1", draft.ID))
+	resp.Redirect(fmt.Sprintf("[[.URLPath]]/wizard/[[.WizardName]]/%d/step/1", draft.ID))
 	[[- else]]
 	// Redirect to first step
-	resp.HXRedirect("[[.URLPath]]/wizard/[[.WizardName]]/step/1")
+	resp.Redirect("[[.URLPath]]/wizard/[[.WizardName]]/step/1")
 	[[- end]]
 }
 
@@ -98,7 +98,7 @@ func (c *[[.WizardNamePascal]]WizardController) Resume(w http.ResponseWriter, r 
 	}
 
 	// Redirect to the current step
-	resp.HXRedirect(fmt.Sprintf("[[.URLPath]]/wizard/[[.WizardName]]/%d/step/%d", draft.ID, draft.CurrentStep))
+	resp.Redirect(fmt.Sprintf("[[.URLPath]]/wizard/[[.WizardName]]/%d/step/%d", draft.ID, draft.CurrentStep))
 }
 [[- end]]
 
@@ -124,7 +124,7 @@ func (c *[[$.WizardNamePascal]]WizardController) Step[[add $i 1]](w http.Respons
 	props := views.[[$.WizardNamePascal]]Step[[add $i 1]]Props{
 		CurrentStep: [[add $i 1]],
 		TotalSteps:  [[$.TotalSteps]],
-		CSRFToken:   resp.CSRFToken(),
+		CSRFToken:   middleware.GetCSRFToken(r.Context()),
 		[[- if $.WithDrafts]]
 		DraftID:     draftID,
 		StepData:    stepData,
@@ -145,7 +145,7 @@ func (c *[[$.WizardNamePascal]]WizardController) Step[[add $i 1]](w http.Respons
 	// props.AvailableItems = items
 	[[- end]]
 
-	resp.Component(views.[[$.WizardNamePascal]]Step[[add $i 1]](props))
+	c.render(w, r, views.[[$.WizardNamePascal]]Step[[add $i 1]](props))
 }
 
 // Step[[add $i 1]]Submit handles step [[add $i 1]] form submission.
@@ -190,16 +190,16 @@ func (c *[[$.WizardNamePascal]]WizardController) Step[[add $i 1]]Submit(w http.R
 
 	// Redirect to next step
 	[[- if .IsLast]]
-	resp.HXRedirect(fmt.Sprintf("[[$.URLPath]]/wizard/[[$.WizardName]]?draft_id=%d&step=submit", draft.ID))
+	resp.Redirect(fmt.Sprintf("[[$.URLPath]]/wizard/[[$.WizardName]]?draft_id=%d&step=submit", draft.ID))
 	[[- else]]
-	resp.HXRedirect(fmt.Sprintf("[[$.URLPath]]/wizard/[[$.WizardName]]/step/[[add $i 2]]?draft_id=%d", draft.ID))
+	resp.Redirect(fmt.Sprintf("[[$.URLPath]]/wizard/[[$.WizardName]]/step/[[add $i 2]]?draft_id=%d", draft.ID))
 	[[- end]]
 	[[- else]]
 	// Store form data in session or pass via URL
 	[[- if .IsLast]]
-	resp.HXRedirect("[[$.URLPath]]/wizard/[[$.WizardName]]/submit")
+	resp.Redirect("[[$.URLPath]]/wizard/[[$.WizardName]]/submit")
 	[[- else]]
-	resp.HXRedirect("[[$.URLPath]]/wizard/[[$.WizardName]]/step/[[add $i 2]]")
+	resp.Redirect("[[$.URLPath]]/wizard/[[$.WizardName]]/step/[[add $i 2]]")
 	[[- end]]
 	[[- end]]
 }
@@ -257,5 +257,5 @@ func (c *[[.WizardNamePascal]]WizardController) Submit(w http.ResponseWriter, r 
 	[[- end]]
 
 	// Redirect to success page
-	resp.HXRedirect("[[.SuccessRedirect]]")
+	resp.Redirect("[[.SuccessRedirect]]")
 }
