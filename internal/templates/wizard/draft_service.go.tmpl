@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"[[.ModulePath]]/internal/models"
+	wizarddraftrepo "[[.ModulePath]]/internal/repository/wizarddraft"
 )
 
 // Service defines the interface for wizard draft business logic.
@@ -19,11 +20,11 @@ type Service interface {
 
 // service implements Service.
 type service struct {
-	repo Repository
+	repo wizarddraftrepo.Repository
 }
 
 // NewService creates a new wizard draft service.
-func NewService(repo Repository) Service {
+func NewService(repo wizarddraftrepo.Repository) Service {
 	return &service{repo: repo}
 }
 
