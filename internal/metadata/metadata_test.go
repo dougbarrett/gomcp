@@ -251,3 +251,255 @@ func TestStore_Exists(t *testing.T) {
 		t.Error("Exists() should return true for existing domain")
 	}
 }
+
+// Wizard metadata tests
+
+func TestStore_SaveWizard(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "metadata-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	store := NewStore(tmpDir)
+
+	// Create wizard input with all fields
+	withDrafts := true
+	input := types.ScaffoldWizardInput{
+		WizardName: "create_order",
+		Domain:     "order",
+		Steps: []types.WizardStepDef{
+			{Name: "Select Client", Type: "select", Fields: []string{"client_id"}},
+			{Name: "Add Items", Type: "has_many", ChildDomain: "orderitem"},
+			{Name: "Review", Type: "summary"},
+		},
+		Layout:     "dashboard",
+		RouteGroup: "admin",
+		FormStyle:  "page",
+		WithDrafts: &withDrafts,
+	}
+
+	err = store.SaveWizard("create_order", "order", input, "0.1.0")
+	if err != nil {
+		t.Fatalf("SaveWizard() error = %v", err)
+	}
+
+	// Load and verify
+	meta, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Verify composite key "domain:wizardName"
+	key := "order:create_order"
+	wizard, exists := meta.Wizards[key]
+	if !exists {
+		t.Fatalf("Wizard with key %q not found in metadata", key)
+	}
+
+	// Verify wizard metadata fields
+	if wizard.ScaffolderVersion != "0.1.0" {
+		t.Errorf("ScaffolderVersion = %q, want %q", wizard.ScaffolderVersion, "0.1.0")
+	}
+
+	if wizard.Domain != "order" {
+		t.Errorf("Domain = %q, want %q", wizard.Domain, "order")
+	}
+
+	if wizard.Input.WizardName != "create_order" {
+		t.Errorf("Input.WizardName = %q, want %q", wizard.Input.WizardName, "create_order")
+	}
+
+	if wizard.Input.Layout != "dashboard" {
+		t.Errorf("Input.Layout = %q, want %q", wizard.Input.Layout, "dashboard")
+	}
+
+	if wizard.Input.RouteGroup != "admin" {
+		t.Errorf("Input.RouteGroup = %q, want %q", wizard.Input.RouteGroup, "admin")
+	}
+
+	if wizard.Input.FormStyle != "page" {
+		t.Errorf("Input.FormStyle = %q, want %q", wizard.Input.FormStyle, "page")
+	}
+
+	if len(wizard.Input.Steps) != 3 {
+		t.Errorf("len(Input.Steps) = %d, want 3", len(wizard.Input.Steps))
+	}
+
+	// Verify step details
+	if wizard.Input.Steps[0].Type != "select" {
+		t.Errorf("Steps[0].Type = %q, want %q", wizard.Input.Steps[0].Type, "select")
+	}
+
+	if wizard.Input.Steps[1].ChildDomain != "orderitem" {
+		t.Errorf("Steps[1].ChildDomain = %q, want %q", wizard.Input.Steps[1].ChildDomain, "orderitem")
+	}
+}
+
+func TestStore_WizardCompositeKey(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "metadata-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	store := NewStore(tmpDir)
+
+	// Create two wizards with same domain but different names
+	input1 := types.ScaffoldWizardInput{
+		WizardName: "create",
+		Domain:     "order",
+		Steps:      []types.WizardStepDef{{Name: "Step 1", Type: "form"}},
+	}
+	input2 := types.ScaffoldWizardInput{
+		WizardName: "checkout",
+		Domain:     "order",
+		Steps:      []types.WizardStepDef{{Name: "Step 1", Type: "form"}},
+	}
+
+	store.SaveWizard("create", "order", input1, "0.1.0")
+	store.SaveWizard("checkout", "order", input2, "0.1.0")
+
+	// Load and verify both exist
+	meta, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Should have 2 separate entries
+	if len(meta.Wizards) != 2 {
+		t.Errorf("len(Wizards) = %d, want 2", len(meta.Wizards))
+	}
+
+	// Both keys should exist
+	key1 := "order:create"
+	key2 := "order:checkout"
+
+	if _, exists := meta.Wizards[key1]; !exists {
+		t.Errorf("Wizard with key %q not found", key1)
+	}
+
+	if _, exists := meta.Wizards[key2]; !exists {
+		t.Errorf("Wizard with key %q not found", key2)
+	}
+}
+
+func TestStore_WizardDifferentDomains(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "metadata-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	store := NewStore(tmpDir)
+
+	// Create wizards with same name but different domains
+	input1 := types.ScaffoldWizardInput{
+		WizardName: "create",
+		Domain:     "order",
+		Steps:      []types.WizardStepDef{{Name: "Step 1", Type: "form"}},
+	}
+	input2 := types.ScaffoldWizardInput{
+		WizardName: "create",
+		Domain:     "product",
+		Steps:      []types.WizardStepDef{{Name: "Step 1", Type: "form"}},
+	}
+
+	store.SaveWizard("create", "order", input1, "0.1.0")
+	store.SaveWizard("create", "product", input2, "0.1.0")
+
+	// Load and verify both exist with different keys
+	meta, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Should have 2 separate entries
+	if len(meta.Wizards) != 2 {
+		t.Errorf("len(Wizards) = %d, want 2", len(meta.Wizards))
+	}
+
+	// Both keys should exist
+	key1 := "order:create"
+	key2 := "product:create"
+
+	if _, exists := meta.Wizards[key1]; !exists {
+		t.Errorf("Wizard with key %q not found", key1)
+	}
+
+	if _, exists := meta.Wizards[key2]; !exists {
+		t.Errorf("Wizard with key %q not found", key2)
+	}
+
+	// Verify each wizard has correct domain
+	if meta.Wizards[key1].Domain != "order" {
+		t.Errorf("Wizard[%q].Domain = %q, want %q", key1, meta.Wizards[key1].Domain, "order")
+	}
+
+	if meta.Wizards[key2].Domain != "product" {
+		t.Errorf("Wizard[%q].Domain = %q, want %q", key2, meta.Wizards[key2].Domain, "product")
+	}
+}
+
+func TestStore_UpdateWizard(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "metadata-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	store := NewStore(tmpDir)
+
+	// Save initial wizard
+	input1 := types.ScaffoldWizardInput{
+		WizardName: "create",
+		Domain:     "order",
+		Steps:      []types.WizardStepDef{{Name: "Step 1", Type: "form"}},
+		Layout:     "dashboard",
+	}
+	store.SaveWizard("create", "order", input1, "0.1.0")
+
+	// Get original timestamp
+	meta1, _ := store.Load()
+	originalTime := meta1.Wizards["order:create"].ScaffoldedAt
+
+	// Update wizard
+	input2 := types.ScaffoldWizardInput{
+		WizardName: "create",
+		Domain:     "order",
+		Steps:      []types.WizardStepDef{{Name: "Step 1", Type: "form"}, {Name: "Step 2", Type: "summary"}},
+		Layout:     "base",
+	}
+	store.SaveWizard("create", "order", input2, "0.2.0")
+
+	// Load and verify update
+	meta2, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	wizard := meta2.Wizards["order:create"]
+
+	// Original scaffold time should be preserved
+	if wizard.ScaffoldedAt != originalTime {
+		t.Error("ScaffoldedAt should be preserved on update")
+	}
+
+	// Updated time should be set
+	if wizard.UpdatedAt.IsZero() {
+		t.Error("UpdatedAt should be set on update")
+	}
+
+	// New values should be saved
+	if wizard.ScaffolderVersion != "0.2.0" {
+		t.Errorf("ScaffolderVersion = %q, want %q", wizard.ScaffolderVersion, "0.2.0")
+	}
+
+	if wizard.Input.Layout != "base" {
+		t.Errorf("Input.Layout = %q, want %q", wizard.Input.Layout, "base")
+	}
+
+	if len(wizard.Input.Steps) != 2 {
+		t.Errorf("len(Input.Steps) = %d, want 2", len(wizard.Input.Steps))
+	}
+}
