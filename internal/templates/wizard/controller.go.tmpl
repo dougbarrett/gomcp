@@ -53,6 +53,12 @@ func (c *[[.WizardNamePascal]]WizardController) RegisterRoutes(r chi.Router) {
 	})
 }
 
+// render renders a templ component to the response.
+func (c *[[.WizardNamePascal]]WizardController) render(w http.ResponseWriter, r *http.Request, component templ.Component) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	component.Render(r.Context(), w)
+}
+
 // Start begins a new wizard flow.
 func (c *[[.WizardNamePascal]]WizardController) Start(w http.ResponseWriter, r *http.Request) {
 	resp := web.NewResponse(w, r)
