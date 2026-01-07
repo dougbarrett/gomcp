@@ -18,7 +18,7 @@ None
 - [x] **Phase 2: Controller Template Fixes** (Complete) - Fix Bug #a9479784 + align with patterns
 - [x] **Phase 3: Service Template Fixes** (Complete) - Fix Bug #cb94adf6 + align with patterns
 - [x] **Phase 4: View Template Improvements** (Complete) - Align view templates with other patterns
-- [ ] **Phase 5: Draft System Review** - Review and improve draft save/resume functionality
+- [ ] **Phase 5: Draft System Review** (In progress) - Review and improve draft save/resume functionality
 - [ ] **Phase 6: Generator Logic Review** - Review wizard generator code for issues
 - [ ] **Phase 7: Test Coverage** - Add/improve tests for wizard scaffolding
 - [ ] **Phase 8: End-to-End Validation** - Generate test wizard, verify it compiles and runs
@@ -71,7 +71,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 05-01: Review draft model and repository templates
+- [x] 05-01: Review draft model and repository templates
 - [ ] 05-02: Verify draft save/resume workflow is correct
 
 ### Phase 6: Generator Logic Review
@@ -117,7 +117,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Controller Template Fixes | 2/2 | Complete | 2026-01-06 |
 | 3. Service Template Fixes | 1/1 | Complete | 2026-01-06 |
 | 4. View Template Improvements | 2/2 | Complete | 2026-01-07 |
-| 5. Draft System Review | 0/2 | Not started | - |
+| 5. Draft System Review | 1/2 | In progress | - |
 | 6. Generator Logic Review | 0/2 | Not started | - |
 | 7. Test Coverage | 0/3 | Not started | - |
 | 8. End-to-End Validation | 0/3 | Not started | - |
