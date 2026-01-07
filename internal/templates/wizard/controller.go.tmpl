@@ -11,6 +11,12 @@ import (
 	[[- end]]
 	"[[.ModulePath]]/internal/web"
 	"[[.ModulePath]]/internal/web/[[.PackageName]]/views"
+	"[[.ModulePath]]/internal/web/middleware"
+	[[- if .WithDrafts]]
+	"[[.ModulePath]]/internal/models"
+	[[- end]]
+
+	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 )
 
