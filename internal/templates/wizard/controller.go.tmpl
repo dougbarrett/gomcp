@@ -98,7 +98,7 @@ func (c *[[.WizardNamePascal]]WizardController) Resume(w http.ResponseWriter, r 
 	}
 
 	// Redirect to the current step
-	resp.Redirect(fmt.Sprintf("[[.URLPath]]/wizard/[[.WizardName]]/%d/step/%d", draft.ID, draft.CurrentStep))
+	resp.Redirect(fmt.Sprintf("[[.URLPath]]/wizard/[[.WizardName]]/step/%d?draft_id=%d", draft.CurrentStep, draft.ID))
 }
 [[- end]]
 
