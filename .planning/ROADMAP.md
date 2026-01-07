@@ -19,7 +19,7 @@ None
 - [x] **Phase 3: Service Template Fixes** (Complete) - Fix Bug #cb94adf6 + align with patterns
 - [x] **Phase 4: View Template Improvements** (Complete) - Align view templates with other patterns
 - [x] **Phase 5: Draft System Review** (Complete) - Review and improve draft save/resume functionality
-- [ ] **Phase 6: Generator Logic Review** (In progress) - Review wizard generator code for issues
+- [x] **Phase 6: Generator Logic Review** (Complete) - Review wizard generator code for issues
 - [ ] **Phase 7: Test Coverage** - Add/improve tests for wizard scaffolding
 - [ ] **Phase 8: End-to-End Validation** - Generate test wizard, verify it compiles and runs
 
@@ -82,7 +82,7 @@ Plans:
 
 Plans:
 - [x] 06-01: Review scaffold_wizard.go against scaffold_domain.go patterns
-- [ ] 06-02: Fix any generator logic issues found
+- [x] 06-02: Fix any generator logic issues found
 
 ### Phase 7: Test Coverage
 **Goal**: Add/improve test coverage for wizard scaffolding
@@ -118,6 +118,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Service Template Fixes | 1/1 | Complete | 2026-01-06 |
 | 4. View Template Improvements | 2/2 | Complete | 2026-01-07 |
 | 5. Draft System Review | 2/2 | Complete | 2026-01-07 |
-| 6. Generator Logic Review | 1/2 | In progress | - |
+| 6. Generator Logic Review | 2/2 | Complete | 2026-01-07 |
 | 7. Test Coverage | 0/3 | Not started | - |
 | 8. End-to-End Validation | 0/3 | Not started | - |
