@@ -27,6 +27,7 @@ const (
 type ProjectMetadata struct {
 	Version string                    `json:"version"`
 	Domains map[string]DomainMetadata `json:"domains"`
+	Wizards map[string]WizardMetadata `json:"wizards,omitempty"`
 }
 
 // DomainMetadata contains metadata for a single scaffolded domain.
@@ -35,6 +36,15 @@ type DomainMetadata struct {
 	UpdatedAt         time.Time                 `json:"updated_at,omitempty"`
 	ScaffolderVersion string                    `json:"scaffolder_version"`
 	Input             types.ScaffoldDomainInput `json:"input"`
+}
+
+// WizardMetadata contains metadata for a single scaffolded wizard.
+type WizardMetadata struct {
+	ScaffoldedAt      time.Time                  `json:"scaffolded_at"`
+	UpdatedAt         time.Time                  `json:"updated_at,omitempty"`
+	ScaffolderVersion string                     `json:"scaffolder_version"`
+	Domain            string                     `json:"domain"`
+	Input             types.ScaffoldWizardInput  `json:"input"`
 }
 
 // Store handles reading and writing scaffold metadata.
@@ -68,6 +78,7 @@ func (s *Store) Load() (*ProjectMetadata, error) {
 			return &ProjectMetadata{
 				Version: CurrentVersion,
 				Domains: make(map[string]DomainMetadata),
+				Wizards: make(map[string]WizardMetadata),
 			}, nil
 		}
 		return nil, fmt.Errorf("failed to read metadata: %w", err)
@@ -78,9 +89,12 @@ func (s *Store) Load() (*ProjectMetadata, error) {
 		return nil, fmt.Errorf("failed to parse metadata: %w", err)
 	}
 
-	// Ensure domains map is initialized
+	// Ensure maps are initialized
 	if meta.Domains == nil {
 		meta.Domains = make(map[string]DomainMetadata)
+	}
+	if meta.Wizards == nil {
+		meta.Wizards = make(map[string]WizardMetadata)
 	}
 
 	return &meta, nil
@@ -135,6 +149,36 @@ func (s *Store) SaveDomain(domainName string, input types.ScaffoldDomainInput, s
 	}
 
 	meta.Domains[domainName] = domainMeta
+	return s.Save(meta)
+}
+
+// SaveWizard saves or updates metadata for a single wizard.
+func (s *Store) SaveWizard(wizardName, domain string, input types.ScaffoldWizardInput, scaffolderVersion string) error {
+	meta, err := s.Load()
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().UTC()
+	// Use a composite key of domain:wizardName for uniqueness
+	key := domain + ":" + wizardName
+	existing, exists := meta.Wizards[key]
+
+	wizardMeta := WizardMetadata{
+		ScaffolderVersion: scaffolderVersion,
+		Domain:            domain,
+		Input:             input,
+	}
+
+	if exists {
+		// Preserve original scaffold time, update the updated time
+		wizardMeta.ScaffoldedAt = existing.ScaffoldedAt
+		wizardMeta.UpdatedAt = now
+	} else {
+		wizardMeta.ScaffoldedAt = now
+	}
+
+	meta.Wizards[key] = wizardMeta
 	return s.Save(meta)
 }
 

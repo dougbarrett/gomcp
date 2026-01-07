@@ -6,10 +6,14 @@ import (
 	"path/filepath"
 
 	"github.com/dbb1dev/go-mcp/internal/generator"
+	"github.com/dbb1dev/go-mcp/internal/metadata"
+	"github.com/dbb1dev/go-mcp/internal/modifier"
 	"github.com/dbb1dev/go-mcp/internal/types"
 	"github.com/dbb1dev/go-mcp/internal/utils"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+// Note: Uses ScaffolderVersion from scaffold_domain.go
 
 // RegisterScaffoldWizard registers the scaffold_wizard tool.
 func RegisterScaffoldWizard(server *mcp.Server, registry *Registry) {
@@ -246,14 +250,9 @@ func scaffoldWizard(registry *Registry, input types.ScaffoldWizardInput) (types.
 	}
 
 	nextSteps := []string{
-		"templ generate",
 		"go mod tidy",
-		fmt.Sprintf("Register wizard routes in cmd/web/main.go"),
+		"templ generate",
 		fmt.Sprintf("Add wizard link to domain views (e.g., a 'New with Wizard' button)"),
-	}
-
-	if data.WithDrafts {
-		nextSteps = append(nextSteps, "Add WizardDraft to database AutoMigrate")
 	}
 
 	suggestedTools := []types.ToolHint{
@@ -275,6 +274,30 @@ func scaffoldWizard(registry *Registry, input types.ScaffoldWizardInput) (types.
 		}, nil
 	}
 
+	// Inject DI wiring into main.go and database.go
+	mainGoPath := filepath.Join(registry.WorkingDir, "cmd", "web", "main.go")
+	databaseGoPath := filepath.Join(registry.WorkingDir, "internal", "database", "database.go")
+	if utils.FileExists(mainGoPath) {
+		if err := injectWizardWiring(mainGoPath, databaseGoPath, modulePath, pkgName, data); err != nil {
+			// Log warning but don't fail
+			fmt.Printf("Warning: could not inject wizard DI wiring: %v\n", err)
+		} else {
+			result.FilesUpdated = append(result.FilesUpdated, "cmd/web/main.go")
+			if data.WithDrafts && utils.FileExists(databaseGoPath) {
+				result.FilesUpdated = append(result.FilesUpdated, "internal/database/database.go")
+			}
+		}
+	}
+
+	// Save scaffold metadata for future sync/upgrade capabilities
+	metaStore := metadata.NewStore(registry.WorkingDir)
+	if err := metaStore.SaveWizard(input.WizardName, input.Domain, input, ScaffolderVersion); err != nil {
+		// Log warning but don't fail - metadata is optional
+		fmt.Printf("Warning: could not save wizard metadata: %v\n", err)
+	} else {
+		result.FilesUpdated = append(result.FilesUpdated, ".mcp/scaffold-metadata.json")
+	}
+
 	return types.ScaffoldResult{
 		Success:        true,
 		Message:        fmt.Sprintf("Successfully created wizard '%s' for domain '%s' with %d steps", input.WizardName, input.Domain, len(input.Steps)),
@@ -283,4 +306,65 @@ func scaffoldWizard(registry *Registry, input types.ScaffoldWizardInput) (types.
 		NextSteps:      nextSteps,
 		SuggestedTools: suggestedTools,
 	}, nil
+}
+
+// injectWizardWiring injects the wizard wiring into main.go and database.go.
+// This includes draft repo/service instantiation if WithDrafts is enabled.
+func injectWizardWiring(mainGoPath, databaseGoPath, modulePath, pkgName string, data generator.WizardData) error {
+	// Only inject draft system wiring if drafts are enabled
+	if !data.WithDrafts {
+		return nil
+	}
+
+	// Inject into main.go for draft repo and service
+	mainInjector, err := modifier.NewInjector(mainGoPath)
+	if err != nil {
+		return err
+	}
+
+	// Inject draft repository import
+	draftRepoImport := fmt.Sprintf("%s/internal/repository/wizarddraft", modulePath)
+	if err := mainInjector.InjectImportWithAlias(draftRepoImport, "wizarddraftrepo"); err != nil {
+		return err
+	}
+
+	// Inject draft service import
+	draftServiceImport := fmt.Sprintf("%s/internal/services/wizarddraft", modulePath)
+	if err := mainInjector.InjectImportWithAlias(draftServiceImport, "wizarddraftsvc"); err != nil {
+		return err
+	}
+
+	// Inject draft repository instantiation
+	draftRepoCode := `wizardDraftRepo := wizarddraftrepo.NewRepository(db)`
+	if err := mainInjector.InjectBetweenMarkers(modifier.MarkerReposStart, modifier.MarkerReposEnd, draftRepoCode); err != nil {
+		return err
+	}
+
+	// Inject draft service instantiation
+	draftServiceCode := `wizardDraftService := wizarddraftsvc.NewService(wizardDraftRepo)`
+	if err := mainInjector.InjectBetweenMarkers(modifier.MarkerServicesStart, modifier.MarkerServicesEnd, draftServiceCode); err != nil {
+		return err
+	}
+
+	if err := mainInjector.Save(); err != nil {
+		return err
+	}
+
+	// Inject WizardDraft model into database.go AutoMigrate
+	if databaseGoPath != "" && utils.FileExists(databaseGoPath) {
+		dbInjector, err := modifier.NewInjector(databaseGoPath)
+		if err != nil {
+			return err
+		}
+
+		if err := dbInjector.InjectModel("WizardDraft"); err != nil {
+			return err
+		}
+
+		if err := dbInjector.Save(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
