@@ -72,7 +72,7 @@ func (c *[[.WizardNamePascal]]WizardController) Start(w http.ResponseWriter, r *
 	}
 
 	// Redirect to first step with draft ID
-	resp.Redirect(fmt.Sprintf("[[.URLPath]]/wizard/[[.WizardName]]/%d/step/1", draft.ID))
+	resp.Redirect(fmt.Sprintf("[[.URLPath]]/wizard/[[.WizardName]]/step/1?draft_id=%d", draft.ID))
 	[[- else]]
 	// Redirect to first step
 	resp.Redirect("[[.URLPath]]/wizard/[[.WizardName]]/step/1")
