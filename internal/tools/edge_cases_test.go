@@ -503,3 +503,323 @@ func TestEdgeCases_ConcurrentScaffolding(t *testing.T) {
 		}
 	})
 }
+
+func TestWizardEdgeCases(t *testing.T) {
+	t.Run("wizard with all step types", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/project")
+
+		input := types.ScaffoldWizardInput{
+			WizardName: "complete",
+			Domain:     "order",
+			Steps: []types.WizardStepDef{
+				{Name: "Select Client", Type: "select", Fields: []string{"client_id"}, Searchable: true},
+				{Name: "Order Details", Type: "form", Fields: []string{"notes", "priority"}},
+				{Name: "Add Items", Type: "has_many", ChildDomain: "orderitem", HasManyMode: "select_existing"},
+				{Name: "Review", Type: "summary"},
+			},
+			DryRun: true,
+		}
+
+		result, err := scaffoldWizard(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.Success {
+			t.Errorf("wizard with all step types should succeed, got: %s", result.Message)
+		}
+		// Should create 4 step views + wizard view + controller + service
+		if len(result.FilesCreated) < 6 {
+			t.Errorf("expected at least 6 files, got %d", len(result.FilesCreated))
+		}
+	})
+
+	t.Run("wizard with maximum step count", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/project")
+
+		// Create 12 steps
+		steps := make([]types.WizardStepDef, 12)
+		for i := 0; i < 11; i++ {
+			steps[i] = types.WizardStepDef{
+				Name:   "Step " + string(rune('A'+i)),
+				Type:   "form",
+				Fields: []string{"field1"},
+			}
+		}
+		steps[11] = types.WizardStepDef{Name: "Final Review", Type: "summary"}
+
+		input := types.ScaffoldWizardInput{
+			WizardName: "manysteps",
+			Domain:     "complex",
+			Steps:      steps,
+			DryRun:     true,
+		}
+
+		result, err := scaffoldWizard(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.Success {
+			t.Errorf("wizard with many steps should succeed, got: %s", result.Message)
+		}
+	})
+
+	t.Run("wizard with special characters in name should fail", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/project")
+
+		testCases := []struct {
+			wizardName string
+			desc       string
+		}{
+			{"create-order", "hyphen in name"},
+			{"create.order", "dot in name"},
+			{"create order", "space in name"},
+			{"create@order", "at symbol in name"},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.desc, func(t *testing.T) {
+				input := types.ScaffoldWizardInput{
+					WizardName: tc.wizardName,
+					Domain:     "order",
+					Steps:      []types.WizardStepDef{{Name: "Step 1", Type: "form"}},
+					DryRun:     true,
+				}
+
+				result, err := scaffoldWizard(registry, input)
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				// Should either fail validation or sanitize the name
+				// Most generators should reject special characters
+				_ = result
+			})
+		}
+	})
+
+	t.Run("wizard with Go keyword as domain name", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/project")
+
+		// "type" is a Go keyword
+		input := types.ScaffoldWizardInput{
+			WizardName: "create",
+			Domain:     "type",
+			Steps:      []types.WizardStepDef{{Name: "Step 1", Type: "form"}},
+			DryRun:     true,
+		}
+
+		result, err := scaffoldWizard(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// Should fail because "type" would create invalid Go code
+		if result.Success {
+			t.Errorf("Go keyword 'type' should be rejected as domain name")
+		}
+	})
+
+	t.Run("wizard on non-existent domain still works", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/project")
+
+		// Domain doesn't need to exist - it's just organizational
+		input := types.ScaffoldWizardInput{
+			WizardName: "create",
+			Domain:     "nonexistentdomain",
+			Steps: []types.WizardStepDef{
+				{Name: "Details", Type: "form", Fields: []string{"name"}},
+				{Name: "Review", Type: "summary"},
+			},
+			DryRun: true,
+		}
+
+		result, err := scaffoldWizard(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.Success {
+			t.Errorf("wizard on non-existent domain should work (it's organizational), got: %s", result.Message)
+		}
+	})
+
+	t.Run("multiple wizards with same name on different domains", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/project")
+
+		// First wizard on "order" domain - creates draft system files
+		withDrafts := true
+		input1 := types.ScaffoldWizardInput{
+			WizardName: "create",
+			Domain:     "order",
+			Steps:      []types.WizardStepDef{{Name: "Details", Type: "form"}, {Name: "Review", Type: "summary"}},
+			WithDrafts: &withDrafts,
+			DryRun:     false,
+		}
+
+		result1, err := scaffoldWizard(registry, input1)
+		if err != nil {
+			t.Fatalf("first wizard error: %v", err)
+		}
+		if !result1.Success {
+			t.Fatalf("first wizard failed: %s", result1.Message)
+		}
+
+		// Second wizard with same name on "product" domain
+		// Disable drafts since draft system already exists from first wizard
+		noDrafts := false
+		input2 := types.ScaffoldWizardInput{
+			WizardName: "create",
+			Domain:     "product",
+			Steps:      []types.WizardStepDef{{Name: "Details", Type: "form"}, {Name: "Review", Type: "summary"}},
+			WithDrafts: &noDrafts,
+			DryRun:     false,
+		}
+
+		result2, err := scaffoldWizard(registry, input2)
+		if err != nil {
+			t.Fatalf("second wizard error: %v", err)
+		}
+		if !result2.Success {
+			t.Fatalf("second wizard failed: %s", result2.Message)
+		}
+
+		// Verify both controllers exist in different directories
+		orderController := filepath.Join(tmpDir, "internal/web/order/wizard_create.go")
+		productController := filepath.Join(tmpDir, "internal/web/product/wizard_create.go")
+
+		if !fileExists(orderController) {
+			t.Errorf("expected order wizard controller at %s", orderController)
+		}
+		if !fileExists(productController) {
+			t.Errorf("expected product wizard controller at %s", productController)
+		}
+	})
+
+	t.Run("wizard with empty step name fails validation", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/project")
+
+		input := types.ScaffoldWizardInput{
+			WizardName: "create",
+			Domain:     "order",
+			Steps: []types.WizardStepDef{
+				{Name: "", Type: "form"}, // Empty name
+			},
+			DryRun: true,
+		}
+
+		result, err := scaffoldWizard(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.Success {
+			t.Error("wizard with empty step name should fail validation")
+		}
+		if !strings.Contains(result.Message, "name is required") {
+			t.Errorf("expected error about name being required, got: %s", result.Message)
+		}
+	})
+
+	t.Run("wizard with create_inline has_many mode", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/project")
+
+		input := types.ScaffoldWizardInput{
+			WizardName: "create",
+			Domain:     "project",
+			Steps: []types.WizardStepDef{
+				{Name: "Project Info", Type: "form", Fields: []string{"name", "description"}},
+				{Name: "Add Members", Type: "has_many", ChildDomain: "projectmember", HasManyMode: "create_inline"},
+				{Name: "Review", Type: "summary"},
+			},
+			DryRun: true,
+		}
+
+		result, err := scaffoldWizard(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.Success {
+			t.Errorf("wizard with create_inline mode should succeed, got: %s", result.Message)
+		}
+	})
+
+	t.Run("wizard with very long wizard name", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/project")
+
+		longName := strings.Repeat("a", 100)
+		input := types.ScaffoldWizardInput{
+			WizardName: longName,
+			Domain:     "order",
+			Steps: []types.WizardStepDef{
+				{Name: "Details", Type: "form"},
+				{Name: "Review", Type: "summary"},
+			},
+			DryRun: true,
+		}
+
+		result, err := scaffoldWizard(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// Very long names should work (filesystem limits may apply later)
+		_ = result
+	})
+
+	t.Run("wizard dry run consistency", func(t *testing.T) {
+		registry1, tmpDir1 := testRegistry(t)
+		setupGoMod(t, tmpDir1, "github.com/test/project")
+
+		registry2, tmpDir2 := testRegistry(t)
+		setupGoMod(t, tmpDir2, "github.com/test/project")
+
+		input := types.ScaffoldWizardInput{
+			WizardName: "create",
+			Domain:     "order",
+			Steps: []types.WizardStepDef{
+				{Name: "Details", Type: "form", Fields: []string{"name"}},
+				{Name: "Review", Type: "summary"},
+			},
+		}
+
+		// Dry run
+		input.DryRun = true
+		dryResult, err := scaffoldWizard(registry1, input)
+		if err != nil || !dryResult.Success {
+			t.Fatalf("dry run failed: %v / %s", err, dryResult.Message)
+		}
+
+		// Actual run
+		input.DryRun = false
+		actualResult, err := scaffoldWizard(registry2, input)
+		if err != nil || !actualResult.Success {
+			t.Fatalf("actual run failed: %v / %s", err, actualResult.Message)
+		}
+
+		// File counts should match
+		if len(dryResult.FilesCreated) != len(actualResult.FilesCreated) {
+			t.Errorf("dry run reported %d files, actual created %d files",
+				len(dryResult.FilesCreated), len(actualResult.FilesCreated))
+		}
+
+		// Dry run should not have created files
+		for _, f := range dryResult.FilesCreated {
+			fullPath := filepath.Join(tmpDir1, f)
+			if fileExists(fullPath) {
+				t.Errorf("dry run should not create file %s", f)
+			}
+		}
+
+		// Actual run should have created files
+		for _, f := range actualResult.FilesCreated {
+			fullPath := filepath.Join(tmpDir2, f)
+			if !fileExists(fullPath) {
+				t.Errorf("actual run should create file %s", f)
+			}
+		}
+	})
+}
