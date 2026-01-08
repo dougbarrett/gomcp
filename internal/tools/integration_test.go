@@ -1,9 +1,11 @@
 package tools
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/dbb1dev/go-mcp/internal/types"
@@ -535,4 +537,184 @@ func dirExistsIntegration(path string) bool {
 		return false
 	}
 	return info.IsDir()
+}
+
+func TestWizardIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	// Check if go command is available for gofmt validation
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go command not available")
+	}
+
+	registry, tmpDir := testRegistry(t)
+
+	// Step 1: Scaffold a project with auth (provides User model)
+	projectInput := types.ScaffoldProjectInput{
+		ProjectName:  "wizardtest",
+		ModulePath:   "github.com/test/wizardtest",
+		DatabaseType: "sqlite",
+		WithAuth:     true,
+		DryRun:       false,
+	}
+
+	projectResult, err := scaffoldProject(registry, projectInput)
+	if err != nil {
+		t.Fatalf("scaffoldProject error: %v", err)
+	}
+	if !projectResult.Success {
+		t.Fatalf("scaffoldProject failed: %s", projectResult.Message)
+	}
+
+	projectDir := filepath.Join(tmpDir, "wizardtest")
+	projectRegistry := NewRegistry(projectDir)
+
+	// Step 2: Scaffold a client domain for the select step
+	clientInput := types.ScaffoldDomainInput{
+		DomainName: "client",
+		Fields: []types.FieldDef{
+			{Name: "Name", Type: "string", Required: true},
+			{Name: "Email", Type: "string"},
+		},
+		DryRun: false,
+	}
+
+	clientResult, err := scaffoldDomain(projectRegistry, clientInput)
+	if err != nil {
+		t.Fatalf("scaffoldDomain(client) error: %v", err)
+	}
+	if !clientResult.Success {
+		t.Fatalf("scaffoldDomain(client) failed: %s", clientResult.Message)
+	}
+
+	// Step 3: Scaffold an order domain for the wizard
+	orderInput := types.ScaffoldDomainInput{
+		DomainName: "order",
+		Fields: []types.FieldDef{
+			{Name: "Total", Type: "float64"},
+			{Name: "Notes", Type: "string"},
+			{Name: "Status", Type: "string"},
+		},
+		Relationships: []types.RelationshipDef{
+			{Type: "belongs_to", Model: "Client"},
+		},
+		DryRun: false,
+	}
+
+	orderResult, err := scaffoldDomain(projectRegistry, orderInput)
+	if err != nil {
+		t.Fatalf("scaffoldDomain(order) error: %v", err)
+	}
+	if !orderResult.Success {
+		t.Fatalf("scaffoldDomain(order) failed: %s", orderResult.Message)
+	}
+
+	// Step 4: Scaffold an orderitem domain for has_many step
+	orderItemInput := types.ScaffoldDomainInput{
+		DomainName: "orderitem",
+		Fields: []types.FieldDef{
+			{Name: "ProductName", Type: "string"},
+			{Name: "Quantity", Type: "int"},
+			{Name: "Price", Type: "float64"},
+		},
+		DryRun: false,
+	}
+
+	orderItemResult, err := scaffoldDomain(projectRegistry, orderItemInput)
+	if err != nil {
+		t.Fatalf("scaffoldDomain(orderitem) error: %v", err)
+	}
+	if !orderItemResult.Success {
+		t.Fatalf("scaffoldDomain(orderitem) failed: %s", orderItemResult.Message)
+	}
+
+	// Step 5: Scaffold a wizard with multiple step types
+	wizardInput := types.ScaffoldWizardInput{
+		WizardName: "create_order",
+		Domain:     "order",
+		Steps: []types.WizardStepDef{
+			{Name: "Select Client", Type: "select", Fields: []string{"client_id"}, Searchable: true},
+			{Name: "Order Details", Type: "form", Fields: []string{"notes", "status"}},
+			{Name: "Add Items", Type: "has_many", ChildDomain: "orderitem", HasManyMode: "select_existing"},
+			{Name: "Review", Type: "summary"},
+		},
+		RouteGroup: "authenticated",
+		Layout:     "dashboard",
+		DryRun:     false,
+	}
+
+	wizardResult, err := scaffoldWizard(projectRegistry, wizardInput)
+	if err != nil {
+		t.Fatalf("scaffoldWizard error: %v", err)
+	}
+	if !wizardResult.Success {
+		t.Fatalf("scaffoldWizard failed: %s", wizardResult.Message)
+	}
+
+	// Step 6: Verify wizard files were created
+	expectedWizardFiles := []string{
+		"internal/web/order/wizard_create_order.go",
+		"internal/web/order/views/wizard_create_order.templ",
+		"internal/web/order/views/wizard_create_order_step1.templ",
+		"internal/web/order/views/wizard_create_order_step2.templ",
+		"internal/web/order/views/wizard_create_order_step3.templ",
+		"internal/web/order/views/wizard_create_order_step4.templ",
+		"internal/models/wizard_draft.go",
+	}
+
+	for _, f := range expectedWizardFiles {
+		path := filepath.Join(projectDir, f)
+		if !fileExists(path) {
+			t.Errorf("expected wizard file %s to exist", f)
+		}
+	}
+
+	// Step 7: Run gofmt on all generated .go files to verify syntax
+	var goFiles []string
+	err = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && filepath.Ext(path) == ".go" {
+			goFiles = append(goFiles, path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("failed to walk project directory: %v", err)
+	}
+
+	if len(goFiles) == 0 {
+		t.Fatal("no .go files found in project directory")
+	}
+
+	// Check each .go file with gofmt
+	var syntaxErrors []string
+	for _, goFile := range goFiles {
+		cmd := exec.Command("gofmt", "-e", goFile)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			// gofmt -e returns non-zero for syntax errors
+			syntaxErrors = append(syntaxErrors, fmt.Sprintf("%s: %s", goFile, string(output)))
+		}
+	}
+
+	if len(syntaxErrors) > 0 {
+		t.Errorf("gofmt found syntax errors in %d files:\n%s",
+			len(syntaxErrors), strings.Join(syntaxErrors, "\n"))
+	}
+
+	// Step 8 (optional): Verify Go code is importable by checking go vet on generated files
+	// This is lighter than a full build and faster
+	vetCmd := exec.Command("go", "vet", "./internal/web/order/...")
+	vetCmd.Dir = projectDir
+	vetOutput, err := vetCmd.CombinedOutput()
+	if err != nil {
+		// Log but don't fail - vet might fail due to missing dependencies
+		t.Logf("go vet output (may fail due to missing deps): %s", string(vetOutput))
+	}
+
+	t.Logf("Integration test verified %d .go files with gofmt", len(goFiles))
 }
