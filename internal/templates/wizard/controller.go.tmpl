@@ -106,8 +106,6 @@ func (c *[[.WizardNamePascal]]WizardController) Resume(w http.ResponseWriter, r 
 
 // Step[[add $i 1]] renders step [[add $i 1]]: [[.Name]].
 func (c *[[$.WizardNamePascal]]WizardController) Step[[add $i 1]](w http.ResponseWriter, r *http.Request) {
-	resp := web.NewResponse(w, r)
-
 	[[- if $.WithDrafts]]
 	// Get draft data
 	draftID := r.URL.Query().Get("draft_id")
