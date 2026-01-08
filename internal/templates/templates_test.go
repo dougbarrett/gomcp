@@ -1412,6 +1412,73 @@ func TestBelongsToDisplayFieldRendering(t *testing.T) {
 		}
 	})
 
+	// Test DTO template uses DisplayField in Summary struct and mapping
+	t.Run("DTO template uses DisplayField", func(t *testing.T) {
+		content, err := FS.ReadFile("domain/dto.go.tmpl")
+		if err != nil {
+			t.Fatalf("Failed to read dto template: %v", err)
+		}
+
+		tmpl, err := parseTemplate("dto.go.tmpl", string(content))
+		if err != nil {
+			t.Fatalf("Failed to parse dto template: %v", err)
+		}
+
+		// Create DTO-specific data with HasRelationships flag
+		dtoData := struct {
+			ModulePath       string
+			ModelName        string
+			PackageName      string
+			VariableName     string
+			Fields           []generator.FieldData
+			Relationships    []generator.RelationshipData
+			HasRelationships bool
+		}{
+			ModulePath:   "github.com/test/testproject",
+			ModelName:    "Product",
+			PackageName:  "product",
+			VariableName: "product",
+			Fields: []generator.FieldData{
+				{Name: "Name", Type: "string", JSONName: "name"},
+			},
+			Relationships: []generator.RelationshipData{
+				{
+					Type:         "belongs_to",
+					Model:        "Category",
+					FieldName:    "Category",
+					ForeignKey:   "CategoryID",
+					IsBelongsTo:  true,
+					DisplayField: "Title", // Custom display field
+				},
+			},
+			HasRelationships: true,
+		}
+
+		var buf bytes.Buffer
+		err = tmpl.Execute(&buf, dtoData)
+		if err != nil {
+			t.Fatalf("Failed to execute dto template: %v", err)
+		}
+
+		output := buf.String()
+
+		// Summary struct should use Title field (the DisplayField) in CategorySummary
+		if !strings.Contains(output, "Title string") {
+			t.Error("DTO template Summary struct should use 'Title string' (DisplayField) not hardcoded 'Name string'")
+		}
+
+		// Verify the CategorySummary struct doesn't have hardcoded "Name" for the display field
+		// (Note: Product.Name field is expected and correct - we're checking the Summary struct)
+		if strings.Contains(output, `Name string `+"`json:\"name,omitempty\"`") {
+			t.Error("DTO template Summary struct should NOT use hardcoded 'Name' when DisplayField is 'Title'")
+		}
+
+		// Mapping should populate the Title field
+		if !strings.Contains(output, "Title: product.Category.Title") {
+			t.Error("DTO template mapping should populate 'Title: product.Category.Title' (DisplayField)")
+		}
+	})
+
 	// Test with default DisplayField (should be "Name")
 	t.Run("Default DisplayField is Name", func(t *testing.T) {
 		defaultFKField := generator.FieldData{Name: "UserID", Type: "uint", JSONName: "user_id"}
