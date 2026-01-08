@@ -1456,6 +1456,130 @@ func TestBelongsToDisplayFieldRendering(t *testing.T) {
 	})
 }
 
+// TestWizardControllerTemplatePatterns verifies the wizard controller template:
+// 1. Step handler doesn't declare unused 'resp' variable
+// 2. Submit handler uses Create...Input (not Create...DTO)
+func TestWizardControllerTemplatePatterns(t *testing.T) {
+	wizardData := struct {
+		ModulePath       string
+		WizardName       string
+		WizardNamePascal string
+		Domain           string
+		ModelName        string
+		PackageName      string
+		VariableName     string
+		URLPath          string
+		URLPathSegment   string
+		Steps            []generator.WizardStepData
+		TotalSteps       int
+		Layout           string
+		RouteGroup       string
+		FormStyle        string
+		SuccessRedirect  string
+		WithDrafts       bool
+	}{
+		ModulePath:       "github.com/test/testproject",
+		WizardName:       "create_order",
+		WizardNamePascal: "CreateOrder",
+		Domain:           "order",
+		ModelName:        "Order",
+		PackageName:      "order",
+		VariableName:     "order",
+		URLPath:          "/orders",
+		URLPathSegment:   "orders",
+		Steps: []generator.WizardStepData{
+			{Number: 1, Name: "Client Info", Type: "form", FieldNames: []string{"client_name", "email"}, IsFirst: true, IsLast: false, IsForm: true},
+			{Number: 2, Name: "Review", Type: "summary", FieldNames: []string{}, IsFirst: false, IsLast: true, IsSummary: true},
+		},
+		TotalSteps:      2,
+		Layout:          "dashboard",
+		RouteGroup:      "admin",
+		FormStyle:       "page",
+		SuccessRedirect: "/orders",
+		WithDrafts:      false,
+	}
+
+	content, err := FS.ReadFile("wizard/controller.go.tmpl")
+	if err != nil {
+		t.Fatalf("Failed to read wizard controller template: %v", err)
+	}
+
+	tmpl, err := parseTemplate("wizard_controller.go.tmpl", string(content))
+	if err != nil {
+		t.Fatalf("Failed to parse wizard controller template: %v", err)
+	}
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, wizardData)
+	if err != nil {
+		t.Fatalf("Failed to execute wizard controller template: %v", err)
+	}
+
+	output := buf.String()
+
+	// Test 1: Step handler should NOT have unused resp variable
+	t.Run("Step handler no unused resp", func(t *testing.T) {
+		// Find the Step1 function and check if it declares resp but doesn't use it
+		// The Step handler should just call c.render() which doesn't need resp
+		// A valid pattern is: resp declared AND used for Error/Redirect
+		// An invalid pattern is: resp declared but only c.render() is called
+
+		// Since we're testing without drafts, the Step handler should NOT have resp at all
+		// because it only calls c.render(w, r, views.Component(props))
+		stepFuncStart := strings.Index(output, "func (c *CreateOrderWizardController) Step1(")
+		stepFuncEnd := strings.Index(output[stepFuncStart:], "func (c *CreateOrderWizardController) Step1Submit")
+		if stepFuncEnd == -1 {
+			// Try to find end of Step1
+			stepFuncEnd = strings.Index(output[stepFuncStart:], "\n\n//")
+		}
+		stepFunc := output[stepFuncStart : stepFuncStart+stepFuncEnd]
+
+		// Without drafts, Step handler should NOT declare resp at all
+		// because it doesn't use it - it just renders a view
+		if strings.Contains(stepFunc, "resp := web.NewResponse") {
+			t.Error("Step handler (without drafts) should NOT declare resp since it only calls c.render()")
+		}
+	})
+
+	// Test 2: Submit handler should use Create...Input, not Create...DTO
+	t.Run("Submit uses CreateInput not CreateDTO", func(t *testing.T) {
+		if strings.Contains(output, "Create"+wizardData.ModelName+"DTO") {
+			t.Error("Submit handler should use Create...Input, not Create...DTO")
+		}
+		if !strings.Contains(output, "Create"+wizardData.ModelName+"Input") {
+			t.Error("Submit handler should reference Create...Input")
+		}
+	})
+
+	// Test 3: With drafts enabled, Step handler still shouldn't have unused resp
+	t.Run("Step handler with drafts no unused resp", func(t *testing.T) {
+		wizardDataWithDrafts := wizardData
+		wizardDataWithDrafts.WithDrafts = true
+
+		var bufDrafts bytes.Buffer
+		err = tmpl.Execute(&bufDrafts, wizardDataWithDrafts)
+		if err != nil {
+			t.Fatalf("Failed to execute wizard controller template with drafts: %v", err)
+		}
+
+		outputDrafts := bufDrafts.String()
+
+		// Find the Step1 function
+		stepFuncStart := strings.Index(outputDrafts, "func (c *CreateOrderWizardController) Step1(")
+		stepFuncEnd := strings.Index(outputDrafts[stepFuncStart:], "func (c *CreateOrderWizardController) Step1Submit")
+		if stepFuncEnd == -1 {
+			stepFuncEnd = strings.Index(outputDrafts[stepFuncStart:], "\n\n//")
+		}
+		stepFunc := outputDrafts[stepFuncStart : stepFuncStart+stepFuncEnd]
+
+		// Even with drafts, Step handler doesn't need resp because it just renders a view
+		// The draft data is fetched but doesn't require Error/Redirect calls
+		if strings.Contains(stepFunc, "resp := web.NewResponse") {
+			t.Error("Step handler (with drafts) should NOT declare resp since it only calls c.render()")
+		}
+	})
+}
+
 // TestTemplateDelimiters verifies templates use correct delimiters.
 func TestTemplateDelimiters(t *testing.T) {
 	dirs := []string{
