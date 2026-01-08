@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-06)
 
 **Core value:** The 2 reported bugs must be fixed first. Working code generation is non-negotiable.
-**Current focus:** Phase 7 complete — Ready for Phase 8: End-to-End Validation
+**Current focus:** Phase 8 in progress — Original bugs verified fixed, 4 new bugs discovered
 
 ## Current Position
 
-Phase: 7 of 8 (Test Coverage)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-01-08 — Completed 07-03-PLAN.md
+Phase: 8 of 8 (End-to-End Validation)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-01-08 — Completed 08-01-PLAN.md
 
-Progress: █████████████░░ 82%
+Progress: ██████████████░ 88%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: 4 min
-- Total execution time: 61 min
+- Total plans completed: 15
+- Average duration: 5 min
+- Total execution time: 73 min
 
 **By Phase:**
 
@@ -34,10 +34,11 @@ Progress: █████████████░░ 82%
 | 5. Draft System Review | 2/2 | 4 min | 2 min |
 | 6. Generator Logic Review | 2/2 | 6 min | 3 min |
 | 7. Test Coverage | 3/3 | 16 min | 5 min |
+| 8. End-to-End Validation | 1/3 | 12 min | 12 min |
 
 **Recent Trend:**
-- Last 5 plans: 3 min, 3 min, 6 min, 8 min, 2 min
-- Trend: Stable
+- Last 5 plans: 6 min, 8 min, 2 min, 12 min
+- Trend: Variable (08-01 longer due to new test harness creation)
 
 ## Accumulated Context
 
@@ -49,17 +50,22 @@ Recent decisions affecting current work:
 - URL double slash was generator bug, not template bug - fixed at source (02-02)
 - No wizard view template changes needed - differences are intentional (04-01)
 - Wizard metadata uses composite key (domain:wizardName) for uniqueness (06-02)
+- Created reusable MCP test harness with Claude integration for future testing (08-01)
 
 ### Deferred Issues
 
-None yet.
+4 new bugs discovered during validation (08-01):
+- b88f8cab: scaffold_wizard doesn't auto-generate wizard components
+- 5ab684ea: Wizard controller has unused 'resp' variable
+- ab2c40cb: Wizard controller references wrong DTO type name
+- 69d42b6e: belongs_to display assumes related model has Name field
 
 ### Blockers/Concerns
 
-None yet.
+New bugs block full compilation of generated wizard code. Original bugs (#a9479784, #cb94adf6) are verified fixed.
 
 ## Session Continuity
 
 Last session: 2026-01-08
-Stopped at: Completed 07-03-PLAN.md (Phase 7 complete)
+Stopped at: Completed 08-01-PLAN.md (4 new bugs discovered)
 Resume file: None
