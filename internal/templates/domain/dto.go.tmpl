@@ -75,7 +75,7 @@ type [[.ModelName]]Response struct {
 // [[.Model]]Summary is a summary of a related [[.Model]].
 type [[.Model]]Summary struct {
 	ID   uint   `json:"id"`
-	Name string `json:"name,omitempty"`
+	[[.DisplayField]] string `json:"[[.DisplayField | toLower]],omitempty"`
 }
 [[- end]]
 [[- end]]
