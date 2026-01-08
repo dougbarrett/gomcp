@@ -345,6 +345,81 @@ func TestScaffoldWizard(t *testing.T) {
 			t.Errorf("expected controller at %s", controllerPath)
 		}
 	})
+
+	t.Run("generates wizard components automatically", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
+
+		input := types.ScaffoldWizardInput{
+			WizardName: "create",
+			Domain:     "order",
+			Steps: []types.WizardStepDef{
+				{Name: "Details", Type: "form"},
+				{Name: "Review", Type: "summary"},
+			},
+		}
+
+		result, err := scaffoldWizard(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.Success {
+			t.Errorf("expected success, got failure: %s", result.Message)
+		}
+
+		// Check wizard components file is created
+		wizardComponentsPath := filepath.Join(tmpDir, "internal", "web", "components", "wizard.templ")
+		if !fileExists(wizardComponentsPath) {
+			t.Errorf("expected wizard components at %s", wizardComponentsPath)
+		}
+
+		// Verify the file contains expected component definitions
+		content := readFile(t, wizardComponentsPath)
+		expectedComponents := []string{"WizardNav", "WizardEmpty", "WizardProgress", "WizardSteps"}
+		for _, comp := range expectedComponents {
+			if !strings.Contains(content, comp) {
+				t.Errorf("expected wizard components file to contain %q", comp)
+			}
+		}
+	})
+
+	t.Run("does not overwrite existing wizard components", func(t *testing.T) {
+		registry, tmpDir := testRegistry(t)
+		setupGoMod(t, tmpDir, "github.com/test/myapp")
+
+		// Create existing wizard.templ with custom content
+		componentsDir := filepath.Join(tmpDir, "internal", "web", "components")
+		if err := os.MkdirAll(componentsDir, 0755); err != nil {
+			t.Fatalf("failed to create components dir: %v", err)
+		}
+		customContent := "// Custom wizard components - should not be overwritten\npackage components\n"
+		wizardPath := filepath.Join(componentsDir, "wizard.templ")
+		if err := os.WriteFile(wizardPath, []byte(customContent), 0644); err != nil {
+			t.Fatalf("failed to write custom wizard.templ: %v", err)
+		}
+
+		input := types.ScaffoldWizardInput{
+			WizardName: "create",
+			Domain:     "order",
+			Steps: []types.WizardStepDef{
+				{Name: "Details", Type: "form"},
+			},
+		}
+
+		result, err := scaffoldWizard(registry, input)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.Success {
+			t.Errorf("expected success, got failure: %s", result.Message)
+		}
+
+		// Verify the custom file was NOT overwritten
+		content := readFile(t, wizardPath)
+		if !strings.Contains(content, "Custom wizard components") {
+			t.Error("expected custom wizard.templ to NOT be overwritten")
+		}
+	})
 }
 
 // Sample main.go content with markers for wizard DI wiring tests
