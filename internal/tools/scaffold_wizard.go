@@ -173,6 +173,17 @@ func scaffoldWizard(registry *Registry, input types.ScaffoldWizardInput) (types.
 		}
 	}
 
+	// Ensure components directory exists for wizard components
+	if err := gen.EnsureDir(filepath.Join("internal", "web", "components")); err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to create components directory: %v", err)), nil
+	}
+
+	// Generate wizard components if they don't exist
+	wizardComponentsPath := filepath.Join("internal", "web", "components", "wizard.templ")
+	if err := gen.GenerateFileIfNotExists("components/wizard.templ.tmpl", wizardComponentsPath, data); err != nil {
+		return types.NewErrorResult(fmt.Sprintf("failed to generate wizard components: %v", err)), nil
+	}
+
 	// Generate wizard controller
 	controllerPath := filepath.Join("internal", "web", pkgName, "wizard_"+wizardName+".go")
 	if err := gen.GenerateFile("wizard/controller.go.tmpl", controllerPath, data); err != nil {
@@ -251,16 +262,16 @@ func scaffoldWizard(registry *Registry, input types.ScaffoldWizardInput) (types.
 
 	nextSteps := []string{
 		"go mod tidy",
-		"templ generate",
-		fmt.Sprintf("Add wizard link to domain views (e.g., a 'New with Wizard' button)"),
+		"templ generate (wizard components auto-generated)",
+		"Add wizard link to domain views (e.g., a 'New with Wizard' button)",
 	}
 
 	suggestedTools := []types.ToolHint{
 		{
-			Tool:        "scaffold_component",
-			Description: "Create additional wizard UI components",
-			Example:     `scaffold_component: { component_type: "wizard" }`,
-			Priority:    "optional",
+			Tool:        "update_di_wiring",
+			Description: "Wire up the domain's service for the wizard controller",
+			Example:     `update_di_wiring: { domains: ["` + input.Domain + `"] }`,
+			Priority:    "recommended",
 		},
 	}
 
