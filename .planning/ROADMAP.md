@@ -120,7 +120,7 @@ Plans:
 - 69d42b6e: belongs_to display assumes related model has Name field
 
 Plans:
-- [ ] 09-01: Controller template fixes (bugs 5ab684ea, ab2c40cb)
+- [x] 09-01: Controller template fixes (bugs 5ab684ea, ab2c40cb)
 - [ ] 09-02: Wizard component auto-generation (bug b88f8cab)
 - [ ] 09-03: belongs_to display field fix (bug 69d42b6e)
 
@@ -139,4 +139,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 6. Generator Logic Review | 2/2 | Complete | 2026-01-07 |
 | 7. Test Coverage | 3/3 | Complete | 2026-01-08 |
 | 8. End-to-End Validation | 1/3 | In progress | - |
-| 9. Wizard Bug Fixes | 0/3 | Not started | - |
+| 9. Wizard Bug Fixes | 1/3 | In progress | - |
