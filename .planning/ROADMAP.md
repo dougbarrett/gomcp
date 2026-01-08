@@ -92,7 +92,7 @@ Plans:
 
 Plans:
 - [x] 07-01: Add tests for wizard DI wiring and metadata tracking
-- [ ] 07-02: Add tests for wizard generator
+- [x] 07-02: Add tests for wizard generator
 - [ ] 07-03: Add tests for wizard templates
 
 ### Phase 8: End-to-End Validation
@@ -119,5 +119,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. View Template Improvements | 2/2 | Complete | 2026-01-07 |
 | 5. Draft System Review | 2/2 | Complete | 2026-01-07 |
 | 6. Generator Logic Review | 2/2 | Complete | 2026-01-07 |
-| 7. Test Coverage | 1/3 | In progress | - |
+| 7. Test Coverage | 2/3 | In progress | - |
 | 8. End-to-End Validation | 0/3 | Not started | - |
