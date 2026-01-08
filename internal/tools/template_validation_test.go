@@ -436,3 +436,118 @@ func TestTemplateValidation_AuthAndUserManagement(t *testing.T) {
 		}
 	}
 }
+
+func TestTemplateValidation_WizardTemplates(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping template validation in short mode")
+	}
+
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go command not available")
+	}
+
+	registry, tmpDir := testRegistry(t)
+
+	// Scaffold a project first
+	projectInput := types.ScaffoldProjectInput{
+		ProjectName:  "wizardvalidation",
+		ModulePath:   "github.com/test/wizardvalidation",
+		DatabaseType: "sqlite",
+		DryRun:       false,
+	}
+
+	projectResult, err := scaffoldProject(registry, projectInput)
+	if err != nil || !projectResult.Success {
+		t.Fatalf("scaffoldProject failed: %v / %s", err, projectResult.Message)
+	}
+
+	projectDir := filepath.Join(tmpDir, "wizardvalidation")
+	projectRegistry := NewRegistry(projectDir)
+
+	// Scaffold a domain first (wizard needs an existing domain)
+	domainInput := types.ScaffoldDomainInput{
+		DomainName: "order",
+		Fields: []types.FieldDef{
+			{Name: "CustomerName", Type: "string", Required: true},
+			{Name: "Total", Type: "float64"},
+			{Name: "Status", Type: "string"},
+		},
+		DryRun: false,
+	}
+
+	domainResult, err := scaffoldDomain(projectRegistry, domainInput)
+	if err != nil || !domainResult.Success {
+		t.Fatalf("scaffoldDomain failed: %v / %s", err, domainResult.Message)
+	}
+
+	// Scaffold a wizard with all step types (form, select, has_many, summary)
+	wizardInput := types.ScaffoldWizardInput{
+		WizardName: "create_order",
+		Domain:     "order",
+		Steps: []types.WizardStepDef{
+			{Name: "Customer Details", Type: "form", Fields: []string{"customer_name", "email"}},
+			{Name: "Select Product", Type: "select", Fields: []string{"product_id"}, Searchable: true},
+			{Name: "Add Items", Type: "has_many", ChildDomain: "orderitem", HasManyMode: "select_existing"},
+			{Name: "Review Order", Type: "summary"},
+		},
+		WithDrafts: nil, // Default to true
+		DryRun:     false,
+	}
+
+	wizardResult, err := scaffoldWizard(projectRegistry, wizardInput)
+	if err != nil || !wizardResult.Success {
+		t.Fatalf("scaffoldWizard failed: %v / %s", err, wizardResult.Message)
+	}
+
+	// Validate all generated .go files
+	goFiles := []string{
+		"internal/web/order/wizard_create_order.go",      // Controller
+		"internal/models/wizard_draft.go",                // Draft model
+		"internal/repository/wizarddraft/wizarddraft.go", // Draft repository
+		"internal/services/wizarddraft/wizarddraft.go",   // Draft service
+	}
+
+	for _, file := range goFiles {
+		path := filepath.Join(projectDir, file)
+		if !fileExists(path) {
+			t.Errorf("expected wizard file %s to exist", file)
+			continue
+		}
+
+		cmd := exec.Command("gofmt", "-e", path)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Errorf("syntax error in %s: %s", file, string(output))
+		}
+	}
+
+	// Validate wizard templ files
+	templFiles := []string{
+		"internal/web/order/views/wizard_create_order.templ",       // Main wizard view
+		"internal/web/order/views/wizard_create_order_step1.templ", // Form step
+		"internal/web/order/views/wizard_create_order_step2.templ", // Select step
+		"internal/web/order/views/wizard_create_order_step3.templ", // Has_many step
+		"internal/web/order/views/wizard_create_order_step4.templ", // Summary step
+	}
+
+	for _, file := range templFiles {
+		path := filepath.Join(projectDir, file)
+		if !fileExists(path) {
+			t.Errorf("expected wizard templ file %s to exist", file)
+			continue
+		}
+
+		// Read the file and check for basic templ structure
+		content := readFile(t, path)
+		if !strings.Contains(content, "package views") {
+			t.Errorf("wizard templ %s should have package declaration", file)
+		}
+		if !strings.Contains(content, "templ ") {
+			t.Errorf("wizard templ %s should have templ function", file)
+		}
+		// Check for unexpanded template markers
+		if strings.Contains(content, "[[.") || strings.Contains(content, "]]") {
+			t.Errorf("wizard templ %s has unexpanded template markers", file)
+		}
+	}
+}
