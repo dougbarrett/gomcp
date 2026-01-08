@@ -102,13 +102,15 @@ func To[[.ModelName]]Response([[.VariableName]] *models.[[.ModelName]]) *[[.Mode
 [[- if .IsBelongsTo]]
 	if [[$.VariableName]].[[.FieldName]] != nil {
 		resp.[[.FieldName]] = &[[.Model]]Summary{
-			ID: [[$.VariableName]].[[.FieldName]].ID,
+			ID:            [[$.VariableName]].[[.FieldName]].ID,
+			[[.DisplayField]]: [[$.VariableName]].[[.FieldName]].[[.DisplayField]],
 		}
 	}
 [[- else if .IsHasOne]]
 	if [[$.VariableName]].[[.FieldName]] != nil {
 		resp.[[.FieldName]] = &[[.Model]]Summary{
-			ID: [[$.VariableName]].[[.FieldName]].ID,
+			ID:            [[$.VariableName]].[[.FieldName]].ID,
+			[[.DisplayField]]: [[$.VariableName]].[[.FieldName]].[[.DisplayField]],
 		}
 	}
 [[- else if or .IsHasMany .IsManyToMany]]
@@ -116,7 +118,8 @@ func To[[.ModelName]]Response([[.VariableName]] *models.[[.ModelName]]) *[[.Mode
 		resp.[[.FieldName]] = make([][[.Model]]Summary, len([[$.VariableName]].[[.FieldName]]))
 		for i, item := range [[$.VariableName]].[[.FieldName]] {
 			resp.[[.FieldName]][i] = [[.Model]]Summary{
-				ID: item.ID,
+				ID:            item.ID,
+				[[.DisplayField]]: item.[[.DisplayField]],
 			}
 		}
 	}
