@@ -6,7 +6,9 @@ A focused improvement pass on the wizard scaffolding feature of go-mcp, fixing k
 
 ## Core Value
 
-The 2 reported bugs must be fixed first. Everything else is valuable, but working code generation is non-negotiable.
+~~The 2 reported bugs must be fixed first. Everything else is valuable, but working code generation is non-negotiable.~~
+
+**COMPLETE:** All bugs fixed and verified. Wizard scaffolding generates correct, compilable code.
 
 ## Requirements
 
@@ -18,13 +20,14 @@ The 2 reported bugs must be fixed first. Everything else is valuable, but workin
 - HTMX-powered step navigation — existing
 - Integration with existing domain scaffolding patterns — existing
 
-### Active
+### Completed
 
-- [ ] Fix wizard controller using non-existent web.Response methods (Bug #a9479784)
-- [ ] Fix wizard service missing repository import (Bug #cb94adf6)
-- [ ] Improve template quality and consistency with other scaffold_* tools
-- [ ] Add/improve test coverage for wizard scaffolding
-- [ ] Ensure feature completeness for real-world wizard use cases
+- [x] Fix wizard controller using non-existent web.Response methods (Bug #a9479784) — Phase 2
+- [x] Fix wizard service missing repository import (Bug #cb94adf6) — Phase 3
+- [x] Improve template quality and consistency with other scaffold_* tools — Phases 4-6
+- [x] Add/improve test coverage for wizard scaffolding — Phase 7
+- [x] Ensure feature completeness for real-world wizard use cases — Phase 8
+- [x] Fix additional bugs discovered during validation (Bugs #b88f8cab, #69d42b6e) — Phase 9
 
 ### Out of Scope
 
@@ -67,8 +70,25 @@ Bug #cb94adf6 - Wizard service missing repository import:
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Fix bugs first, then improve | Core value — working code before polish | — Pending |
-| Match existing scaffold patterns | Consistency constraint from user | — Pending |
+| Fix bugs first, then improve | Core value — working code before polish | Done (Phases 2-3) |
+| Match existing scaffold patterns | Consistency constraint from user | Done (Phases 4-6) |
+| URL double slash was generator bug, not template | Root cause analysis in Phase 2 | Fixed in data.go |
+| Use GenerateFileIfNotExists for wizard components | Preserve user customizations | Implemented in Phase 9 |
+| Use DisplayField for belongs_to display | Match form/show template patterns | Implemented in Phase 9 |
+| Phase 9 inserted for validation bugs | Fix bugs before declaring complete | All 4 bugs fixed |
+
+## Project Completion
+
+All 9 phases complete:
+- Phase 1: Analysis — mapped templates, cataloged issues
+- Phase 2: Controller template fixes — Bug #a9479784
+- Phase 3: Service template fixes — Bug #cb94adf6
+- Phase 4: View template improvements — consistency review
+- Phase 5: Draft system review — verified persistence
+- Phase 6: Generator logic review — metadata tracking
+- Phase 7: Test coverage — added wizard tests
+- Phase 8: End-to-end validation — verified compilation
+- Phase 9: Wizard bug fixes — fixed 4 validation bugs
 
 ---
-*Last updated: 2026-01-06 after initialization*
+*Last updated: 2026-01-10 — PROJECT COMPLETE*
