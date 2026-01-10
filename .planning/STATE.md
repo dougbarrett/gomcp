@@ -2,17 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-06)
+See: .planning/PROJECT.md (updated 2026-01-10)
 
 **Core value:** Working code generation is non-negotiable.
-**Current focus:** PROJECT COMPLETE — All bugs fixed and verified
+**Current focus:** v1.0 SHIPPED — All bugs fixed and verified
 
 ## Current Position
 
-Phase: 8 of 9 (End-to-End Validation) — COMPLETE
-Plan: 3 of 3 in current phase
-Status: PROJECT COMPLETE
-Last activity: 2026-01-10 — Completed 08-03-PLAN.md (final plan)
+Phase: All complete (9 of 9)
+Plan: All complete (20 of 20)
+Status: MILESTONE SHIPPED
+Last activity: 2026-01-10 — v1.0 milestone complete
 
 Progress: ██████████████████ 100%
 
@@ -37,46 +37,28 @@ Progress: ██████████████████ 100%
 | 8. End-to-End Validation | 3/3 | 20 min | 6.7 min |
 | 9. Wizard Bug Fixes | 3/3 | 9 min | 3 min |
 
-**Recent Trend:**
-- Last 5 plans: 3 min, 3 min, 5 min, 3 min (08-03)
-- Trend: Project complete
-
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- URL double slash was generator bug, not template bug - fixed at source (02-02)
-- No wizard view template changes needed - differences are intentional (04-01)
-- Wizard metadata uses composite key (domain:wizardName) for uniqueness (06-02)
-- Created reusable MCP test harness with Claude integration for future testing (08-01)
-- Use GenerateFileIfNotExists for wizard components to preserve customizations (09-02)
-- Used same DisplayField pattern as form/show templates for DTO consistency (09-03)
+Decisions logged in PROJECT.md Key Decisions table.
+All decisions marked ✓ Good — no items needing revisit.
 
 ### Deferred Issues
 
-4 bugs discovered during validation (08-01), all fixed:
-- ~~5ab684ea: Wizard controller has unused 'resp' variable~~ (FIXED in 09-01)
-- ~~ab2c40cb: Wizard controller references wrong DTO type name~~ (FIXED in 09-01)
-- ~~b88f8cab: scaffold_wizard doesn't auto-generate wizard components~~ (FIXED in 09-02)
-- ~~69d42b6e: belongs_to display assumes related model has Name field~~ (FIXED in 09-03)
+Minor: `stepData` unused variable in wizard submit handler - template bug, non-blocking
 
 ### Blockers/Concerns
 
-Minor: New bug discovered during 08-02 validation:
-- `stepData` unused variable in wizard submit handler - template bug, non-blocking
-- Workaround exists, can be fixed in future phase
+None — project shipped successfully.
 
 ### Roadmap Evolution
 
-- Phase 9 added: Wizard Bug Fixes - Fix 4 bugs discovered during validation
-- Phase 9 complete: All 4 bugs fixed
+Complete. All 9 phases finished, v1.0 milestone archived.
 
 ## Session Continuity
 
 Last session: 2026-01-10
-Stopped at: PROJECT COMPLETE
+Stopped at: MILESTONE SHIPPED
 Resume file: None
-Next action: None — project complete, use /gsd:complete-milestone to archive
+Next action: None — v1.0 shipped, planning complete

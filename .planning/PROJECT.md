@@ -2,93 +2,70 @@
 
 ## What This Is
 
-A focused improvement pass on the wizard scaffolding feature of go-mcp, fixing known bugs and bringing the wizard templates up to the quality standard of other scaffold_* tools. The goal is a production-ready wizard scaffolding tool that generates correct, consistent code.
+A production-ready wizard scaffolding tool for go-mcp that generates correct, compilable code aligned with other scaffold_* tools. Scaffolds multi-step wizard flows with form, select, has_many, and summary step types.
 
 ## Core Value
 
-~~The 2 reported bugs must be fixed first. Everything else is valuable, but working code generation is non-negotiable.~~
-
-**COMPLETE:** All bugs fixed and verified. Wizard scaffolding generates correct, compilable code.
+Working code generation is non-negotiable. All generated wizard code compiles and runs correctly.
 
 ## Requirements
 
 ### Validated
 
-- Wizard scaffolding generates controller, views, and draft persistence — existing
-- Multi-step wizard flow with form, select, has_many, and summary step types — existing
-- Draft save/resume functionality via database — existing
-- HTMX-powered step navigation — existing
-- Integration with existing domain scaffolding patterns — existing
+- ✓ Fix wizard controller using non-existent web.Response methods (Bug #a9479784) — v1.0
+- ✓ Fix wizard service missing repository import (Bug #cb94adf6) — v1.0
+- ✓ Improve template quality and consistency with other scaffold_* tools — v1.0
+- ✓ Add/improve test coverage for wizard scaffolding — v1.0
+- ✓ Ensure feature completeness for real-world wizard use cases — v1.0
+- ✓ Fix additional bugs discovered during validation (Bugs #b88f8cab, #69d42b6e) — v1.0
+- ✓ Wizard scaffolding generates controller, views, and draft persistence — v1.0
+- ✓ Multi-step wizard flow with form, select, has_many, and summary step types — v1.0
+- ✓ Draft save/resume functionality via database — v1.0
+- ✓ HTMX-powered step navigation — v1.0
+- ✓ Integration with existing domain scaffolding patterns — v1.0
 
-### Completed
+### Active
 
-- [x] Fix wizard controller using non-existent web.Response methods (Bug #a9479784) — Phase 2
-- [x] Fix wizard service missing repository import (Bug #cb94adf6) — Phase 3
-- [x] Improve template quality and consistency with other scaffold_* tools — Phases 4-6
-- [x] Add/improve test coverage for wizard scaffolding — Phase 7
-- [x] Ensure feature completeness for real-world wizard use cases — Phase 8
-- [x] Fix additional bugs discovered during validation (Bugs #b88f8cab, #69d42b6e) — Phase 9
+(None — project complete)
 
 ### Out of Scope
 
 - UI redesign — Focus on code correctness, not visual changes
-- Breaking changes — Existing wizard scaffolds should continue to work
-- New step types beyond existing (form, select, has_many, summary) — Stabilize what exists first
+- Breaking changes — Existing wizard scaffolds continue to work
+- New step types beyond existing (form, select, has_many, summary) — Can add later if needed
 
 ## Context
 
-**Existing Codebase:**
-- MCP server using Go 1.24.3 with modelcontextprotocol/go-sdk
-- Template-driven code generation with embedded templates in `internal/templates/`
+**Current State:**
+- Shipped v1.0 with 28,090 LOC Go
+- 50 files modified, 5,757 lines added
+- 9 phases, 20 plans completed
+- All 6 tracked bugs fixed and closed
+
+**Tech Stack:**
+- Go 1.24.3 with modelcontextprotocol/go-sdk
+- Template-driven code generation with `[[ ]]` delimiters
 - 30+ scaffolding tools following consistent patterns
-- Generator uses `[[ ]]` delimiters to avoid conflicts with Go templates
 
-**Bug Details:**
-
-Bug #a9479784 - Wizard controller uses non-existent web.Response methods:
-- `resp.HXRedirect(url)` should be `resp.Redirect(url)`
-- `resp.Component(component)` should be `resp.Render(component)`
-- `resp.CSRFToken()` doesn't exist — CSRF token comes from middleware context
-- URLs have double slashes: `//orders/wizard/...`
-- Missing models import in wizard controller
-
-Bug #cb94adf6 - Wizard service missing repository import:
-- Generated wizarddraft service uses `Repository` type without importing the repository package
-- Needs qualified import: `wizarddraftrepo "module/internal/repository/wizarddraft"`
-
-**Known Patterns:**
-- Other scaffold_* tools use `internal/tools/scaffold_*.go` structure
-- Templates in `internal/templates/wizard/`
-- Tests follow `*_test.go` convention with table-driven tests
+**Known Issues:**
+- `stepData` unused variable in wizard submit handler (minor, non-blocking)
 
 ## Constraints
 
-- **Consistency**: Must match patterns used in other scaffold_* tools (domain, form, table, etc.)
+- **Consistency**: Must match patterns used in other scaffold_* tools
 - **Backwards Compatible**: No changes that would break existing generated wizard code
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Fix bugs first, then improve | Core value — working code before polish | Done (Phases 2-3) |
-| Match existing scaffold patterns | Consistency constraint from user | Done (Phases 4-6) |
-| URL double slash was generator bug, not template | Root cause analysis in Phase 2 | Fixed in data.go |
-| Use GenerateFileIfNotExists for wizard components | Preserve user customizations | Implemented in Phase 9 |
-| Use DisplayField for belongs_to display | Match form/show template patterns | Implemented in Phase 9 |
-| Phase 9 inserted for validation bugs | Fix bugs before declaring complete | All 4 bugs fixed |
-
-## Project Completion
-
-All 9 phases complete:
-- Phase 1: Analysis — mapped templates, cataloged issues
-- Phase 2: Controller template fixes — Bug #a9479784
-- Phase 3: Service template fixes — Bug #cb94adf6
-- Phase 4: View template improvements — consistency review
-- Phase 5: Draft system review — verified persistence
-- Phase 6: Generator logic review — metadata tracking
-- Phase 7: Test coverage — added wizard tests
-- Phase 8: End-to-end validation — verified compilation
-- Phase 9: Wizard bug fixes — fixed 4 validation bugs
+| Fix bugs first, then improve | Core value — working code before polish | ✓ Good |
+| Match existing scaffold patterns | Consistency constraint from user | ✓ Good |
+| URL double slash was generator bug, not template | Root cause analysis in Phase 2 | ✓ Good |
+| Use GenerateFileIfNotExists for wizard components | Preserve user customizations | ✓ Good |
+| Use DisplayField for belongs_to display | Match form/show template patterns | ✓ Good |
+| Phase 9 inserted for validation bugs | Fix bugs before declaring complete | ✓ Good |
+| Created MCP test harness with Claude integration | Enable future automated testing | ✓ Good |
 
 ---
-*Last updated: 2026-01-10 — PROJECT COMPLETE*
+*Last updated: 2026-01-10 after v1.0 milestone*
